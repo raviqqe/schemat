@@ -1,7 +1,12 @@
 [package]
 name = "schemat"
+description = "Scheme formatter"
 version = "0.1.0"
 edition = "2021"
+license = "Unlicense"
+repository = "https://github.com/raviqqe/schemat"
+readme = "./README.md"
+keywords = ["format", "scheme"]
 
 [dependencies]
 mfmt = "0.1.1"
