@@ -10,7 +10,7 @@ checksum = "fa98e71b01d0e4ebfaf0aa0fc86678506f1d80a83d64d310b0f33354e36ff347"
 
 [[package]]
 name = "schemat"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "mfmt",
 ]
