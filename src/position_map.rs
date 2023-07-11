@@ -32,4 +32,15 @@ mod tests {
         assert_eq!(map.line(0), Some(0));
         assert_eq!(map.line(1), None);
     }
+
+    #[test]
+    fn get_line_in_line() {
+        let source = "foo";
+        let map = PositionMap::new(source);
+
+        assert_eq!(map.line(0), Some(0));
+        assert_eq!(map.line(1), Some(0));
+        assert_eq!(map.line(2), Some(0));
+        assert_eq!(map.line(3), None);
+    }
 }
