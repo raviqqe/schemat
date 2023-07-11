@@ -12,7 +12,7 @@ fn compile_module(module: &[Expression]) -> Document {
 
 fn compile_expression(expression: &Expression) -> Document {
     match expression {
-        Expression::Symbol(name) => name.into(),
+        Expression::Symbol(name) => (*name).into(),
         _ => todo!(),
     }
 }
