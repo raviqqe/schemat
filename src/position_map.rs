@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 #[derive(Debug)]
 pub struct PositionMap {
     lines: Vec<usize>,
@@ -21,7 +23,7 @@ impl PositionMap {
         Self { lines }
     }
 
-    pub fn line(&self, offset: usize) -> Option<usize> {
+    pub fn line_index(&self, offset: usize) -> Option<usize> {
         let line = match self.lines.binary_search(&offset) {
             Ok(line) => line,
             Err(line) => line - 1,
@@ -32,6 +34,16 @@ impl PositionMap {
         } else {
             Some(line)
         }
+    }
+
+    pub fn column_index(&self, offset: usize) -> Option<usize> {
+        self.line_index(offset)
+            .map(|line| offset - self.lines[line])
+    }
+
+    pub fn line_range(&self, offset: usize) -> Option<Range<usize>> {
+        self.line_index(offset)
+            .map(|line| self.lines[line]..self.lines[line + 1])
     }
 }
 
@@ -50,39 +62,85 @@ mod tests {
         assert_eq!([3].binary_search(&3), Ok(0));
     }
 
-    #[test]
-    fn get_line_of_empty_source() {
-        let source = "";
-        let map = PositionMap::new(source);
+    mod line_index {
+        use super::*;
 
-        assert_eq!(map.line(0), None);
-        assert_eq!(map.line(1), None);
+        #[test]
+        fn get_line_of_empty_source() {
+            let source = "";
+            let map = PositionMap::new(source);
+
+            assert_eq!(map.line_index(0), None);
+            assert_eq!(map.line_index(1), None);
+        }
+
+        #[test]
+        fn get_line_in_line() {
+            let source = "foo";
+            let map = PositionMap::new(source);
+
+            assert_eq!(map.line_index(0), Some(0));
+            assert_eq!(map.line_index(1), Some(0));
+            assert_eq!(map.line_index(2), Some(0));
+            assert_eq!(map.line_index(3), None);
+        }
+
+        #[test]
+        fn get_line_in_two_lines() {
+            let source = "foo\nbar\n";
+            let map = PositionMap::new(source);
+
+            assert_eq!(map.line_index(0), Some(0));
+            assert_eq!(map.line_index(1), Some(0));
+            assert_eq!(map.line_index(2), Some(0));
+            assert_eq!(map.line_index(3), Some(0));
+            assert_eq!(map.line_index(4), Some(1));
+            assert_eq!(map.line_index(5), Some(1));
+            assert_eq!(map.line_index(6), Some(1));
+            assert_eq!(map.line_index(7), Some(1));
+            assert_eq!(map.line_index(8), None);
+        }
     }
 
-    #[test]
-    fn get_line_in_line() {
-        let source = "foo";
-        let map = PositionMap::new(source);
+    mod line_range {
+        use super::*;
 
-        assert_eq!(map.line(0), Some(0));
-        assert_eq!(map.line(1), Some(0));
-        assert_eq!(map.line(2), Some(0));
-        assert_eq!(map.line(3), None);
-    }
+        #[test]
+        fn get_in_line() {
+            let source = "foo";
+            let map = PositionMap::new(source);
 
-    #[test]
-    fn get_line_in_two_lines() {
-        let source = "foo\nbar\n";
-        let map = PositionMap::new(source);
+            assert_eq!(map.line_range(0), Some(0..3));
+            assert_eq!(map.line_range(1), Some(0..3));
+            assert_eq!(map.line_range(2), Some(0..3));
+            assert_eq!(map.line_range(3), None);
+        }
 
-        assert_eq!(map.line(0), Some(0));
-        assert_eq!(map.line(1), Some(0));
-        assert_eq!(map.line(2), Some(0));
-        assert_eq!(map.line(3), Some(0));
-        assert_eq!(map.line(4), Some(1));
-        assert_eq!(map.line(5), Some(1));
-        assert_eq!(map.line(6), Some(1));
-        assert_eq!(map.line(7), Some(1));
-        assert_eq!(map.line(8), None);
+        #[test]
+        fn get_in_line_with_newline() {
+            let source = "foo\n";
+            let map = PositionMap::new(source);
+
+            assert_eq!(map.line_range(0), Some(0..4));
+            assert_eq!(map.line_range(1), Some(0..4));
+            assert_eq!(map.line_range(2), Some(0..4));
+            assert_eq!(map.line_range(3), Some(0..4));
+            assert_eq!(map.line_range(4), None);
+        }
+
+        #[test]
+        fn get_in_lines() {
+            let source = "foo\nbar";
+            let map = PositionMap::new(source);
+
+            assert_eq!(map.line_range(0), Some(0..4));
+            assert_eq!(map.line_range(1), Some(0..4));
+            assert_eq!(map.line_range(2), Some(0..4));
+            assert_eq!(map.line_range(3), Some(0..4));
+            assert_eq!(map.line_range(4), Some(4..7));
+            assert_eq!(map.line_range(5), Some(4..7));
+            assert_eq!(map.line_range(6), Some(4..7));
+            assert_eq!(map.line_range(7), None);
+        }
     }
 }

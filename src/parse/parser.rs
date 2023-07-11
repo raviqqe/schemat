@@ -1,19 +1,19 @@
-use super::{error::Error, input::Input};
+use super::{error::NomError, input::Input};
 use crate::{ast::Expression, position::Position};
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_until, take_while1},
     character::complete::{char, multispace1, none_of, space0},
-    combinator::{all_consuming, map, recognize, value},
+    combinator::{all_consuming, cut, map, recognize, value},
     error::context,
     multi::{many0, many1},
-    sequence::{delimited, preceded, tuple},
+    sequence::{delimited, preceded, terminated, tuple},
     Parser,
 };
 
-const SYMBOL_SIGNS: &str = "+-*/<>=!?$%_&~^#";
+const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&~^.:#";
 
-pub type IResult<'a, T> = nom::IResult<Input<'a>, T, Error<'a>>;
+pub type IResult<'a, T> = nom::IResult<Input<'a>, T, NomError<'a>>;
 
 pub fn module(input: Input<'_>) -> IResult<Vec<Expression<'_>>> {
     all_consuming(delimited(many0(hash_line), many0(expression), blank))(input)
@@ -42,7 +42,10 @@ fn expression(input: Input<'_>) -> IResult<Expression<'_>> {
         context(
             "list",
             map(
-                positioned(delimited(sign('('), many0(expression), sign(')'))),
+                positioned(preceded(
+                    sign('('),
+                    cut(terminated(many0(expression), sign(')'))),
+                )),
                 |(expressions, position)| Expression::List(expressions, position),
             ),
         ),
@@ -72,13 +75,13 @@ fn sign<'a>(character: char) -> impl Fn(Input<'a>) -> IResult<()> {
 }
 
 fn token<'a, T>(
-    mut parser: impl Parser<Input<'a>, T, Error<'a>>,
+    mut parser: impl Parser<Input<'a>, T, NomError<'a>>,
 ) -> impl FnMut(Input<'a>) -> IResult<T> {
     move |input| preceded(blank, |input| parser.parse(input))(input)
 }
 
 fn positioned<'a, T>(
-    mut parser: impl Parser<Input<'a>, T, Error<'a>>,
+    mut parser: impl Parser<Input<'a>, T, NomError<'a>>,
 ) -> impl FnMut(Input<'a>) -> IResult<'a, (T, Position)> {
     move |input| {
         map(

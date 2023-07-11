@@ -2,13 +2,13 @@ mod error;
 mod input;
 mod parser;
 
-use self::{error::Error, input::Input, parser::module};
+use self::{error::ParseError, input::Input, parser::module};
 use crate::ast::Expression;
 
-pub type ParseError<'a> = nom::Err<Error<'a>>;
-
 pub fn parse(source: &str) -> Result<Vec<Expression>, ParseError> {
-    module(Input::new(source)).map(|(_, module)| module)
+    module(Input::new(source))
+        .map(|(_, module)| module)
+        .map_err(|error| ParseError::new(source, error))
 }
 
 #[cfg(test)]
@@ -26,6 +26,22 @@ mod tests {
         assert_eq!(
             parse("foo"),
             Ok(vec![Expression::Symbol("foo", Position::new(0, 3))])
+        );
+    }
+
+    #[test]
+    fn parse_shebang() {
+        assert_eq!(
+            parse("#!/bin/sh\n#t"),
+            Ok(vec![Expression::Symbol("#t", Position::new(10, 12))])
+        );
+    }
+
+    #[test]
+    fn parse_lang_directive() {
+        assert_eq!(
+            parse("#lang racket\n#t"),
+            Ok(vec![Expression::Symbol("#t", Position::new(13, 15))])
         );
     }
 
