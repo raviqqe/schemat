@@ -4,14 +4,14 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, take_until, take_while1},
     character::complete::{char, multispace1, none_of, space0},
-    combinator::{all_consuming, map, recognize, value},
+    combinator::{all_consuming, cut, map, recognize, value},
     error::context,
     multi::{many0, many1},
-    sequence::{delimited, preceded, tuple},
+    sequence::{delimited, preceded, terminated, tuple},
     Parser,
 };
 
-const SYMBOL_SIGNS: &str = "+-*/<>=!?$%_&~^:#";
+const SYMBOL_SIGNS: &str = "+-*/<>=!?$%_&~^.:#";
 
 pub type IResult<'a, T> = nom::IResult<Input<'a>, T, NomError<'a>>;
 
@@ -42,7 +42,10 @@ fn expression(input: Input<'_>) -> IResult<Expression<'_>> {
         context(
             "list",
             map(
-                positioned(delimited(sign('('), many0(expression), sign(')'))),
+                positioned(preceded(
+                    sign('('),
+                    cut(terminated(many0(expression), sign(')'))),
+                )),
                 |(expressions, position)| Expression::List(expressions, position),
             ),
         ),
