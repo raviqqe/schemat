@@ -98,7 +98,7 @@ fn positioned<'a, T>(
 }
 
 fn blank(input: Input<'_>) -> IResult<()> {
-    value((), many0(alt((multispace1, comment, hash_line))))(input)
+    value((), many0(alt((multispace1, comment))))(input)
 }
 
 fn comment(input: Input<'_>) -> IResult<Input<'_>> {
@@ -112,6 +112,30 @@ fn hash_line(input: Input<'_>) -> IResult<Input<'_>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parse_false() {
+        assert_eq!(
+            expression(Input::new("#f")).unwrap().1,
+            Expression::Symbol("#f", Position::new(0, 2))
+        );
+        assert_eq!(
+            expression(Input::new("#false")).unwrap().1,
+            Expression::Symbol("#false", Position::new(0, 2))
+        );
+    }
+
+    #[test]
+    fn parse_true() {
+        assert_eq!(
+            expression(Input::new("#t")).unwrap().1,
+            Expression::Symbol("#t", Position::new(0, 2))
+        );
+        assert_eq!(
+            expression(Input::new("#true")).unwrap().1,
+            Expression::Symbol("#true", Position::new(0, 2))
+        );
+    }
 
     #[test]
     fn parse_shebang() {
