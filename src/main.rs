@@ -1,6 +1,7 @@
 mod ast;
 mod format;
 mod parse;
+mod position;
 
 use crate::{format::format, parse::parse};
 use std::{
