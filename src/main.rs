@@ -2,6 +2,7 @@ mod ast;
 mod format;
 mod parse;
 mod position;
+mod position_map;
 
 use crate::{format::format, parse::parse};
 use std::{

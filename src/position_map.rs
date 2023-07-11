@@ -16,7 +16,7 @@ impl PositionMap {
     }
 
     pub fn line(&self, offset: usize) -> Option<usize> {
-        foo
+        lines.binary_search(offset).ok()
     }
 }
 
