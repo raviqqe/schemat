@@ -34,6 +34,12 @@ fn expression<'a>(input: Input<'a>) -> IResult<Expression<'a>> {
     alt((
         context("symbol", symbol),
         context(
+            "quote",
+            map(preceded(sign('\''), expression), |expression| {
+                Expression::Quote(expression.into())
+            }),
+        ),
+        context(
             "list",
             delimited(
                 sign('('),
