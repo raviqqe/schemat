@@ -77,7 +77,7 @@ impl ParseError {
                 .column_index(self.offset)
                 .expect("valid offset")
                 + 1,
-            String::from_utf8_lossy(bytes),
+            String::from_utf8_lossy(bytes).trim_end(),
         )
     }
 }

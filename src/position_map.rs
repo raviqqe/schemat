@@ -97,4 +97,46 @@ mod tests {
         assert_eq!(map.line_index(7), Some(1));
         assert_eq!(map.line_index(8), None);
     }
+
+    mod line_range {
+        use super::*;
+
+        #[test]
+        fn get_in_line() {
+            let source = "foo";
+            let map = PositionMap::new(source);
+
+            assert_eq!(map.line_range(0), Some(0..3));
+            assert_eq!(map.line_range(1), Some(0..3));
+            assert_eq!(map.line_range(2), Some(0..3));
+            assert_eq!(map.line_range(3), None);
+        }
+
+        #[test]
+        fn get_in_line_with_newline() {
+            let source = "foo\n";
+            let map = PositionMap::new(source);
+
+            assert_eq!(map.line_range(0), Some(0..4));
+            assert_eq!(map.line_range(1), Some(0..4));
+            assert_eq!(map.line_range(2), Some(0..4));
+            assert_eq!(map.line_range(3), Some(0..4));
+            assert_eq!(map.line_range(4), None);
+        }
+
+        #[test]
+        fn get_in_lines() {
+            let source = "foo\nbar";
+            let map = PositionMap::new(source);
+
+            assert_eq!(map.line_range(0), Some(0..4));
+            assert_eq!(map.line_range(1), Some(0..4));
+            assert_eq!(map.line_range(2), Some(0..4));
+            assert_eq!(map.line_range(3), Some(0..4));
+            assert_eq!(map.line_range(4), Some(4..7));
+            assert_eq!(map.line_range(5), Some(4..7));
+            assert_eq!(map.line_range(6), Some(4..7));
+            assert_eq!(map.line_range(8), None);
+        }
+    }
 }
