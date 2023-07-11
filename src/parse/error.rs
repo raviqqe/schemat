@@ -1,3 +1,5 @@
+use crate::position_map::PositionMap;
+
 use super::input::Input;
 use nom::error::{VerboseError, VerboseErrorKind};
 
@@ -57,6 +59,10 @@ impl ParseError {
         }
     }
 
+    pub fn message(&self) -> &str {
+        &self.message
+    }
+
     pub fn offset(&self) -> usize {
         self.offset
     }
@@ -66,5 +72,15 @@ impl ParseError {
             message: "unexpected end of source".into(),
             offset: source.as_bytes().len() - 1,
         }
+    }
+
+    pub fn to_string(&self, position_map: &PositionMap) -> String {
+        format!(
+            "{}\n{}:{}: {}",
+            &self.message,
+            &position_map.line_index(self.offset).unwrap(),
+            &position_map.column_index(self.offset).unwrap(),
+            "<dummy_line>",
+        )
     }
 }

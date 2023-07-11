@@ -20,10 +20,13 @@ fn compile_module(context: &Context, module: &[Expression]) -> Document {
 fn compile_expression(context: &Context, expression: &Expression) -> Document {
     match expression {
         Expression::List(expressions, position) => {
-            let line_index = context.position_map().line(position.start());
+            let line_index = context.position_map().line_index(position.start());
 
             let (first, last) = expressions.iter().partition::<Vec<_>, _>(|expression| {
-                context.position_map().line(expression.position().start()) == line_index
+                context
+                    .position_map()
+                    .line_index(expression.position().start())
+                    == line_index
             });
 
             flatten(sequence(

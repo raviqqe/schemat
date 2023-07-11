@@ -21,12 +21,13 @@ fn main() {
 
 fn run() -> Result<(), Box<dyn Error>> {
     let source = read_to_string(stdin())?;
+    let position_map = PositionMap::new(&source);
 
     print!(
         "{}",
         format(
-            &parse(&source).map_err(|error| error.to_string())?,
-            &PositionMap::new(&source)
+            &parse(&source).map_err(|error| error.to_string(&position_map))?,
+            &position_map
         )
     );
 

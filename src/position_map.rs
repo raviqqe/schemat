@@ -21,7 +21,7 @@ impl PositionMap {
         Self { lines }
     }
 
-    pub fn line(&self, offset: usize) -> Option<usize> {
+    pub fn line_index(&self, offset: usize) -> Option<usize> {
         let line = match self.lines.binary_search(&offset) {
             Ok(line) => line,
             Err(line) => line - 1,
@@ -32,6 +32,11 @@ impl PositionMap {
         } else {
             Some(line)
         }
+    }
+
+    pub fn column_index(&self, offset: usize) -> Option<usize> {
+        self.line_index(offset)
+            .map(|line| offset - self.lines[line])
     }
 }
 
@@ -55,8 +60,8 @@ mod tests {
         let source = "";
         let map = PositionMap::new(source);
 
-        assert_eq!(map.line(0), None);
-        assert_eq!(map.line(1), None);
+        assert_eq!(map.line_index(0), None);
+        assert_eq!(map.line_index(1), None);
     }
 
     #[test]
@@ -64,10 +69,10 @@ mod tests {
         let source = "foo";
         let map = PositionMap::new(source);
 
-        assert_eq!(map.line(0), Some(0));
-        assert_eq!(map.line(1), Some(0));
-        assert_eq!(map.line(2), Some(0));
-        assert_eq!(map.line(3), None);
+        assert_eq!(map.line_index(0), Some(0));
+        assert_eq!(map.line_index(1), Some(0));
+        assert_eq!(map.line_index(2), Some(0));
+        assert_eq!(map.line_index(3), None);
     }
 
     #[test]
@@ -75,14 +80,14 @@ mod tests {
         let source = "foo\nbar\n";
         let map = PositionMap::new(source);
 
-        assert_eq!(map.line(0), Some(0));
-        assert_eq!(map.line(1), Some(0));
-        assert_eq!(map.line(2), Some(0));
-        assert_eq!(map.line(3), Some(0));
-        assert_eq!(map.line(4), Some(1));
-        assert_eq!(map.line(5), Some(1));
-        assert_eq!(map.line(6), Some(1));
-        assert_eq!(map.line(7), Some(1));
-        assert_eq!(map.line(8), None);
+        assert_eq!(map.line_index(0), Some(0));
+        assert_eq!(map.line_index(1), Some(0));
+        assert_eq!(map.line_index(2), Some(0));
+        assert_eq!(map.line_index(3), Some(0));
+        assert_eq!(map.line_index(4), Some(1));
+        assert_eq!(map.line_index(5), Some(1));
+        assert_eq!(map.line_index(6), Some(1));
+        assert_eq!(map.line_index(7), Some(1));
+        assert_eq!(map.line_index(8), None);
     }
 }
