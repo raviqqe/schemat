@@ -105,6 +105,31 @@ mod tests {
     }
 
     #[test]
+    fn format_list_with_split_lines_and_multiple_elements() {
+        assert_eq!(
+            format(
+                &[Expression::List(
+                    vec![
+                        Expression::Symbol("foo", Position::new(0, 0)),
+                        Expression::Symbol("bar", Position::new(0, 0)),
+                        Expression::Symbol("baz", Position::new(2, 0)),
+                        Expression::Symbol("qux", Position::new(2, 0)),
+                    ],
+                    Position::new(0, 0)
+                )],
+                &PositionMap::new("a\nb"),
+            ),
+            indoc!(
+                "
+                (foo bar
+                  baz
+                  qux)
+                "
+            )
+        );
+    }
+
+    #[test]
     fn format_quote() {
         assert_eq!(
             format(
