@@ -8,6 +8,7 @@ use nom::{
     error::{context, VerboseError},
     multi::many0,
     sequence::{delimited, preceded},
+    Parser,
 };
 
 const SYMBOL_SIGNS: &str = "+-*/<>=!?$%_&~^";
@@ -22,9 +23,9 @@ pub fn module<'a>(input: Input<'a>) -> IResult<Vec<Expression<'a>>> {
 
 fn symbol<'a>(input: Input<'a>) -> IResult<Expression<'a>> {
     map(
-        take_while1::<_, Input<'a>, _>(|character: char| {
+        token(take_while1::<_, Input<'a>, _>(|character: char| {
             character.is_alphanumeric() || SYMBOL_SIGNS.contains(character)
-        }),
+        })),
         |input| Expression::Symbol(&input),
     )(input)
 }
@@ -44,9 +45,11 @@ fn expression<'a>(input: Input<'a>) -> IResult<Expression<'a>> {
 }
 
 fn sign<'a>(character: char) -> impl Fn(Input<'a>) -> IResult<()> {
-    move |input| value((), preceded(multispace0, char(character)))(input)
+    move |input| value((), token(char(character)))(input)
 }
 
-fn token<'a, T>(parser: impl Fn(Input<'a>) -> IResult<T>) -> impl Fn(Input<'a>) -> IResult<T> {
-    move |input| preceded(multispace0, parser)(input)
+fn token<'a, T>(
+    mut parser: impl Parser<Input<'a>, T, Error<'a>>,
+) -> impl FnMut(Input<'a>) -> IResult<T> {
+    move |input| preceded(multispace0, |input| parser.parse(input))(input)
 }
