@@ -2,7 +2,7 @@
 
 use crate::ast::Expression;
 use itertools::Itertools;
-use mfmt::{line, sequence, Document};
+use mfmt::{empty, flatten, line, sequence, Document};
 
 pub fn format(module: &[Expression]) -> String {
     mfmt::format(&compile_module(module))
@@ -14,17 +14,18 @@ fn compile_module(module: &[Expression]) -> Document {
 
 fn compile_expression(expression: &Expression) -> Document {
     match expression {
-        Expression::List(expressions) => sequence(
+        Expression::List(expressions) => flatten(sequence(
             ["(".into()]
                 .into_iter()
-                .chain(
-                    expressions
-                        .iter()
-                        .map(|expression| sequence([line(), compile_expression(expression)])),
-                )
+                .chain(expressions.iter().enumerate().map(|(index, expression)| {
+                    sequence([
+                        if index == 0 { empty() } else { line() },
+                        compile_expression(expression),
+                    ])
+                }))
                 .chain([")".into()])
                 .collect::<Vec<_>>(),
-        ),
+        )),
         Expression::String(string) => sequence(["\"", string, "\""]),
         Expression::Symbol(name) => (*name).into(),
         _ => todo!(),
