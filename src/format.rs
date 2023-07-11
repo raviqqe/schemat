@@ -14,7 +14,7 @@ fn compile_module(module: &[Expression]) -> Document {
 
 fn compile_expression(expression: &Expression) -> Document {
     match expression {
-        Expression::List(expressions) => flatten(sequence(
+        Expression::List(expressions, _) => flatten(sequence(
             ["(".into()]
                 .into_iter()
                 .chain(
@@ -26,23 +26,27 @@ fn compile_expression(expression: &Expression) -> Document {
                 .chain([")".into()])
                 .collect::<Vec<_>>(),
         )),
-        Expression::String(string) => sequence(["\"", string, "\""]),
-        Expression::Symbol(name) => (*name).into(),
-        Expression::Quote(expression) => sequence(["'".into(), compile_expression(expression)]),
+        Expression::String(string, _) => sequence(["\"", string, "\""]),
+        Expression::Symbol(name, _) => (*name).into(),
+        Expression::Quote(expression, _) => sequence(["'".into(), compile_expression(expression)]),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::position::Position;
 
     #[test]
     fn format_list() {
         assert_eq!(
-            format(&[Expression::List(vec![
-                Expression::Symbol("foo"),
-                Expression::Symbol("bar")
-            ])]),
+            format(&[Expression::List(
+                vec![
+                    Expression::Symbol("foo", Position::new(0, 2)),
+                    Expression::Symbol("bar", Position::new(0, 2))
+                ],
+                Position::new(0, 2)
+            )]),
             "(foo bar)"
         );
     }
@@ -50,18 +54,27 @@ mod tests {
     #[test]
     fn format_quote() {
         assert_eq!(
-            format(&[Expression::Quote(Expression::Symbol("foo").into())]),
+            format(&[Expression::Quote(
+                Expression::Symbol("foo", Position::new(0, 3)).into(),
+                Position::new(0, 3)
+            )]),
             "'foo"
         );
     }
 
     #[test]
     fn format_string() {
-        assert_eq!(format(&[Expression::String("foo")]), "\"foo\"");
+        assert_eq!(
+            format(&[Expression::String("foo", Position::new(0, 3))]),
+            "\"foo\""
+        );
     }
 
     #[test]
     fn format_symbol() {
-        assert_eq!(format(&[Expression::Symbol("foo")]), "foo");
+        assert_eq!(
+            format(&[Expression::Symbol("foo", Position::new(0, 3))]),
+            "foo"
+        );
     }
 }
