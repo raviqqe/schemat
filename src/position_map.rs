@@ -12,11 +12,22 @@ impl PositionMap {
             }
         }
 
+        lines.push(source.len());
+
         Self { lines }
     }
 
     pub fn line(&self, offset: usize) -> Option<usize> {
-        self.lines.binary_search(&offset).ok()
+        match self.lines.binary_search(&offset) {
+            Ok(line) => Some(line),
+            Err(line) => {
+                if line == self.lines.len() - 1 {
+                    None
+                } else {
+                    Some(line)
+                }
+            }
+        }
     }
 }
 
