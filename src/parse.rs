@@ -30,6 +30,22 @@ mod tests {
     }
 
     #[test]
+    fn parse_shebang() {
+        assert_eq!(
+            parse("#!/bin/sh\n#t"),
+            Ok(vec![Expression::Symbol("#t", Position::new(10, 12))])
+        );
+    }
+
+    #[test]
+    fn parse_lang_directive() {
+        assert_eq!(
+            parse("#lang racket\n#t"),
+            Ok(vec![Expression::Symbol("#t", Position::new(13, 15))])
+        );
+    }
+
+    #[test]
     fn parse_empty_list() {
         assert_eq!(
             parse("()"),
