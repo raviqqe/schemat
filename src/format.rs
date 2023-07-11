@@ -20,24 +20,38 @@ fn compile_module(context: &Context, module: &[Expression]) -> Document {
 
 fn compile_expression(context: &Context, expression: &Expression) -> Document {
     match expression {
-        Expression::List(expressions, _) => flatten(sequence(
-            ["(".into()]
-                .into_iter()
-                .chain(
-                    expressions
-                        .iter()
-                        .map(|expression| compile_expression(context, expression))
-                        .intersperse(line()),
-                )
-                .chain([")".into()])
-                .collect::<Vec<_>>(),
-        )),
+        Expression::List(expressions, position) => {
+            let line_index = context.position_map().line(position.start());
+
+            let (first, last) = expressions.iter().partition::<Vec<_>, _>(|expression| {
+                context.position_map().line(expression.position().start()) == line_index
+            });
+
+            flatten(sequence(
+                ["(".into()]
+                    .into_iter()
+                    .chain([compile_expressions(context, &first)])
+                    .chain(if !last.is_empty() { Some(line()) } else { None })
+                    .chain([compile_expressions(context, &last)])
+                    .chain([")".into()])
+                    .collect::<Vec<_>>(),
+            ))
+        }
         Expression::String(string, _) => sequence(["\"", string, "\""]),
         Expression::Symbol(name, _) => (*name).into(),
         Expression::Quote(expression, _) => {
             sequence(["'".into(), compile_expression(context, expression)])
         }
     }
+}
+
+fn compile_expressions(context: &Context, expressions: &[&Expression]) -> Document {
+    sequence(
+        expressions
+            .iter()
+            .map(|expression| compile_expression(context, expression))
+            .intersperse(line()),
+    )
 }
 
 #[cfg(test)]

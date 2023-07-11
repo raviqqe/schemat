@@ -10,6 +10,6 @@ impl<'a> Context<'a> {
     }
 
     pub fn position_map(&self) -> &'a PositionMap {
-        &self.position_map
+        self.position_map
     }
 }
