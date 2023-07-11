@@ -24,10 +24,10 @@ pub fn module<'a>(input: Span<'a>) -> IResult<Vec<Expression<'a>>> {
 
 fn symbol<'a>(input: Span<'a>) -> IResult<Expression<'a>> {
     map(
-        take_while1(|character: char| {
+        take_while1::<_, Span<'a>, _>(|character: char| {
             character.is_alphanumeric() || SYMBOL_SIGNS.contains(character)
         }),
-        Expression::Symbol,
+        |input| Expression::Symbol(&input),
     )(input)
 }
 
