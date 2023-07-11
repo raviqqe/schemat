@@ -49,7 +49,7 @@ fn expression(input: Input<'_>) -> IResult<Expression<'_>> {
     ))(input)
 }
 
-fn string<'a>(input: Input<'a>) -> IResult<Expression<'a>> {
+fn string(input: Input<'_>) -> IResult<Expression<'_>> {
     map(
         positioned(delimited(
             char('"'),
@@ -128,7 +128,7 @@ mod tests {
         );
         assert_eq!(
             expression(Input::new("#false")).unwrap().1,
-            Expression::Symbol("#false", Position::new(0, 5))
+            Expression::Symbol("#false", Position::new(0, 6))
         );
     }
 
