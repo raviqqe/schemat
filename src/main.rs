@@ -2,9 +2,11 @@ mod ast;
 mod parse;
 
 use crate::parse::parse;
-use std::error::Error;
-use std::process::exit;
-use std::{io::read_to_string, io::stdin};
+use std::{
+    error::Error,
+    io::{read_to_string, stdin},
+    process::exit,
+};
 
 fn main() {
     if let Err(error) = run() {

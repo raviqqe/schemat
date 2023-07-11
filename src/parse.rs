@@ -8,7 +8,7 @@ use crate::ast::Expression;
 pub type ParseError<'a> = nom::Err<Error<'a>>;
 
 pub fn parse(source: &str) -> Result<Vec<Expression>, ParseError> {
-    Ok(module(Input::new(source)).map(|(_, module)| module)?)
+    module(Input::new(source)).map(|(_, module)| module)
 }
 
 #[cfg(test)]

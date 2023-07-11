@@ -2,8 +2,7 @@ use super::{error::Error, input::Input};
 use crate::ast::Expression;
 use nom::{
     branch::alt,
-    bytes::complete::tag,
-    bytes::complete::{take_until, take_while1},
+    bytes::complete::{tag, take_until, take_while1},
     character::complete::{char, multispace1, none_of},
     combinator::{all_consuming, map, recognize, value},
     error::context,
@@ -16,7 +15,7 @@ const SYMBOL_SIGNS: &str = "+-*/<>=!?$%_&~^";
 
 pub type IResult<'a, T> = nom::IResult<Input<'a>, T, Error<'a>>;
 
-pub fn module<'a>(input: Input<'a>) -> IResult<Vec<Expression<'a>>> {
+pub fn module(input: Input<'_>) -> IResult<Vec<Expression<'_>>> {
     all_consuming(terminated(many0(expression), blank))(input)
 }
 
@@ -29,7 +28,7 @@ fn symbol<'a>(input: Input<'a>) -> IResult<Expression<'a>> {
     )(input)
 }
 
-fn expression<'a>(input: Input<'a>) -> IResult<Expression<'a>> {
+fn expression(input: Input<'_>) -> IResult<Expression<'_>> {
     alt((
         context("symbol", symbol),
         context(
@@ -77,15 +76,15 @@ fn token<'a, T>(
     move |input| preceded(blank, |input| parser.parse(input))(input)
 }
 
-fn blank<'a>(input: Input<'a>) -> IResult<()> {
+fn blank(input: Input<'_>) -> IResult<()> {
     value((), many0(alt((multispace1, comment, hash_line))))(input)
 }
 
-fn comment<'a>(input: Input<'a>) -> IResult<Input<'a>> {
+fn comment(input: Input<'_>) -> IResult<Input<'_>> {
     preceded(char(';'), take_until("\n"))(input)
 }
 
-fn hash_line<'a>(input: Input<'a>) -> IResult<Input<'a>> {
+fn hash_line(input: Input<'_>) -> IResult<Input<'_>> {
     preceded(char('#'), take_until("\n"))(input)
 }
 
