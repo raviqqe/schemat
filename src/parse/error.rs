@@ -59,14 +59,6 @@ impl ParseError {
         }
     }
 
-    pub fn message(&self) -> &str {
-        &self.message
-    }
-
-    pub fn offset(&self) -> usize {
-        self.offset
-    }
-
     fn unexpected_end(source: &str) -> Self {
         Self {
             message: "unexpected end of source".into(),
@@ -78,8 +70,11 @@ impl ParseError {
         format!(
             "{}\n{}:{}: {}",
             &self.message,
-            &position_map.line_index(self.offset).unwrap(),
-            &position_map.column_index(self.offset).unwrap(),
+            &position_map.line_index(self.offset).expect("valid offset") + 1,
+            &position_map
+                .column_index(self.offset)
+                .expect("valid offset")
+                + 1,
             "<dummy_line>",
         )
     }
