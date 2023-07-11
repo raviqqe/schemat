@@ -1,9 +1,11 @@
 mod ast;
+mod context;
 mod format;
 mod parse;
 mod position;
+mod position_map;
 
-use crate::{format::format, parse::parse};
+use crate::{format::format, parse::parse, position_map::PositionMap};
 use std::{
     error::Error,
     io::{read_to_string, stdin},
@@ -20,9 +22,12 @@ fn main() {
 fn run() -> Result<(), Box<dyn Error>> {
     let source = read_to_string(stdin())?;
 
-    println!(
+    print!(
         "{}",
-        format(&parse(&source).map_err(|error| error.to_string())?)
+        format(
+            &parse(&source).map_err(|error| error.to_string())?,
+            &PositionMap::new(&source)
+        )
     );
 
     Ok(())
