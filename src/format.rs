@@ -28,7 +28,7 @@ fn compile_expression(expression: &Expression) -> Document {
         )),
         Expression::String(string) => sequence(["\"", string, "\""]),
         Expression::Symbol(name) => (*name).into(),
-        _ => todo!(),
+        Expression::Quote(expression) => sequence(["'".into(), compile_expression(expression)]),
     }
 }
 
