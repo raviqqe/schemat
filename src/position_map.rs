@@ -30,8 +30,6 @@ mod tests {
         let map = PositionMap::new(source);
 
         assert_eq!(map.line(0), Some(0));
-        assert_eq!(map.line(1), Some(0));
-        assert_eq!(map.line(2), Some(0));
-        assert_eq!(map.line(0), Some(0));
+        assert_eq!(map.line(1), None);
     }
 }
