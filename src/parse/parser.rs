@@ -1,4 +1,4 @@
-use super::{error::Error, input::Input};
+use super::{error::NomError, input::Input};
 use crate::{ast::Expression, position::Position};
 use nom::{
     branch::alt,
@@ -13,7 +13,7 @@ use nom::{
 
 const SYMBOL_SIGNS: &str = "+-*/<>=!?$%_&~^:#";
 
-pub type IResult<'a, T> = nom::IResult<Input<'a>, T, Error<'a>>;
+pub type IResult<'a, T> = nom::IResult<Input<'a>, T, NomError<'a>>;
 
 pub fn module(input: Input<'_>) -> IResult<Vec<Expression<'_>>> {
     all_consuming(delimited(many0(hash_line), many0(expression), blank))(input)
@@ -72,13 +72,13 @@ fn sign<'a>(character: char) -> impl Fn(Input<'a>) -> IResult<()> {
 }
 
 fn token<'a, T>(
-    mut parser: impl Parser<Input<'a>, T, Error<'a>>,
+    mut parser: impl Parser<Input<'a>, T, NomError<'a>>,
 ) -> impl FnMut(Input<'a>) -> IResult<T> {
     move |input| preceded(blank, |input| parser.parse(input))(input)
 }
 
 fn positioned<'a, T>(
-    mut parser: impl Parser<Input<'a>, T, Error<'a>>,
+    mut parser: impl Parser<Input<'a>, T, NomError<'a>>,
 ) -> impl FnMut(Input<'a>) -> IResult<'a, (T, Position)> {
     move |input| {
         map(

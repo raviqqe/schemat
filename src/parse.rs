@@ -2,10 +2,10 @@ mod error;
 mod input;
 mod parser;
 
-use self::{error::Error, input::Input, parser::module};
+use self::{error::NomError, input::Input, parser::module};
 use crate::ast::Expression;
 
-pub type ParseError<'a> = nom::Err<Error<'a>>;
+pub type ParseError<'a> = nom::Err<NomError<'a>>;
 
 pub fn parse(source: &str) -> Result<Vec<Expression>, ParseError> {
     module(Input::new(source)).map(|(_, module)| module)
