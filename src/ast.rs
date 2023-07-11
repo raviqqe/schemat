@@ -1,3 +1,5 @@
+use crate::position::Position;
+
 #[derive(Debug, Eq, PartialEq)]
 pub enum Expression<'a> {
     List(Vec<Expression<'a>>, Position),

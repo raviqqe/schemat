@@ -1,5 +1,5 @@
 use super::{error::Error, input::Input};
-use crate::ast::Expression;
+use crate::{ast::Expression, position::Position};
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_until, take_while1},
@@ -7,7 +7,7 @@ use nom::{
     combinator::{all_consuming, map, recognize, value},
     error::context,
     multi::many0,
-    sequence::{delimited, preceded, terminated},
+    sequence::{delimited, preceded, terminated, tuple},
     Parser,
 };
 
@@ -21,10 +21,10 @@ pub fn module(input: Input<'_>) -> IResult<Vec<Expression<'_>>> {
 
 fn symbol<'a>(input: Input<'a>) -> IResult<Expression<'a>> {
     map(
-        token(take_while1::<_, Input<'a>, _>(|character: char| {
-            character.is_alphanumeric() || SYMBOL_SIGNS.contains(character)
-        })),
-        |input| Expression::Symbol(&input),
+        token(positioned(take_while1::<_, Input<'a>, _>(
+            |character: char| character.is_alphanumeric() || SYMBOL_SIGNS.contains(character),
+        ))),
+        |(input, position)| Expression::Symbol(&input, position),
     )(input)
 }
 
@@ -33,16 +33,17 @@ fn expression(input: Input<'_>) -> IResult<Expression<'_>> {
         context("symbol", symbol),
         context(
             "quote",
-            map(preceded(sign('\''), expression), |expression| {
-                Expression::Quote(expression.into())
-            }),
+            map(
+                positioned(preceded(sign('\''), expression)),
+                |(expression, position)| Expression::Quote(expression.into(), position),
+            ),
         ),
         context("string", string),
         context(
             "list",
             map(
-                delimited(sign('('), many0(expression), sign(')')),
-                Expression::List,
+                positioned(delimited(sign('('), many0(expression), sign(')'))),
+                |(expressions, position)| Expression::List(expressions, position),
             ),
         ),
     ))(input)
@@ -50,7 +51,7 @@ fn expression(input: Input<'_>) -> IResult<Expression<'_>> {
 
 fn string<'a>(input: Input<'a>) -> IResult<Expression<'a>> {
     map(
-        delimited(
+        positioned(delimited(
             char('"'),
             recognize(many0(alt((
                 recognize(none_of("\\\"")),
@@ -61,8 +62,8 @@ fn string<'a>(input: Input<'a>) -> IResult<Expression<'a>> {
                 tag("\\t"),
             )))),
             char('"'),
-        ),
-        |input: Input<'a>| Expression::String(*input),
+        )),
+        |(input, position): (Input<'a>, _)| Expression::String(*input, position),
     )(input)
 }
 
@@ -74,6 +75,26 @@ fn token<'a, T>(
     mut parser: impl Parser<Input<'a>, T, Error<'a>>,
 ) -> impl FnMut(Input<'a>) -> IResult<T> {
     move |input| preceded(blank, |input| parser.parse(input))(input)
+}
+
+fn positioned<'a, T>(
+    mut parser: impl Parser<Input<'a>, T, Error<'a>>,
+) -> impl FnMut(Input<'a>) -> IResult<'a, (T, Position)> {
+    move |input| {
+        map(
+            tuple((
+                token(nom_locate::position),
+                |input| parser.parse(input),
+                nom_locate::position,
+            )),
+            |(start, value, end)| {
+                (
+                    value,
+                    Position::new(start.location_offset(), end.location_offset()),
+                )
+            },
+        )(input)
+    }
 }
 
 fn blank(input: Input<'_>) -> IResult<()> {
@@ -112,7 +133,7 @@ mod tests {
         fn parse_empty() {
             assert_eq!(
                 string(Input::new("\"\"")).unwrap().1,
-                Expression::String("")
+                Expression::String("", Position::new(0, 2))
             );
         }
 
@@ -120,7 +141,7 @@ mod tests {
         fn parse_non_empty() {
             assert_eq!(
                 string(Input::new("\"foo\"")).unwrap().1,
-                Expression::String("foo")
+                Expression::String("foo", Position::new(0, 5))
             );
         }
 
@@ -128,7 +149,7 @@ mod tests {
         fn parse_escaped_characters() {
             assert_eq!(
                 string(Input::new("\"\\\\\\n\\r\\t\"")).unwrap().1,
-                Expression::String("\\\\\\n\\r\\t")
+                Expression::String("\\\\\\n\\r\\t", Position::new(0, 10))
             );
         }
     }

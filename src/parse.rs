@@ -14,6 +14,7 @@ pub fn parse(source: &str) -> Result<Vec<Expression>, ParseError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::position::Position;
 
     #[test]
     fn parse_nothing() {
@@ -22,19 +23,28 @@ mod tests {
 
     #[test]
     fn parse_symbol() {
-        assert_eq!(parse("foo"), Ok(vec![Expression::Symbol("foo")]));
+        assert_eq!(
+            parse("foo"),
+            Ok(vec![Expression::Symbol("foo", Position::new(0, 3))])
+        );
     }
 
     #[test]
     fn parse_empty_list() {
-        assert_eq!(parse("()"), Ok(vec![Expression::List(vec![])]));
+        assert_eq!(
+            parse("()"),
+            Ok(vec![Expression::List(vec![], Position::new(0, 2))])
+        );
     }
 
     #[test]
     fn parse_list_with_element() {
         assert_eq!(
             parse("(foo)"),
-            Ok(vec![Expression::List(vec![Expression::Symbol("foo")])])
+            Ok(vec![Expression::List(
+                vec![Expression::Symbol("foo", Position::new(1, 4))],
+                Position::new(0, 5)
+            )])
         );
     }
 
@@ -42,10 +52,13 @@ mod tests {
     fn parse_list_with_elements() {
         assert_eq!(
             parse("(foo bar)"),
-            Ok(vec![Expression::List(vec![
-                Expression::Symbol("foo"),
-                Expression::Symbol("bar")
-            ])])
+            Ok(vec![Expression::List(
+                vec![
+                    Expression::Symbol("foo", Position::new(1, 4)),
+                    Expression::Symbol("bar", Position::new(5, 8))
+                ],
+                Position::new(0, 9)
+            )])
         );
     }
 }
