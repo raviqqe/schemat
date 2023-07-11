@@ -1,11 +1,10 @@
 mod parser;
 
-fn main() {
-    // Example usage
-    let input = Span::new("(+ 1 (* 2 3))");
+use self::parser::{module, Span};
+use crate::ast::Expression;
 
-    match parse_expr::<()>(input) {
-        Ok((_, expr)) => println!("Parsed expression: {:?}", expr),
-        Err(e) => println!("Error parsing input: {:?}", e),
-    }
+pub fn parse(source: &str) -> Result<Vec<Expression>, ()> {
+    let input = Span::new(source);
+
+    module(input).map(|(_, module)| module)
 }
