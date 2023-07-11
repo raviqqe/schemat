@@ -46,3 +46,7 @@ fn expression<'a>(input: Input<'a>) -> IResult<Expression<'a>> {
 fn sign<'a>(character: char) -> impl Fn(Input<'a>) -> IResult<()> {
     move |input| value((), preceded(multispace0, char(character)))(input)
 }
+
+fn token<'a, T>(parser: impl Fn(Input<'a>) -> IResult<T>) -> impl Fn(Input<'a>) -> IResult<T> {
+    move |input| preceded(multispace0, parser)(input)
+}
