@@ -3,27 +3,27 @@ use crate::{ast::Expression, position::Position};
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_until, take_while1},
-    character::complete::{char, multispace1, none_of},
+    character::complete::{char, multispace1, none_of, space0},
     combinator::{all_consuming, map, recognize, value},
     error::context,
-    multi::many0,
-    sequence::{delimited, preceded, terminated, tuple},
+    multi::{many0, many1},
+    sequence::{delimited, preceded, tuple},
     Parser,
 };
 
-const SYMBOL_SIGNS: &str = "+-*/<>=!?$%_&~^";
+const SYMBOL_SIGNS: &str = "+-*/<>=!?$%_&~^#";
 
 pub type IResult<'a, T> = nom::IResult<Input<'a>, T, Error<'a>>;
 
 pub fn module(input: Input<'_>) -> IResult<Vec<Expression<'_>>> {
-    all_consuming(terminated(many0(expression), blank))(input)
+    all_consuming(delimited(many0(hash_line), many0(expression), blank))(input)
 }
 
 fn symbol<'a>(input: Input<'a>) -> IResult<Expression<'a>> {
     map(
-        token(positioned(take_while1::<_, Input<'a>, _>(
-            |character: char| character.is_alphanumeric() || SYMBOL_SIGNS.contains(character),
-        ))),
+        token(positioned(take_while1::<_, Input<'a>, _>(|character| {
+            character.is_alphanumeric() || SYMBOL_SIGNS.contains(character)
+        }))),
         |(input, position)| Expression::Symbol(&input, position),
     )(input)
 }
@@ -49,7 +49,7 @@ fn expression(input: Input<'_>) -> IResult<Expression<'_>> {
     ))(input)
 }
 
-fn string<'a>(input: Input<'a>) -> IResult<Expression<'a>> {
+fn string(input: Input<'_>) -> IResult<Expression<'_>> {
     map(
         positioned(delimited(
             char('"'),
@@ -63,7 +63,7 @@ fn string<'a>(input: Input<'a>) -> IResult<Expression<'a>> {
             )))),
             char('"'),
         )),
-        |(input, position): (Input<'a>, _)| Expression::String(*input, position),
+        |(input, position)| Expression::String(*input, position),
     )(input)
 }
 
@@ -98,20 +98,51 @@ fn positioned<'a, T>(
 }
 
 fn blank(input: Input<'_>) -> IResult<()> {
-    value((), many0(alt((multispace1, comment, hash_line))))(input)
+    value((), many0(alt((multispace1, comment))))(input)
 }
 
 fn comment(input: Input<'_>) -> IResult<Input<'_>> {
-    preceded(char(';'), take_until("\n"))(input)
+    delimited(char(';'), take_until("\n"), newline)(input)
 }
 
 fn hash_line(input: Input<'_>) -> IResult<Input<'_>> {
-    preceded(char('#'), take_until("\n"))(input)
+    delimited(char('#'), take_until("\n"), newline)(input)
+}
+
+fn newline(input: Input<'_>) -> IResult<()> {
+    value(
+        (),
+        many1(delimited(space0, nom::character::complete::newline, space0)),
+    )(input)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parse_false() {
+        assert_eq!(
+            expression(Input::new("#f")).unwrap().1,
+            Expression::Symbol("#f", Position::new(0, 2))
+        );
+        assert_eq!(
+            expression(Input::new("#false")).unwrap().1,
+            Expression::Symbol("#false", Position::new(0, 6))
+        );
+    }
+
+    #[test]
+    fn parse_true() {
+        assert_eq!(
+            expression(Input::new("#t")).unwrap().1,
+            Expression::Symbol("#t", Position::new(0, 2))
+        );
+        assert_eq!(
+            expression(Input::new("#true")).unwrap().1,
+            Expression::Symbol("#true", Position::new(0, 5))
+        );
+    }
 
     #[test]
     fn parse_shebang() {
