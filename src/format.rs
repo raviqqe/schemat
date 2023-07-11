@@ -37,6 +37,25 @@ mod tests {
     use super::*;
 
     #[test]
+    fn format_list() {
+        assert_eq!(
+            format(&[Expression::List(vec![
+                Expression::Symbol("foo"),
+                Expression::Symbol("bar")
+            ])]),
+            "(foo bar)"
+        );
+    }
+
+    #[test]
+    fn format_quote() {
+        assert_eq!(
+            format(&[Expression::Quote(Expression::Symbol("foo").into())]),
+            "'foo"
+        );
+    }
+
+    #[test]
     fn format_string() {
         assert_eq!(format(&[Expression::String("foo")]), "\"foo\"");
     }
