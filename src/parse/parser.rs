@@ -11,7 +11,7 @@ use nom::{
     Parser,
 };
 
-const SYMBOL_SIGNS: &str = "+-*/<>=!?$%_&~^";
+const SYMBOL_SIGNS: &str = "+-*/<>=!?$%_&~^#";
 
 pub type IResult<'a, T> = nom::IResult<Input<'a>, T, Error<'a>>;
 
