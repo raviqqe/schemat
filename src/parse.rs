@@ -1,10 +1,8 @@
+mod error;
 mod input;
 mod parser;
 
-use self::{
-    input::Input,
-    parser::{module, Error},
-};
+use self::{error::Error, input::Input, parser::module};
 use crate::ast::Expression;
 
 pub type ParseError<'a> = nom::Err<Error<'a>>;

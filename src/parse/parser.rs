@@ -1,4 +1,4 @@
-use super::input::Input;
+use super::{error::Error, input::Input};
 use crate::ast::Expression;
 use nom::{
     branch::alt,
@@ -6,15 +6,13 @@ use nom::{
     bytes::complete::{take_until, take_while1},
     character::complete::{char, multispace1, none_of},
     combinator::{all_consuming, map, recognize, value},
-    error::{context, VerboseError},
+    error::context,
     multi::many0,
     sequence::{delimited, preceded, terminated},
     Parser,
 };
 
 const SYMBOL_SIGNS: &str = "+-*/<>=!?$%_&~^";
-
-pub type Error<'a> = VerboseError<Input<'a>>;
 
 pub type IResult<'a, T> = nom::IResult<Input<'a>, T, Error<'a>>;
 
