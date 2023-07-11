@@ -1,1 +1,3 @@
-{ "words": ["lcov", "mfmt", "multispace", "rustup", "schemat"] }
+{
+  "words": ["itertools", "lcov", "mfmt", "multispace", "rustup", "schemat"]
+}
