@@ -13,8 +13,7 @@ fn compile_module(context: &Context, module: &[Expression]) -> Document {
     sequence(
         module
             .iter()
-            .map(|expression| compile_expression(context, expression))
-            .intersperse(line()),
+            .map(|expression| sequence([compile_expression(context, expression), line()])),
     )
 }
 
@@ -79,7 +78,7 @@ mod tests {
                 )],
                 &PositionMap::new(""),
             ),
-            "(foo bar)"
+            "(foo bar)\n"
         );
     }
 
@@ -115,7 +114,7 @@ mod tests {
                 )],
                 &PositionMap::new(""),
             ),
-            "'foo"
+            "'foo\n"
         );
     }
 
@@ -126,7 +125,7 @@ mod tests {
                 &[Expression::String("foo", Position::new(0, 3))],
                 &PositionMap::new(""),
             ),
-            "\"foo\""
+            "\"foo\"\n"
         );
     }
 
@@ -137,7 +136,7 @@ mod tests {
                 &[Expression::Symbol("foo", Position::new(0, 3))],
                 &PositionMap::new(""),
             ),
-            "foo"
+            "foo\n"
         );
     }
 }
