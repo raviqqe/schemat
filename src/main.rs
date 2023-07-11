@@ -2,7 +2,7 @@ mod ast;
 mod format;
 mod parse;
 
-use crate::parse::parse;
+use crate::{format::format, parse::parse};
 use std::{
     error::Error,
     io::{read_to_string, stdin},
@@ -17,7 +17,12 @@ fn main() {
 }
 
 fn run() -> Result<(), Box<dyn Error>> {
-    println!("{:?}", parse(&read_to_string(stdin())?));
+    let source = read_to_string(stdin())?;
+
+    println!(
+        "{}",
+        format(&parse(&source).map_err(|error| error.to_string())?)
+    );
 
     Ok(())
 }
