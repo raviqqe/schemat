@@ -14,6 +14,7 @@ fn compile_module(module: &[Expression]) -> Document {
 
 fn compile_expression(expression: &Expression) -> Document {
     match expression {
+        Expression::List(list) => sequence(["(", string, ")"]),
         Expression::String(string) => sequence(["\"", string, "\""]),
         Expression::Symbol(name) => (*name).into(),
         _ => todo!(),
