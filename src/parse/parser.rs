@@ -55,16 +55,33 @@ fn token<'a, T>(
 }
 
 fn blank<'a>(input: Input<'a>) -> IResult<()> {
-    value((), many0(alt((multispace1, comment))))(input)
+    value((), many0(alt((multispace1, comment, hash_line))))(input)
 }
 
 fn comment<'a>(input: Input<'a>) -> IResult<Input<'a>> {
     preceded(char(';'), take_until("\n"))(input)
 }
 
+fn hash_line<'a>(input: Input<'a>) -> IResult<Input<'a>> {
+    preceded(char('#'), take_until("\n"))(input)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parse_shebang() {
+        assert_eq!(*hash_line(Input::new("#!/bin/sh\n")).unwrap().1, "!/bin/sh");
+    }
+
+    #[test]
+    fn parse_lang_directive() {
+        assert_eq!(
+            *hash_line(Input::new("#lang r7rs\n")).unwrap().1,
+            "lang r7rs"
+        );
+    }
 
     mod comment {
         use super::*;
