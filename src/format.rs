@@ -14,7 +14,17 @@ fn compile_module(module: &[Expression]) -> Document {
 
 fn compile_expression(expression: &Expression) -> Document {
     match expression {
-        Expression::List(list) => sequence(["(", string, ")"]),
+        Expression::List(expressions) => sequence(
+            ["(".into()]
+                .into_iter()
+                .chain(
+                    expressions
+                        .iter()
+                        .map(|expression| sequence([line(), compile_expression(expression)])),
+                )
+                .chain([")".into()])
+                .collect::<Vec<_>>(),
+        ),
         Expression::String(string) => sequence(["\"", string, "\""]),
         Expression::Symbol(name) => (*name).into(),
         _ => todo!(),
