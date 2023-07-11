@@ -1,3 +1,4 @@
+use super::input::Input;
 use crate::ast::Expression;
 use nom::{
     branch::alt,
@@ -8,30 +9,27 @@ use nom::{
     multi::many0,
     sequence::{delimited, preceded},
 };
-use nom_locate::LocatedSpan;
 
 const SYMBOL_SIGNS: &str = "+-*/<>=!?$%_&~^";
 
-pub type Span<'a> = LocatedSpan<&'a str>;
+pub type Error<'a> = VerboseError<Input<'a>>;
 
-pub type Error<'a> = VerboseError<Span<'a>>;
+pub type IResult<'a, T> = nom::IResult<Input<'a>, T, Error<'a>>;
 
-pub type IResult<'a, T> = nom::IResult<Span<'a>, T, Error<'a>>;
-
-pub fn module<'a>(input: Span<'a>) -> IResult<Vec<Expression<'a>>> {
+pub fn module<'a>(input: Input<'a>) -> IResult<Vec<Expression<'a>>> {
     many0(expression)(input)
 }
 
-fn symbol<'a>(input: Span<'a>) -> IResult<Expression<'a>> {
+fn symbol<'a>(input: Input<'a>) -> IResult<Expression<'a>> {
     map(
-        take_while1::<_, Span<'a>, _>(|character: char| {
+        take_while1::<_, Input<'a>, _>(|character: char| {
             character.is_alphanumeric() || SYMBOL_SIGNS.contains(character)
         }),
         |input| Expression::Symbol(&input),
     )(input)
 }
 
-fn expression<'a>(input: Span<'a>) -> IResult<Expression<'a>> {
+fn expression<'a>(input: Input<'a>) -> IResult<Expression<'a>> {
     alt((
         context("symbol", symbol),
         context(
@@ -45,6 +43,6 @@ fn expression<'a>(input: Span<'a>) -> IResult<Expression<'a>> {
     ))(input)
 }
 
-fn sign<'a>(character: char) -> impl Fn(Span<'a>) -> IResult<()> {
+fn sign<'a>(character: char) -> impl Fn(Input<'a>) -> IResult<()> {
     move |input| value((), preceded(multispace0, char(character)))(input)
 }
