@@ -15,7 +15,20 @@ impl PositionMap {
         Self { lines }
     }
 
-    pub fn line(&self, offset: usize) -> usize {
+    pub fn line(&self, offset: usize) -> Option<usize> {
         foo
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn get_line_of_empty_source() {
+        let source = "";
+        let map = PositionMap::new(source);
+
+        map.line(0, 1, 2)
     }
 }
