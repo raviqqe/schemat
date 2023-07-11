@@ -2,12 +2,12 @@ use super::input::Input;
 use crate::ast::Expression;
 use nom::{
     branch::alt,
-    bytes::complete::take_while1,
-    character::complete::{char, multispace0},
-    combinator::{map, value},
+    bytes::complete::{take_until, take_while1},
+    character::complete::{char, multispace1},
+    combinator::{all_consuming, map, value},
     error::{context, VerboseError},
     multi::many0,
-    sequence::{delimited, preceded},
+    sequence::{delimited, preceded, terminated},
     Parser,
 };
 
@@ -18,7 +18,7 @@ pub type Error<'a> = VerboseError<Input<'a>>;
 pub type IResult<'a, T> = nom::IResult<Input<'a>, T, Error<'a>>;
 
 pub fn module<'a>(input: Input<'a>) -> IResult<Vec<Expression<'a>>> {
-    many0(expression)(input)
+    all_consuming(terminated(many0(expression), blank))(input)
 }
 
 fn symbol<'a>(input: Input<'a>) -> IResult<Expression<'a>> {
@@ -51,5 +51,32 @@ fn sign<'a>(character: char) -> impl Fn(Input<'a>) -> IResult<()> {
 fn token<'a, T>(
     mut parser: impl Parser<Input<'a>, T, Error<'a>>,
 ) -> impl FnMut(Input<'a>) -> IResult<T> {
-    move |input| preceded(multispace0, |input| parser.parse(input))(input)
+    move |input| preceded(blank, |input| parser.parse(input))(input)
+}
+
+fn blank<'a>(input: Input<'a>) -> IResult<()> {
+    value((), many0(alt((multispace1, comment))))(input)
+}
+
+fn comment<'a>(input: Input<'a>) -> IResult<Input<'a>> {
+    preceded(char(';'), take_until("\n"))(input)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod comment {
+        use super::*;
+
+        #[test]
+        fn parse_empty() {
+            assert_eq!(*comment(Input::new(";\n")).unwrap().1, "");
+        }
+
+        #[test]
+        fn parse_comment() {
+            assert_eq!(*comment(Input::new(";foo\n")).unwrap().1, "foo");
+        }
+    }
 }
