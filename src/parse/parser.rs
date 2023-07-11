@@ -2,9 +2,10 @@ use super::input::Input;
 use crate::ast::Expression;
 use nom::{
     branch::alt,
+    bytes::complete::tag,
     bytes::complete::{take_until, take_while1},
-    character::complete::{char, multispace1},
-    combinator::{all_consuming, map, value},
+    character::complete::{char, multispace1, none_of},
+    combinator::{all_consuming, map, recognize, value},
     error::{context, VerboseError},
     multi::many0,
     sequence::{delimited, preceded, terminated},
@@ -39,15 +40,33 @@ fn expression<'a>(input: Input<'a>) -> IResult<Expression<'a>> {
                 Expression::Quote(expression.into())
             }),
         ),
+        context("string", string),
         context(
             "list",
-            delimited(
-                sign('('),
-                map(many0(expression), Expression::List),
-                sign(')'),
+            map(
+                delimited(sign('('), many0(expression), sign(')')),
+                Expression::List,
             ),
         ),
     ))(input)
+}
+
+fn string<'a>(input: Input<'a>) -> IResult<Expression<'a>> {
+    map(
+        delimited(
+            char('"'),
+            recognize(many0(alt((
+                recognize(none_of("\\\"")),
+                tag("\\\\"),
+                tag("\\\""),
+                tag("\\n"),
+                tag("\\r"),
+                tag("\\t"),
+            )))),
+            char('"'),
+        ),
+        |input: Input<'a>| Expression::String(*input),
+    )(input)
 }
 
 fn sign<'a>(character: char) -> impl Fn(Input<'a>) -> IResult<()> {
@@ -87,6 +106,34 @@ mod tests {
             *hash_line(Input::new("#lang r7rs\n")).unwrap().1,
             "lang r7rs"
         );
+    }
+
+    mod string {
+        use super::*;
+
+        #[test]
+        fn parse_empty() {
+            assert_eq!(
+                string(Input::new("\"\"")).unwrap().1,
+                Expression::String("")
+            );
+        }
+
+        #[test]
+        fn parse_non_empty() {
+            assert_eq!(
+                string(Input::new("\"foo\"")).unwrap().1,
+                Expression::String("foo")
+            );
+        }
+
+        #[test]
+        fn parse_escaped_characters() {
+            assert_eq!(
+                string(Input::new("\"\\\\\\n\\r\\t\"")).unwrap().1,
+                Expression::String("\\\\\\n\\r\\t")
+            );
+        }
     }
 
     mod comment {
