@@ -136,7 +136,7 @@ mod tests {
             assert_eq!(map.line_range(4), Some(4..7));
             assert_eq!(map.line_range(5), Some(4..7));
             assert_eq!(map.line_range(6), Some(4..7));
-            assert_eq!(map.line_range(8), None);
+            assert_eq!(map.line_range(7), None);
         }
     }
 }
