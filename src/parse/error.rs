@@ -1,6 +1,6 @@
-use crate::position_map::PositionMap;
-
 use super::input::Input;
+use crate::position_map::PositionMap;
+use core::str;
 use nom::error::{VerboseError, VerboseErrorKind};
 
 pub type NomError<'a> = VerboseError<Input<'a>>;
@@ -66,7 +66,9 @@ impl ParseError {
         }
     }
 
-    pub fn to_string(&self, position_map: &PositionMap) -> String {
+    pub fn to_string(&self, source: &str, position_map: &PositionMap) -> String {
+        let bytes = &source.as_bytes()[position_map.line_range(self.offset).expect("valid offset")];
+
         format!(
             "{}\n{}:{}: {}",
             &self.message,
@@ -75,7 +77,38 @@ impl ParseError {
                 .column_index(self.offset)
                 .expect("valid offset")
                 + 1,
-            "<dummy_line>",
+            String::from_utf8_lossy(bytes),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use indoc::indoc;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn to_string() {
+        let source = "foo";
+        let position_map = PositionMap::new(source);
+
+        let error = ParseError::new(
+            "foo",
+            nom::Err::Error(VerboseError {
+                errors: vec![(Input::new("foo"), VerboseErrorKind::Context("bar"))],
+            }),
+        );
+
+        assert_eq!(
+            error.to_string(source, &position_map),
+            indoc!(
+                "
+                    failed to parse bar
+                    1:1: foo
+                "
+            )
+            .trim()
+        );
     }
 }

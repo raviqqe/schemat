@@ -26,7 +26,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     print!(
         "{}",
         format(
-            &parse(&source).map_err(|error| error.to_string(&position_map))?,
+            &parse(&source).map_err(|error| error.to_string(&source, &position_map))?,
             &position_map
         )
     );

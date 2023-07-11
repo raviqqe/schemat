@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 #[derive(Debug)]
 pub struct PositionMap {
     lines: Vec<usize>,
@@ -37,6 +39,11 @@ impl PositionMap {
     pub fn column_index(&self, offset: usize) -> Option<usize> {
         self.line_index(offset)
             .map(|line| offset - self.lines[line])
+    }
+
+    pub fn line_range(&self, offset: usize) -> Option<Range<usize>> {
+        self.line_index(offset)
+            .map(|line| self.lines[line]..self.lines[line + 1])
     }
 }
 
