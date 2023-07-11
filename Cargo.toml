@@ -10,3 +10,5 @@ keywords = ["format", "scheme"]
 
 [dependencies]
 mfmt = "0.1.1"
+nom = "7.1.3"
+nom_locate = "4.1.0"
