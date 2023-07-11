@@ -1,5 +1,4 @@
 use super::input::Input;
-use crate::position::Position;
 use nom::error::{VerboseError, VerboseErrorKind};
 
 pub type NomError<'a> = VerboseError<Input<'a>>;
@@ -7,13 +6,13 @@ pub type NomError<'a> = VerboseError<Input<'a>>;
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParseError {
     message: String,
-    position: Position,
+    offset: usize,
 }
 
 impl ParseError {
-    pub fn new(source: &str, path: &str, error: nom::Err<NomError<'_>>) -> Self {
+    pub fn new(source: &str, error: nom::Err<NomError<'_>>) -> Self {
         match error {
-            nom::Err::Incomplete(_) => Self::unexpected_end(source, path),
+            nom::Err::Incomplete(_) => Self::unexpected_end(source),
             nom::Err::Error(error) | nom::Err::Failure(error) => {
                 let context = error
                     .errors
@@ -49,27 +48,23 @@ impl ParseError {
                                 .collect::<Vec<_>>()
                                 .join(" ")
                         },
-                        position: position(input),
+                        offset: input.location_offset(),
                     }
                 } else {
-                    Self::unexpected_end(source, path)
+                    Self::unexpected_end(source)
                 }
             }
         }
     }
 
-    fn unexpected_end(source: &str, path: &str) -> Self {
-        let lines = source.split('\n').collect::<Vec<_>>();
-        let line = lines
-            .iter()
-            .rev()
-            .find(|string| !string.is_empty())
-            .map(|string| string.to_string())
-            .unwrap_or_default();
+    pub fn offset(&self) -> usize {
+        self.offset
+    }
 
+    fn unexpected_end(source: &str) -> Self {
         Self {
             message: "unexpected end of source".into(),
-            position: Position::new(path, lines.len(), line.len(), line),
+            offset: source.as_bytes().len() - 1,
         }
     }
 }
