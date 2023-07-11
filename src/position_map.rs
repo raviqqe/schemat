@@ -13,7 +13,10 @@ impl PositionMap {
             }
         }
 
-        lines.push(source.len() + 1);
+        // Add an implicit newline character.
+        if source.len() > *lines.iter().last().unwrap() {
+            lines.push(source.len() );
+        }
 
         Self { lines }
     }
@@ -21,7 +24,7 @@ impl PositionMap {
     pub fn line(&self, offset: usize) -> Option<usize> {
         let line = match self.lines.binary_search(&offset) {
             Ok(line) => line,
-            Err(line) => line,
+            Err(line) => line - 1,
         };
 
         if line >= self.lines.len() - 1 {
@@ -52,7 +55,7 @@ mod tests {
         let source = "";
         let map = PositionMap::new(source);
 
-        assert_eq!(map.line(0), Some(0));
+        assert_eq!(map.line(0), None);
         assert_eq!(map.line(1), None);
     }
 
