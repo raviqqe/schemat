@@ -15,7 +15,7 @@ impl PositionMap {
 
         // Add an implicit newline character.
         if source.len() > *lines.iter().last().unwrap() {
-            lines.push(source.len() );
+            lines.push(source.len());
         }
 
         Self { lines }
