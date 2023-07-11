@@ -4,11 +4,11 @@ pub struct PositionMap {
 
 impl PositionMap {
     pub fn new(source: &str) -> Self {
-        let lines = vec![];
+        let mut lines = vec![];
 
-        for character in source.iter().enumerate() {
+        for (index, character) in source.chars().enumerate() {
             if character == '\n' {
-                lines.push(offset);
+                lines.push(index);
             }
         }
 
@@ -16,7 +16,7 @@ impl PositionMap {
     }
 
     pub fn line(&self, offset: usize) -> Option<usize> {
-        lines.binary_search(offset).ok()
+        self.lines.binary_search(&offset).ok()
     }
 }
 
@@ -29,6 +29,9 @@ mod tests {
         let source = "";
         let map = PositionMap::new(source);
 
-        map.line(0, 1, 2)
+        assert_eq!(map.line(0), Some(0));
+        assert_eq!(map.line(1), Some(0));
+        assert_eq!(map.line(2), Some(0));
+        assert_eq!(map.line(0), Some(0));
     }
 }
