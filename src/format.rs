@@ -13,6 +13,11 @@ fn compile_module(context: &Context, module: &[Expression]) -> Document {
     sequence(
         module
             .iter()
+            .zip(
+                module
+                    .iter()
+                    .map(|expression| expression.position().start()),
+            )
             .map(|expression| sequence([compile_expression(context, expression), line()])),
     )
 }
