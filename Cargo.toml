@@ -9,7 +9,6 @@ readme = "./README.md"
 keywords = ["format", "scheme"]
 
 [dependencies]
-itertools = "0.11.0"
 mfmt = "0.1.1"
 nom = "7.1.3"
 nom_locate = "4.1.0"
