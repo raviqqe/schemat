@@ -249,6 +249,29 @@ mod tests {
                 )
             );
         }
+
+        #[test]
+        fn keep_blank_line_with_multi_line_expression() {
+            assert_eq!(
+                format(
+                    &[Expression::List(
+                        vec![
+                            Expression::Symbol("foo", Position::new(0, 0)),
+                            Expression::Symbol("bar", Position::new(2, 2))
+                        ],
+                        Position::new(0, 0)
+                    )],
+                    &PositionMap::new("\n\na"),
+                ),
+                indoc!(
+                    "
+                    (foo
+
+                      bar)
+                    "
+                )
+            );
+        }
     }
 
     mod module {
