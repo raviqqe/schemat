@@ -21,20 +21,21 @@ fn compile_module(context: &Context, module: &[Expression]) -> Document {
                     .chain([0]),
             )
             .map(|(expression, next_offset)| {
-                let difference = context
+                let next_line = context
                     .position_map()
                     .line_index(next_offset)
-                    .expect("valid offset")
-                    - context
-                        .position_map()
-                        .line_index(expression.position().start())
-                        .expect("valid offset");
+                    .expect("valid offset");
+                let current_line = context
+                    .position_map()
+                    .line_index(expression.position().start())
+                    .expect("valid offset");
+                let difference = next_line.saturating_sub(current_line);
 
                 sequence(
-                    [line()]
+                    [compile_expression(context, expression)]
                         .into_iter()
-                        .chain(if difference <= 1 { None } else { Some(line()) })
-                        .chain([compile_expression(context, expression)]),
+                        .chain([line()])
+                        .chain(if difference <= 1 { None } else { Some(line()) }),
                 )
             }),
     )
