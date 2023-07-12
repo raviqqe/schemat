@@ -27,7 +27,7 @@ pub fn comments(input: Input) -> IResult<Vec<Comment>> {
         all_consuming(many0(alt((
             map(comment, Some),
             map(raw_string, |_| None),
-            map(none_of("\"#"), |_| None),
+            map(none_of("\";"), |_| None),
         )))),
         |comments| comments.into_iter().flatten().collect(),
     )(input)

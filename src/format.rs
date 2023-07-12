@@ -1,13 +1,16 @@
 use crate::{
     ast::{Comment, Expression},
     context::Context,
+    position::Position,
     position_map::PositionMap,
 };
-use mfmt::{flatten, indent, line, r#break, sequence, Document};
+use mfmt::{empty, flatten, indent, line, line_suffix, r#break, sequence, Document};
 
-pub fn format(module: &[Expression], _comments: &[Comment], position_map: &PositionMap) -> String {
-    let context = Context::new(position_map);
-    mfmt::format(&compile_module(&context, module))
+pub fn format(module: &[Expression], comments: &[Comment], position_map: &PositionMap) -> String {
+    mfmt::format(&compile_module(
+        &Context::new(comments, position_map),
+        module,
+    ))
 }
 
 fn compile_module(context: &Context, module: &[Expression]) -> Document {
@@ -79,6 +82,76 @@ fn compile_expressions<'a>(
     }
 
     sequence(documents)
+}
+
+fn compile_line_comment(
+    context: &mut Context,
+    position: &Position,
+    document: impl Fn(&mut Context) -> Document,
+) -> Document {
+    sequence([
+        compile_block_comment(context, position),
+        document(context),
+        compile_suffix_comment(context, position),
+    ])
+}
+
+fn compile_suffix_comment(context: &mut Context, position: &Position) -> Document {
+    sequence(
+        context
+            .drain_current_comment(get_line_index(context, position.start()))
+            .map(|comment| line_suffix(" ;".to_owned() + comment.value().trim_end())),
+    )
+}
+
+fn compile_block_comment(context: &mut Context, position: &Position) -> Document {
+    let comments = context
+        .drain_comments_before(get_line_index(context, position.start()))
+        .collect::<Vec<_>>();
+
+    compile_all_comments(
+        context,
+        &comments,
+        Some(get_line_index(context, position.start())),
+    )
+}
+
+fn compile_remaining_block_comment(context: &mut Context) -> Document {
+    let comments = context
+        .drain_comments_before(usize::MAX)
+        .collect::<Vec<_>>();
+
+    compile_all_comments(context, &comments, None)
+}
+
+fn compile_all_comments(
+    context: &Context,
+    comments: &[&Comment],
+    last_line_number: Option<usize>,
+) -> Document {
+    sequence(
+        comments
+            .iter()
+            .zip(
+                comments
+                    .iter()
+                    .skip(1)
+                    .map(|comment| get_line_index(context, comment.position().start()))
+                    .chain([last_line_number.unwrap_or(0)]),
+            )
+            .map(|(comment, next_line_number)| {
+                sequence([
+                    "#".into(),
+                    comment.value().trim_end().into(),
+                    r#break(line()),
+                    if get_line_index(context, comment.position().start()) + 1 < next_line_number {
+                        line()
+                    } else {
+                        empty()
+                    },
+                ])
+            }),
+    )
 }
 
 fn has_extra_line(
