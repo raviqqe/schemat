@@ -32,7 +32,7 @@ fn compile_expression(context: &Context, expression: &Expression) -> Document {
             flatten(sequence(
                 ["(".into()]
                     .into_iter()
-                    .chain([compile_expressions(context, first)])
+                    .chain([indent(compile_expressions(context, first))])
                     .chain(if last.is_empty() {
                         None
                     } else {
@@ -206,6 +206,31 @@ mod tests {
         use super::*;
 
         #[test]
+        fn double_indent_of_nested_list() {
+            assert_eq!(
+                format(
+                    &[Expression::List(
+                        vec![Expression::List(
+                            vec![
+                                Expression::Symbol("foo", Position::new(0, 0)),
+                                Expression::Symbol("bar", Position::new(1, 1))
+                            ],
+                            Position::new(0, 1)
+                        )],
+                        Position::new(0, 0)
+                    )],
+                    &PositionMap::new("\n\n\na"),
+                ),
+                indoc!(
+                    "
+                    ((foo
+                        bar))
+                    "
+                )
+            );
+        }
+
+        #[test]
         fn keep_no_blank_line() {
             assert_eq!(
                 format(
@@ -272,7 +297,7 @@ mod tests {
                 indoc!(
                     "
                     ((foo
-                      bar)
+                        bar)
 
                       baz)
                     "
