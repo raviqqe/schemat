@@ -9,35 +9,7 @@ pub fn format(module: &[Expression], position_map: &PositionMap) -> String {
 }
 
 fn compile_module(context: &Context, module: &[Expression]) -> Document {
-    sequence(
-        module
-            .iter()
-            .zip(
-                module
-                    .iter()
-                    .skip(1)
-                    .map(|expression| expression.position().start())
-                    .chain([0]),
-            )
-            .map(|(expression, next_offset)| {
-                let next_line = context
-                    .position_map()
-                    .line_index(next_offset)
-                    .expect("valid offset");
-                let current_line = context
-                    .position_map()
-                    .line_index(expression.position().start())
-                    .expect("valid offset");
-                let difference = next_line.saturating_sub(current_line);
-
-                sequence(
-                    [compile_expression(context, expression)]
-                        .into_iter()
-                        .chain([line()])
-                        .chain(if difference <= 1 { None } else { Some(line()) }),
-                )
-            }),
-    )
+    sequence([compile_expressions(context, module), line()])
 }
 
 fn compile_expression(context: &Context, expression: &Expression) -> Document {
