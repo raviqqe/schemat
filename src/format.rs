@@ -37,12 +37,12 @@ fn compile_expression(context: &mut Context, expression: &Expression) -> Documen
                 _ => None,
             };
 
-            flatten(sequence(
+            sequence(
                 [compile_line_comment(context, expression.position(), |_| {
                     "(".into()
                 })]
                 .into_iter()
-                .chain([indent(compile_expressions(context, first))])
+                .chain([flatten(indent(compile_expressions(context, first)))])
                 .chain(if last.is_empty() {
                     None
                 } else {
@@ -54,7 +54,7 @@ fn compile_expression(context: &mut Context, expression: &Expression) -> Documen
                 })
                 .chain([")".into()])
                 .collect::<Vec<_>>(),
-            ))
+            )
         }
         Expression::String(string, _) => sequence(["\"", string, "\""]),
         Expression::Symbol(name, _) => (*name).into(),
