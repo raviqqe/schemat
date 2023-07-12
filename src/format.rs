@@ -1,7 +1,6 @@
 #![allow(unstable_name_collisions)]
 
 use crate::{ast::Expression, context::Context, position_map::PositionMap};
-use itertools::Itertools;
 use mfmt::{flatten, indent, line, r#break, sequence, Document};
 
 pub fn format(module: &[Expression], position_map: &PositionMap) -> String {
@@ -56,13 +55,13 @@ fn compile_expression(context: &Context, expression: &Expression) -> Document {
             flatten(sequence(
                 ["(".into()]
                     .into_iter()
-                    .chain([compile_expressions(context, &first)])
+                    .chain([compile_expressions(context, first)])
                     .chain(if last.is_empty() {
                         None
                     } else {
                         Some(r#break(indent(sequence([
                             line(),
-                            compile_expressions(context, &last),
+                            compile_expressions(context, last),
                         ]))))
                     })
                     .chain([")".into()])
@@ -81,8 +80,8 @@ fn compile_expressions<'a>(
     context: &Context,
     expressions: impl IntoIterator<Item = &'a Expression<'a>>,
 ) -> Document {
-    let documents = vec![];
-    let last_expression = None;
+    let mut documents = vec![];
+    let mut last_expression = None::<&Expression>;
 
     for expression in expressions {
         if let Some(last_expression) = last_expression {
