@@ -20,14 +20,11 @@ pub fn module(input: Input<'_>) -> IResult<Vec<Expression<'_>>> {
 }
 
 pub fn comments(input: Input) -> IResult<Vec<Comment>> {
-    map(
-        all_consuming(many0(alt((
-            map(comment, Some),
-            map(raw_string, |_| None),
-            map(none_of("\"#"), |_| None),
-        )))),
-        |comments| comments.into_iter().flat_map(|comment| comment).collect(),
-    )(input)
+    all_consuming(many0(alt((
+        map(comment, Some),
+        map(raw_string, |_| None),
+        map(none_of("\"#"), |_| None),
+    ))))(input)
 }
 
 fn symbol<'a>(input: Input<'a>) -> IResult<Expression<'a>> {
