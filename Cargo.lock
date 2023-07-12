@@ -71,7 +71,7 @@ dependencies = [
 
 [[package]]
 name = "schemat"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "indoc",
  "mfmt",
