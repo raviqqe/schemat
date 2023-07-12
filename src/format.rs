@@ -529,6 +529,41 @@ mod tests {
         }
 
         #[test]
+        fn format_line_comment() {
+            assert_eq!(
+                format(
+                    &[Expression::Symbol("foo", Position::new(0, 0))],
+                    &[Comment::new("bar", Position::new(0, 0))],
+                    &PositionMap::new("\na"),
+                ),
+                indoc!(
+                    "
+                    foo ;bar
+                    "
+                )
+            );
+        }
+
+        #[test]
+        fn format_line_comments() {
+            assert_eq!(
+                format(
+                    &[Expression::Symbol("foo", Position::new(0, 0))],
+                    &[
+                        Comment::new("bar", Position::new(0, 0)),
+                        Comment::new("baz", Position::new(0, 0))
+                    ],
+                    &PositionMap::new("\na"),
+                ),
+                indoc!(
+                    "
+                    foo ;bar ;baz
+                    "
+                )
+            );
+        }
+
+        #[test]
         fn format_remaining_block_comment() {
             assert_eq!(
                 format(
