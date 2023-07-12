@@ -2,12 +2,24 @@ mod error;
 mod input;
 mod parser;
 
-use self::{error::ParseError, input::Input, parser::module};
-use crate::ast::Expression;
+use self::{
+    error::ParseError,
+    input::Input,
+    parser::{comments, module, IResult},
+};
+use crate::ast::{Comment, Expression};
 
 pub fn parse(source: &str) -> Result<Vec<Expression>, ParseError> {
-    module(Input::new(source))
-        .map(|(_, module)| module)
+    convert_result(module(Input::new(source)), source)
+}
+
+pub fn parse_comments(source: &str) -> Result<Vec<Comment>, ParseError> {
+    convert_result(comments(Input::new(source)), source)
+}
+
+fn convert_result<T>(result: IResult<T>, source: &str) -> Result<T, ParseError> {
+    result
+        .map(|(_, value)| value)
         .map_err(|error| ParseError::new(source, error))
 }
 

@@ -1,9 +1,12 @@
 use super::{error::NomError, input::Input};
-use crate::{ast::Expression, position::Position};
+use crate::{
+    ast::{Comment, Expression},
+    position::Position,
+};
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_until, take_while1},
-    character::complete::{char, multispace1, none_of, space0},
+    character::complete::{char, multispace0, multispace1, none_of, space0},
     combinator::{all_consuming, cut, map, recognize, value},
     error::context,
     multi::{many0, many1},
@@ -17,6 +20,17 @@ pub type IResult<'a, T> = nom::IResult<Input<'a>, T, NomError<'a>>;
 
 pub fn module(input: Input<'_>) -> IResult<Vec<Expression<'_>>> {
     all_consuming(delimited(many0(hash_line), many0(expression), blank))(input)
+}
+
+pub fn comments(input: Input) -> IResult<Vec<Comment>> {
+    map(
+        all_consuming(many0(alt((
+            map(comment, Some),
+            map(raw_string, |_| None),
+            map(none_of("\";"), |_| None),
+        )))),
+        |comments| comments.into_iter().flatten().collect(),
+    )(input)
 }
 
 fn symbol<'a>(input: Input<'a>) -> IResult<Expression<'a>> {
@@ -53,6 +67,10 @@ fn expression(input: Input<'_>) -> IResult<Expression<'_>> {
 }
 
 fn string(input: Input<'_>) -> IResult<Expression<'_>> {
+    token(raw_string)(input)
+}
+
+fn raw_string(input: Input<'_>) -> IResult<Expression<'_>> {
     map(
         positioned(delimited(
             char('"'),
@@ -100,12 +118,35 @@ fn positioned<'a, T>(
     }
 }
 
-fn blank(input: Input<'_>) -> IResult<()> {
-    value((), many0(alt((multispace1, comment))))(input)
+fn positioned_meta<'a, T>(
+    mut parser: impl Parser<Input<'a>, T, NomError<'a>>,
+) -> impl FnMut(Input<'a>) -> IResult<'a, (T, Position)> {
+    move |input| {
+        map(
+            tuple((
+                preceded(multispace0, nom_locate::position),
+                |input| parser.parse(input),
+                nom_locate::position,
+            )),
+            |(start, value, end)| {
+                (
+                    value,
+                    Position::new(start.location_offset(), end.location_offset()),
+                )
+            },
+        )(input)
+    }
 }
 
-fn comment(input: Input<'_>) -> IResult<Input<'_>> {
-    delimited(char(';'), take_until("\n"), newline)(input)
+fn blank(input: Input<'_>) -> IResult<()> {
+    value((), many0(alt((value((), multispace1), value((), comment)))))(input)
+}
+
+fn comment(input: Input) -> IResult<Comment> {
+    map(
+        positioned_meta(delimited(char(';'), take_until("\n"), newline)),
+        |(input, position)| Comment::new(&input, position),
+    )(input)
 }
 
 fn hash_line(input: Input<'_>) -> IResult<Input<'_>> {
@@ -122,6 +163,7 @@ fn newline(input: Input<'_>) -> IResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn parse_false() {
@@ -162,6 +204,7 @@ mod tests {
 
     mod string {
         use super::*;
+        use pretty_assertions::assert_eq;
 
         #[test]
         fn parse_empty() {
@@ -190,15 +233,22 @@ mod tests {
 
     mod comment {
         use super::*;
+        use pretty_assertions::assert_eq;
 
         #[test]
         fn parse_empty() {
-            assert_eq!(*comment(Input::new(";\n")).unwrap().1, "");
+            assert_eq!(
+                comment(Input::new(";\n")).unwrap().1,
+                Comment::new("", Position::new(0, 2))
+            );
         }
 
         #[test]
         fn parse_comment() {
-            assert_eq!(*comment(Input::new(";foo\n")).unwrap().1, "foo");
+            assert_eq!(
+                comment(Input::new(";foo\n")).unwrap().1,
+                Comment::new("foo", Position::new(0, 5))
+            );
         }
     }
 }
