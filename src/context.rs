@@ -39,19 +39,6 @@ impl<'a> Context<'a> {
         self.drain_comments_before(line_index + 1)
     }
 
-    pub fn peek_comments_before<'b>(
-        &'b self,
-        line_index: usize,
-    ) -> impl Iterator<Item = &'a Comment<'a>> + 'b {
-        self.comments[..self
-            .comments
-            .iter()
-            .position(|comment| self.line_index(comment.position()) >= line_index)
-            .unwrap_or(self.comments.len())]
-            .iter()
-            .copied()
-    }
-
     fn line_index(&self, position: &Position) -> usize {
         self.position_map()
             .line_index(position.start())
