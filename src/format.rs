@@ -1,5 +1,3 @@
-#![allow(unstable_name_collisions)]
-
 use crate::{ast::Expression, context::Context, position_map::PositionMap};
 use mfmt::{flatten, indent, line, r#break, sequence, Document};
 
