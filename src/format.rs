@@ -103,7 +103,7 @@ mod tests {
                     ],
                     Position::new(0, 2)
                 )],
-                &PositionMap::new(""),
+                &PositionMap::new("(foo bar)"),
             ),
             "(foo bar)\n"
         );
@@ -164,7 +164,7 @@ mod tests {
                     Expression::Symbol("foo", Position::new(0, 3)).into(),
                     Position::new(0, 3)
                 )],
-                &PositionMap::new(""),
+                &PositionMap::new("'foo"),
             ),
             "'foo\n"
         );
@@ -175,7 +175,7 @@ mod tests {
         assert_eq!(
             format(
                 &[Expression::String("foo", Position::new(0, 3))],
-                &PositionMap::new(""),
+                &PositionMap::new("\"foo\""),
             ),
             "\"foo\"\n"
         );
@@ -186,7 +186,7 @@ mod tests {
         assert_eq!(
             format(
                 &[Expression::Symbol("foo", Position::new(0, 3))],
-                &PositionMap::new(""),
+                &PositionMap::new("foo"),
             ),
             "foo\n"
         );
