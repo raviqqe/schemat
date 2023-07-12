@@ -1,7 +1,6 @@
 #![allow(unstable_name_collisions)]
 
 use crate::{ast::Expression, context::Context, position_map::PositionMap};
-use itertools::Itertools;
 use mfmt::{flatten, indent, line, r#break, sequence, Document};
 
 pub fn format(module: &[Expression], position_map: &PositionMap) -> String {
@@ -10,60 +9,38 @@ pub fn format(module: &[Expression], position_map: &PositionMap) -> String {
 }
 
 fn compile_module(context: &Context, module: &[Expression]) -> Document {
-    sequence(
-        module
-            .iter()
-            .zip(
-                module
-                    .iter()
-                    .skip(1)
-                    .map(|expression| expression.position().start())
-                    .chain([0]),
-            )
-            .map(|(expression, next_offset)| {
-                let next_line = context
-                    .position_map()
-                    .line_index(next_offset)
-                    .expect("valid offset");
-                let current_line = context
-                    .position_map()
-                    .line_index(expression.position().start())
-                    .expect("valid offset");
-                let difference = next_line.saturating_sub(current_line);
-
-                sequence(
-                    [compile_expression(context, expression)]
-                        .into_iter()
-                        .chain([line()])
-                        .chain(if difference <= 1 { None } else { Some(line()) }),
-                )
-            }),
-    )
+    sequence([compile_expressions(context, module), line()])
 }
 
 fn compile_expression(context: &Context, expression: &Expression) -> Document {
     match expression {
         Expression::List(expressions, position) => {
-            let line_index = context.position_map().line_index(position.start());
-
+            let line_index = get_line_index(context, position.start());
             let (first, last) = expressions.iter().partition::<Vec<_>, _>(|expression| {
-                context
-                    .position_map()
-                    .line_index(expression.position().start())
-                    == line_index
+                get_line_index(context, expression.position().start()) == line_index
             });
+            let extra_line = if let (Some(first), Some(last)) = (first.last(), last.first()) {
+                if has_extra_line(context, first, last) {
+                    Some(line())
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
 
             flatten(sequence(
                 ["(".into()]
                     .into_iter()
-                    .chain([compile_expressions(context, &first)])
+                    .chain([indent(compile_expressions(context, first))])
                     .chain(if last.is_empty() {
                         None
                     } else {
-                        Some(r#break(indent(sequence([
-                            line(),
-                            compile_expressions(context, &last),
-                        ]))))
+                        Some(r#break(indent(sequence(
+                            extra_line
+                                .into_iter()
+                                .chain([line(), compile_expressions(context, last)]),
+                        ))))
                     })
                     .chain([")".into()])
                     .collect::<Vec<_>>(),
@@ -77,13 +54,46 @@ fn compile_expression(context: &Context, expression: &Expression) -> Document {
     }
 }
 
-fn compile_expressions(context: &Context, expressions: &[&Expression]) -> Document {
-    sequence(
-        expressions
-            .iter()
-            .map(|expression| compile_expression(context, expression))
-            .intersperse(line()),
-    )
+fn compile_expressions<'a>(
+    context: &Context,
+    expressions: impl IntoIterator<Item = &'a Expression<'a>>,
+) -> Document {
+    let mut documents = vec![];
+    let mut last_expression = None::<&Expression>;
+
+    for expression in expressions {
+        if let Some(last_expression) = last_expression {
+            documents.push(line());
+            documents.extend(if has_extra_line(context, last_expression, expression) {
+                Some(line())
+            } else {
+                None
+            });
+        }
+
+        documents.push(compile_expression(context, expression));
+
+        last_expression = Some(expression);
+    }
+
+    sequence(documents)
+}
+
+fn has_extra_line(
+    context: &Context,
+    last_expression: &Expression,
+    expression: &Expression,
+) -> bool {
+    get_line_index(context, expression.position().start())
+        .saturating_sub(get_line_index(context, last_expression.position().end()))
+        > 1
+}
+
+fn get_line_index(context: &Context, offset: usize) -> usize {
+    context
+        .position_map()
+        .line_index(offset)
+        .expect("valid offset")
 }
 
 #[cfg(test)]
@@ -116,7 +126,7 @@ mod tests {
                 &[Expression::List(
                     vec![
                         Expression::Symbol("foo", Position::new(1, 4)),
-                        Expression::Symbol("bar", Position::new(6, 9))
+                        Expression::Symbol("bar", Position::new(5, 8))
                     ],
                     Position::new(0, 9)
                 )],
@@ -192,42 +202,150 @@ mod tests {
         );
     }
 
-    #[test]
-    fn keep_no_blank_line() {
-        assert_eq!(
-            format(
-                &[
-                    Expression::Symbol("foo", Position::new(0, 2)),
-                    Expression::Symbol("bar", Position::new(1, 2))
-                ],
-                &PositionMap::new("\na"),
-            ),
-            indoc!(
-                "
-                foo
-                bar
-                "
-            )
-        );
+    mod list {
+        use super::*;
+
+        #[test]
+        fn double_indent_of_nested_list() {
+            assert_eq!(
+                format(
+                    &[Expression::List(
+                        vec![Expression::List(
+                            vec![
+                                Expression::Symbol("foo", Position::new(0, 0)),
+                                Expression::Symbol("bar", Position::new(1, 1))
+                            ],
+                            Position::new(0, 1)
+                        )],
+                        Position::new(0, 0)
+                    )],
+                    &PositionMap::new("\n\n\na"),
+                ),
+                indoc!(
+                    "
+                    ((foo
+                        bar))
+                    "
+                )
+            );
+        }
+
+        #[test]
+        fn keep_no_blank_line() {
+            assert_eq!(
+                format(
+                    &[Expression::List(
+                        vec![
+                            Expression::Symbol("foo", Position::new(0, 0)),
+                            Expression::Symbol("bar", Position::new(1, 1))
+                        ],
+                        Position::new(0, 0)
+                    )],
+                    &PositionMap::new("\na"),
+                ),
+                indoc!(
+                    "
+                    (foo
+                      bar)
+                    "
+                )
+            );
+        }
+
+        #[test]
+        fn keep_blank_line() {
+            assert_eq!(
+                format(
+                    &[Expression::List(
+                        vec![
+                            Expression::Symbol("foo", Position::new(0, 0)),
+                            Expression::Symbol("bar", Position::new(2, 2))
+                        ],
+                        Position::new(0, 0)
+                    )],
+                    &PositionMap::new("\n\na"),
+                ),
+                indoc!(
+                    "
+                    (foo
+
+                      bar)
+                    "
+                )
+            );
+        }
+
+        #[test]
+        fn keep_blank_line_with_multi_line_expression() {
+            assert_eq!(
+                format(
+                    &[Expression::List(
+                        vec![
+                            Expression::List(
+                                vec![
+                                    Expression::Symbol("foo", Position::new(0, 0)),
+                                    Expression::Symbol("bar", Position::new(1, 1))
+                                ],
+                                Position::new(0, 1)
+                            ),
+                            Expression::Symbol("baz", Position::new(3, 3))
+                        ],
+                        Position::new(0, 0)
+                    )],
+                    &PositionMap::new("\n\n\na"),
+                ),
+                indoc!(
+                    "
+                    ((foo
+                        bar)
+
+                      baz)
+                    "
+                )
+            );
+        }
     }
 
-    #[test]
-    fn keep_blank_line() {
-        assert_eq!(
-            format(
-                &[
-                    Expression::Symbol("foo", Position::new(0, 2)),
-                    Expression::Symbol("bar", Position::new(2, 2))
-                ],
-                &PositionMap::new("\n\na"),
-            ),
-            indoc!(
-                "
-                foo
+    mod module {
+        use super::*;
 
-                bar
-                "
-            )
-        );
+        #[test]
+        fn keep_no_blank_line() {
+            assert_eq!(
+                format(
+                    &[
+                        Expression::Symbol("foo", Position::new(0, 0)),
+                        Expression::Symbol("bar", Position::new(1, 1))
+                    ],
+                    &PositionMap::new("\na"),
+                ),
+                indoc!(
+                    "
+                    foo
+                    bar
+                    "
+                )
+            );
+        }
+
+        #[test]
+        fn keep_blank_line() {
+            assert_eq!(
+                format(
+                    &[
+                        Expression::Symbol("foo", Position::new(0, 0)),
+                        Expression::Symbol("bar", Position::new(2, 2))
+                    ],
+                    &PositionMap::new("\n\na"),
+                ),
+                indoc!(
+                    "
+                    foo
+
+                    bar
+                    "
+                )
+            );
+        }
     }
 }
