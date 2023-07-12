@@ -9,12 +9,10 @@ impl Position {
         Self { start, end }
     }
 
-    #[allow(dead_code)]
     pub fn start(&self) -> usize {
         self.start
     }
 
-    #[allow(dead_code)]
     pub fn end(&self) -> usize {
         self.end
     }
