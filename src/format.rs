@@ -15,13 +15,9 @@ fn compile_module(context: &Context, module: &[Expression]) -> Document {
 fn compile_expression(context: &Context, expression: &Expression) -> Document {
     match expression {
         Expression::List(expressions, position) => {
-            let line_index = context.position_map().line_index(position.start());
-
+            let line_index = get_line_index(context, position.start());
             let (first, last) = expressions.iter().partition::<Vec<_>, _>(|expression| {
-                context
-                    .position_map()
-                    .line_index(expression.position().start())
-                    == line_index
+                get_line_index(context, expression.position().start()) == line_index
             });
 
             flatten(sequence(
@@ -59,8 +55,8 @@ fn compile_expressions<'a>(
         if let Some(last_expression) = last_expression {
             documents.push(line());
             documents.extend(
-                if get_line_index(context, expression)
-                    .saturating_sub(get_line_index(context, last_expression))
+                if get_line_index(context, expression.position().start())
+                    .saturating_sub(get_line_index(context, last_expression.position().end()))
                     <= 1
                 {
                     None
@@ -78,10 +74,10 @@ fn compile_expressions<'a>(
     sequence(documents)
 }
 
-fn get_line_index(context: &Context, expression: &Expression) -> usize {
+fn get_line_index(context: &Context, offset: usize) -> usize {
     context
         .position_map()
-        .line_index(expression.position().start())
+        .line_index(offset)
         .expect("valid offset")
 }
 
