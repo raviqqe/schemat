@@ -43,20 +43,22 @@ fn compile_expression(context: &mut Context, expression: &Expression) -> Documen
             };
 
             flatten(sequence(
-                ["(".into()]
-                    .into_iter()
-                    .chain([indent(compile_expressions(context, first))])
-                    .chain(if last.is_empty() {
-                        None
-                    } else {
-                        Some(r#break(indent(sequence(
-                            extra_line
-                                .into_iter()
-                                .chain([line(), compile_expressions(context, last)]),
-                        ))))
-                    })
-                    .chain([")".into()])
-                    .collect::<Vec<_>>(),
+                [compile_line_comment(context, expression.position(), |_| {
+                    "(".into()
+                })]
+                .into_iter()
+                .chain([indent(compile_expressions(context, first))])
+                .chain(if last.is_empty() {
+                    None
+                } else {
+                    Some(r#break(indent(sequence(
+                        extra_line
+                            .into_iter()
+                            .chain([line(), compile_expressions(context, last)]),
+                    ))))
+                })
+                .chain([")".into()])
+                .collect::<Vec<_>>(),
             ))
         }
         Expression::String(string, _) => sequence(["\"", string, "\""]),
@@ -397,6 +399,26 @@ mod tests {
                 )
             );
         }
+
+        #[test]
+        fn format_first_element_on_second_line() {
+            assert_eq!(
+                format(
+                    &[Expression::List(
+                        vec![Expression::Symbol("foo", Position::new(1, 1))],
+                        Position::new(0, 0)
+                    )],
+                    &[],
+                    &PositionMap::new("\n\n"),
+                ),
+                indoc!(
+                    "
+                    (
+                      foo)
+                    "
+                )
+            );
+        }
     }
 
     mod module {
@@ -558,6 +580,26 @@ mod tests {
                 indoc!(
                     "
                     foo ;bar ;baz
+                    "
+                )
+            );
+        }
+
+        #[test]
+        fn format_line_comment_on_multi_line_expression() {
+            assert_eq!(
+                format(
+                    &[Expression::List(
+                        vec![Expression::Symbol("foo", Position::new(1, 1))],
+                        Position::new(0, 0)
+                    )],
+                    &[Comment::new("bar", Position::new(0, 0))],
+                    &PositionMap::new("\n\n"),
+                ),
+                indoc!(
+                    "
+                    ( ;bar
+                      foo)
                     "
                 )
             );
