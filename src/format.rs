@@ -231,10 +231,13 @@ mod tests {
         fn keep_blank_line() {
             assert_eq!(
                 format(
-                    &[
-                        Expression::Symbol("foo", Position::new(0, 0)),
-                        Expression::Symbol("bar", Position::new(2, 2))
-                    ],
+                    &[Expression::List(
+                        vec![
+                            Expression::Symbol("foo", Position::new(0, 0)),
+                            Expression::Symbol("bar", Position::new(2, 2))
+                        ],
+                        Position::new(0, 0)
+                    )],
                     &PositionMap::new("\n\na"),
                 ),
                 indoc!(
