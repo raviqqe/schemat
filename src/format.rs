@@ -57,12 +57,17 @@ fn compile_expressions<'a>(
 
     for expression in expressions {
         if let Some(last_expression) = last_expression {
-            let current_line = get_line_index(context, expression);
-            let last_line = get_line_index(context, last_expression);
-            let difference = current_line.saturating_sub(last_line);
-
             documents.push(line());
-            documents.extend(if difference <= 1 { None } else { Some(line()) });
+            documents.extend(
+                if get_line_index(context, expression)
+                    .saturating_sub(get_line_index(context, last_expression))
+                    <= 1
+                {
+                    None
+                } else {
+                    Some(line())
+                },
+            );
         }
 
         documents.push(compile_expression(context, expression));
