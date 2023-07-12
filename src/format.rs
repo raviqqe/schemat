@@ -16,9 +16,27 @@ fn compile_module(context: &Context, module: &[Expression]) -> Document {
             .zip(
                 module
                     .iter()
-                    .map(|expression| expression.position().start()),
+                    .skip(1)
+                    .map(|expression| expression.position().start())
+                    .chain([0]),
             )
-            .map(|expression| sequence([compile_expression(context, expression), line()])),
+            .map(|(expression, next_offset)| {
+                let difference = context
+                    .position_map()
+                    .line_index(next_offset)
+                    .expect("valid offset")
+                    - context
+                        .position_map()
+                        .line_index(expression.position().start())
+                        .expect("valid offset");
+
+                sequence(
+                    [line()]
+                        .into_iter()
+                        .chain(if difference <= 1 { None } else { Some(line()) })
+                        .chain([compile_expression(context, expression)]),
+                )
+            }),
     )
 }
 
