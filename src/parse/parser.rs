@@ -6,7 +6,7 @@ use crate::{
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_until, take_while1},
-    character::complete::{char, multispace1, none_of, space0},
+    character::complete::{char, multispace0, multispace1, none_of, space0},
     combinator::{all_consuming, cut, map, recognize, value},
     error::context,
     multi::{many0, many1},
@@ -118,13 +118,33 @@ fn positioned<'a, T>(
     }
 }
 
+fn positioned_meta<'a, T>(
+    mut parser: impl Parser<Input<'a>, T, NomError<'a>>,
+) -> impl FnMut(Input<'a>) -> IResult<'a, (T, Position)> {
+    move |input| {
+        map(
+            tuple((
+                preceded(multispace0, nom_locate::position),
+                |input| parser.parse(input),
+                nom_locate::position,
+            )),
+            |(start, value, end)| {
+                (
+                    value,
+                    Position::new(start.location_offset(), end.location_offset()),
+                )
+            },
+        )(input)
+    }
+}
+
 fn blank(input: Input<'_>) -> IResult<()> {
     value((), many0(alt((value((), multispace1), value((), comment)))))(input)
 }
 
 fn comment(input: Input) -> IResult<Comment> {
     map(
-        positioned(delimited(char(';'), take_until("\n"), newline)),
+        positioned_meta(delimited(char(';'), take_until("\n"), newline)),
         |(input, position)| Comment::new(&input, position),
     )(input)
 }
@@ -143,6 +163,7 @@ fn newline(input: Input<'_>) -> IResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn parse_false() {
@@ -183,6 +204,7 @@ mod tests {
 
     mod string {
         use super::*;
+        use pretty_assertions::assert_eq;
 
         #[test]
         fn parse_empty() {
@@ -217,7 +239,7 @@ mod tests {
         fn parse_empty() {
             assert_eq!(
                 comment(Input::new(";\n")).unwrap().1,
-                Comment::new("", Position::new(0, 0))
+                Comment::new("", Position::new(0, 2))
             );
         }
 
@@ -225,7 +247,7 @@ mod tests {
         fn parse_comment() {
             assert_eq!(
                 comment(Input::new(";foo\n")).unwrap().1,
-                Comment::new("foo", Position::new(0, 0))
+                Comment::new("foo", Position::new(0, 5))
             );
         }
     }
