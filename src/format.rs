@@ -202,42 +202,92 @@ mod tests {
         );
     }
 
-    #[test]
-    fn keep_no_blank_line() {
-        assert_eq!(
-            format(
-                &[
-                    Expression::Symbol("foo", Position::new(0, 0)),
-                    Expression::Symbol("bar", Position::new(1, 1))
-                ],
-                &PositionMap::new("\na"),
-            ),
-            indoc!(
-                "
-                foo
-                bar
-                "
-            )
-        );
+    mod list {
+        use super::*;
+
+        #[test]
+        fn keep_no_blank_line() {
+            assert_eq!(
+                format(
+                    &[Expression::List(
+                        vec![
+                            Expression::Symbol("foo", Position::new(0, 0)),
+                            Expression::Symbol("bar", Position::new(1, 1))
+                        ],
+                        Position::new(0, 0)
+                    )],
+                    &PositionMap::new("\na"),
+                ),
+                indoc!(
+                    "
+                    (foo
+                      bar)
+                    "
+                )
+            );
+        }
+
+        #[test]
+        fn keep_blank_line() {
+            assert_eq!(
+                format(
+                    &[
+                        Expression::Symbol("foo", Position::new(0, 0)),
+                        Expression::Symbol("bar", Position::new(2, 2))
+                    ],
+                    &PositionMap::new("\n\na"),
+                ),
+                indoc!(
+                    "
+                    (foo
+
+                      bar)
+                    "
+                )
+            );
+        }
     }
 
-    #[test]
-    fn keep_blank_line() {
-        assert_eq!(
-            format(
-                &[
-                    Expression::Symbol("foo", Position::new(0, 0)),
-                    Expression::Symbol("bar", Position::new(2, 2))
-                ],
-                &PositionMap::new("\n\na"),
-            ),
-            indoc!(
-                "
-                foo
+    mod module {
+        use super::*;
 
-                bar
-                "
-            )
-        );
+        #[test]
+        fn keep_no_blank_line() {
+            assert_eq!(
+                format(
+                    &[
+                        Expression::Symbol("foo", Position::new(0, 0)),
+                        Expression::Symbol("bar", Position::new(1, 1))
+                    ],
+                    &PositionMap::new("\na"),
+                ),
+                indoc!(
+                    "
+                    foo
+                    bar
+                    "
+                )
+            );
+        }
+
+        #[test]
+        fn keep_blank_line() {
+            assert_eq!(
+                format(
+                    &[
+                        Expression::Symbol("foo", Position::new(0, 0)),
+                        Expression::Symbol("bar", Position::new(2, 2))
+                    ],
+                    &PositionMap::new("\n\na"),
+                ),
+                indoc!(
+                    "
+                    foo
+
+                    bar
+                    "
+                )
+            );
+        }
     }
 }
