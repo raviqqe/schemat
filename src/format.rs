@@ -32,14 +32,9 @@ fn compile_expression(context: &mut Context, expression: &Expression) -> Documen
             let (first, last) = expressions.iter().partition::<Vec<_>, _>(|expression| {
                 get_line_index(context, expression.position().start()) == line_index
             });
-            let extra_line = if let (Some(first), Some(last)) = (first.last(), last.first()) {
-                if has_extra_line(context, first, last) {
-                    Some(line())
-                } else {
-                    None
-                }
-            } else {
-                None
+            let extra_line = match (first.last(), last.first()) {
+                (Some(first), Some(last)) if has_extra_line(context, first, last) => Some(line()),
+                _ => None,
             };
 
             flatten(sequence(
