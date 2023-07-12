@@ -8,17 +8,25 @@ use mfmt::{empty, flatten, indent, line, line_suffix, r#break, sequence, Documen
 
 pub fn format(module: &[Expression], comments: &[Comment], position_map: &PositionMap) -> String {
     mfmt::format(&compile_module(
-        &Context::new(comments, position_map),
+        &mut Context::new(comments, position_map),
         module,
     ))
 }
 
-fn compile_module(context: &Context, module: &[Expression]) -> Document {
-    sequence([compile_expressions(context, module), line()])
+fn compile_module(context: &mut Context, module: &[Expression]) -> Document {
+    sequence([compile_expressions(context, module), line(), {
+        let comment = compile_remaining_block_comment(context);
+
+        if mfmt::utility::count_lines(&comment) > 0 {
+            sequence([line(), comment])
+        } else {
+            empty()
+        }
+    }])
 }
 
-fn compile_expression(context: &Context, expression: &Expression) -> Document {
-    match expression {
+fn compile_expression(context: &mut Context, expression: &Expression) -> Document {
+    compile_line_comment(context, expression.position(), |context| match expression {
         Expression::List(expressions, position) => {
             let line_index = get_line_index(context, position.start());
             let (first, last) = expressions.iter().partition::<Vec<_>, _>(|expression| {
@@ -56,11 +64,11 @@ fn compile_expression(context: &Context, expression: &Expression) -> Document {
         Expression::Quote(expression, _) => {
             sequence(["'".into(), compile_expression(context, expression)])
         }
-    }
+    })
 }
 
 fn compile_expressions<'a>(
-    context: &Context,
+    context: &mut Context,
     expressions: impl IntoIterator<Item = &'a Expression<'a>>,
 ) -> Document {
     let mut documents = vec![];
@@ -127,7 +135,7 @@ fn compile_remaining_block_comment(context: &mut Context) -> Document {
 fn compile_all_comments(
     context: &Context,
     comments: &[&Comment],
-    last_line_number: Option<usize>,
+    last_line_index: Option<usize>,
 ) -> Document {
     sequence(
         comments
@@ -137,14 +145,14 @@ fn compile_all_comments(
                     .iter()
                     .skip(1)
                     .map(|comment| get_line_index(context, comment.position().start()))
-                    .chain([last_line_number.unwrap_or(0)]),
+                    .chain([last_line_index.unwrap_or(0)]),
             )
-            .map(|(comment, next_line_number)| {
+            .map(|(comment, next_line_index)| {
                 sequence([
-                    "#".into(),
+                    ";".into(),
                     comment.value().trim_end().into(),
                     r#break(line()),
-                    if get_line_index(context, comment.position().start()) + 1 < next_line_number {
+                    if get_line_index(context, comment.position().end()) + 1 < next_line_index {
                         line()
                     } else {
                         empty()
@@ -430,6 +438,154 @@ mod tests {
                     foo
 
                     bar
+                    "
+                )
+            );
+        }
+    }
+
+    mod comment {
+        use super::*;
+        use pretty_assertions::assert_eq;
+
+        #[test]
+        fn format_block_comment() {
+            assert_eq!(
+                format(
+                    &[Expression::Symbol("foo", Position::new(1, 1))],
+                    &[Comment::new("bar", Position::new(0, 0))],
+                    &PositionMap::new("\na"),
+                ),
+                indoc!(
+                    "
+                    ;bar
+                    foo
+                    "
+                )
+            );
+        }
+
+        #[test]
+        fn format_block_comment_with_extra_line() {
+            assert_eq!(
+                format(
+                    &[Expression::Symbol("foo", Position::new(2, 2))],
+                    &[Comment::new("bar", Position::new(0, 0))],
+                    &PositionMap::new("\n\na"),
+                ),
+                indoc!(
+                    "
+                    ;bar
+
+                    foo
+                    "
+                )
+            );
+        }
+
+        #[test]
+        fn format_block_comments() {
+            assert_eq!(
+                format(
+                    &[Expression::Symbol("foo", Position::new(3, 3))],
+                    &[
+                        Comment::new("bar", Position::new(0, 0)),
+                        Comment::new("baz", Position::new(1, 1))
+                    ],
+                    &PositionMap::new("\n\n\na"),
+                ),
+                indoc!(
+                    "
+                    ;bar
+                    ;baz
+
+                    foo
+                    "
+                )
+            );
+        }
+
+        #[test]
+        fn format_block_comments_with_extra_line() {
+            assert_eq!(
+                format(
+                    &[Expression::Symbol("foo", Position::new(4, 4))],
+                    &[
+                        Comment::new("bar", Position::new(0, 0)),
+                        Comment::new("baz", Position::new(2, 2))
+                    ],
+                    &PositionMap::new("\n\n\n\na"),
+                ),
+                indoc!(
+                    "
+                    ;bar
+
+                    ;baz
+
+                    foo
+                    "
+                )
+            );
+        }
+
+        #[test]
+        fn format_remaining_block_comment() {
+            assert_eq!(
+                format(
+                    &[Expression::Symbol("foo", Position::new(0, 0))],
+                    &[Comment::new("bar", Position::new(1, 1))],
+                    &PositionMap::new("\n\n"),
+                ),
+                indoc!(
+                    "
+                    foo
+
+                    ;bar
+                    "
+                )
+            );
+        }
+
+        #[test]
+        fn format_remaining_block_comments() {
+            assert_eq!(
+                format(
+                    &[Expression::Symbol("foo", Position::new(0, 0))],
+                    &[
+                        Comment::new("bar", Position::new(1, 1)),
+                        Comment::new("baz", Position::new(2, 2))
+                    ],
+                    &PositionMap::new("\n\n\n"),
+                ),
+                indoc!(
+                    "
+                    foo
+
+                    ;bar
+                    ;baz
+                    "
+                )
+            );
+        }
+
+        #[test]
+        fn format_remaining_block_comments_with_extra_line() {
+            assert_eq!(
+                format(
+                    &[Expression::Symbol("foo", Position::new(0, 0))],
+                    &[
+                        Comment::new("bar", Position::new(1, 1)),
+                        Comment::new("baz", Position::new(3, 3))
+                    ],
+                    &PositionMap::new("\n\n\n\n"),
+                ),
+                indoc!(
+                    "
+                    foo
+
+                    ;bar
+
+                    ;baz
                     "
                 )
             );
