@@ -19,6 +19,15 @@ fn compile_expression(context: &Context, expression: &Expression) -> Document {
             let (first, last) = expressions.iter().partition::<Vec<_>, _>(|expression| {
                 get_line_index(context, expression.position().start()) == line_index
             });
+            let extra_line = if let (Some(first), Some(last)) = (first.last(), last.first()) {
+                if has_extra_line(context, first, last) {
+                    Some(line())
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
 
             flatten(sequence(
                 ["(".into()]
@@ -27,10 +36,11 @@ fn compile_expression(context: &Context, expression: &Expression) -> Document {
                     .chain(if last.is_empty() {
                         None
                     } else {
-                        Some(r#break(indent(sequence([
-                            line(),
-                            compile_expressions(context, last),
-                        ]))))
+                        Some(r#break(indent(sequence(
+                            extra_line
+                                .into_iter()
+                                .chain([line(), compile_expressions(context, last)]),
+                        ))))
                     })
                     .chain([")".into()])
                     .collect::<Vec<_>>(),
@@ -54,16 +64,11 @@ fn compile_expressions<'a>(
     for expression in expressions {
         if let Some(last_expression) = last_expression {
             documents.push(line());
-            documents.extend(
-                if get_line_index(context, expression.position().start())
-                    .saturating_sub(get_line_index(context, last_expression.position().end()))
-                    <= 1
-                {
-                    None
-                } else {
-                    Some(line())
-                },
-            );
+            documents.extend(if has_extra_line(context, last_expression, expression) {
+                Some(line())
+            } else {
+                None
+            });
         }
 
         documents.push(compile_expression(context, expression));
@@ -72,6 +77,16 @@ fn compile_expressions<'a>(
     }
 
     sequence(documents)
+}
+
+fn has_extra_line(
+    context: &Context,
+    last_expression: &Expression,
+    expression: &Expression,
+) -> bool {
+    get_line_index(context, expression.position().start())
+        .saturating_sub(get_line_index(context, last_expression.position().end()))
+        > 1
 }
 
 fn get_line_index(context: &Context, offset: usize) -> usize {
@@ -111,7 +126,7 @@ mod tests {
                 &[Expression::List(
                     vec![
                         Expression::Symbol("foo", Position::new(1, 4)),
-                        Expression::Symbol("bar", Position::new(6, 9))
+                        Expression::Symbol("bar", Position::new(5, 8))
                     ],
                     Position::new(0, 9)
                 )],
