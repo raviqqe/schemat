@@ -470,8 +470,8 @@ mod tests {
         fn format_block_comment() {
             assert_eq!(
                 format(
-                    &[Expression::Symbol("foo", Position::new(1, 1))],
-                    &[Comment::new("bar", Position::new(0, 0))],
+                    &[Expression::Symbol("foo", Position::new(1, 2))],
+                    &[Comment::new("bar", Position::new(0, 1))],
                     &PositionMap::new("\na"),
                 ),
                 indoc!(
@@ -487,8 +487,8 @@ mod tests {
         fn format_block_comment_with_extra_line() {
             assert_eq!(
                 format(
-                    &[Expression::Symbol("foo", Position::new(2, 2))],
-                    &[Comment::new("bar", Position::new(0, 0))],
+                    &[Expression::Symbol("foo", Position::new(2, 3))],
+                    &[Comment::new("bar", Position::new(0, 1))],
                     &PositionMap::new("\n\na"),
                 ),
                 indoc!(
@@ -505,10 +505,10 @@ mod tests {
         fn format_block_comments() {
             assert_eq!(
                 format(
-                    &[Expression::Symbol("foo", Position::new(3, 3))],
+                    &[Expression::Symbol("foo", Position::new(3, 4))],
                     &[
-                        Comment::new("bar", Position::new(0, 0)),
-                        Comment::new("baz", Position::new(1, 1))
+                        Comment::new("bar", Position::new(0, 1)),
+                        Comment::new("baz", Position::new(1, 2))
                     ],
                     &PositionMap::new("\n\n\na"),
                 ),
@@ -527,10 +527,10 @@ mod tests {
         fn format_block_comments_with_extra_line() {
             assert_eq!(
                 format(
-                    &[Expression::Symbol("foo", Position::new(4, 4))],
+                    &[Expression::Symbol("foo", Position::new(4, 5))],
                     &[
-                        Comment::new("bar", Position::new(0, 0)),
-                        Comment::new("baz", Position::new(2, 2))
+                        Comment::new("bar", Position::new(0, 1)),
+                        Comment::new("baz", Position::new(2, 3))
                     ],
                     &PositionMap::new("\n\n\n\na"),
                 ),
@@ -550,8 +550,8 @@ mod tests {
         fn format_line_comment() {
             assert_eq!(
                 format(
-                    &[Expression::Symbol("foo", Position::new(0, 0))],
-                    &[Comment::new("bar", Position::new(0, 0))],
+                    &[Expression::Symbol("foo", Position::new(0, 1))],
+                    &[Comment::new("bar", Position::new(0, 1))],
                     &PositionMap::new("\na"),
                 ),
                 indoc!(
@@ -566,10 +566,10 @@ mod tests {
         fn format_line_comments() {
             assert_eq!(
                 format(
-                    &[Expression::Symbol("foo", Position::new(0, 0))],
+                    &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[
-                        Comment::new("bar", Position::new(0, 0)),
-                        Comment::new("baz", Position::new(0, 0))
+                        Comment::new("bar", Position::new(0, 1)),
+                        Comment::new("baz", Position::new(0, 1))
                     ],
                     &PositionMap::new("\na"),
                 ),
@@ -586,10 +586,10 @@ mod tests {
             assert_eq!(
                 format(
                     &[Expression::List(
-                        vec![Expression::Symbol("foo", Position::new(1, 1))],
-                        Position::new(0, 0)
+                        vec![Expression::Symbol("foo", Position::new(1, 2))],
+                        Position::new(0, 1)
                     )],
-                    &[Comment::new("bar", Position::new(0, 0))],
+                    &[Comment::new("bar", Position::new(0, 1))],
                     &PositionMap::new("\n\n"),
                 ),
                 indoc!(
