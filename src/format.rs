@@ -176,7 +176,7 @@ mod tests {
                     Expression::Symbol("foo", Position::new(0, 2)),
                     Expression::Symbol("bar", Position::new(1, 2))
                 ],
-                &PositionMap::new(""),
+                &PositionMap::new("\na"),
             ),
             indoc!(
                 "
@@ -195,7 +195,7 @@ mod tests {
                     Expression::Symbol("foo", Position::new(0, 2)),
                     Expression::Symbol("bar", Position::new(2, 2))
                 ],
-                &PositionMap::new(""),
+                &PositionMap::new("\n\na"),
             ),
             indoc!(
                 "
