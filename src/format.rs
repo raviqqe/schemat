@@ -149,7 +149,7 @@ fn compile_all_comments(
                     ";".into(),
                     comment.value().trim_end().into(),
                     r#break(line()),
-                    if get_line_index(context, comment.position().end()) + 1 < next_line_index {
+                    if get_line_index(context, comment.position().end() - 1) + 1 < next_line_index {
                         line()
                     } else {
                         empty()
@@ -164,9 +164,10 @@ fn has_extra_line(
     last_expression: &Expression,
     expression: &Expression,
 ) -> bool {
-    get_line_index(context, expression.position().start())
-        .saturating_sub(get_line_index(context, last_expression.position().end()))
-        > 1
+    get_line_index(context, expression.position().start()).saturating_sub(get_line_index(
+        context,
+        last_expression.position().end() - 1,
+    )) > 1
 }
 
 fn get_line_index(context: &Context, offset: usize) -> usize {
