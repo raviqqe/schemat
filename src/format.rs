@@ -623,10 +623,10 @@ mod tests {
         fn format_remaining_block_comments() {
             assert_eq!(
                 format(
-                    &[Expression::Symbol("foo", Position::new(0, 0))],
+                    &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[
-                        Comment::new("bar", Position::new(1, 1)),
-                        Comment::new("baz", Position::new(2, 2))
+                        Comment::new("bar", Position::new(1, 2)),
+                        Comment::new("baz", Position::new(2, 3))
                     ],
                     &PositionMap::new("\n\n\n"),
                 ),
