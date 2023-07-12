@@ -167,4 +167,43 @@ mod tests {
             "foo\n"
         );
     }
+
+    #[test]
+    fn keep_no_blank_line() {
+        assert_eq!(
+            format(
+                &[
+                    Expression::Symbol("foo", Position::new(0, 2)),
+                    Expression::Symbol("bar", Position::new(1, 2))
+                ],
+                &PositionMap::new(""),
+            ),
+            indoc!(
+                "
+                foo
+                bar
+                "
+            )
+        );
+    }
+
+    #[test]
+    fn keep_blank_line() {
+        assert_eq!(
+            format(
+                &[
+                    Expression::Symbol("foo", Position::new(0, 2)),
+                    Expression::Symbol("bar", Position::new(2, 2))
+                ],
+                &PositionMap::new(""),
+            ),
+            indoc!(
+                "
+                foo
+
+                bar
+                "
+            )
+        );
+    }
 }
