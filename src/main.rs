@@ -5,7 +5,11 @@ mod parse;
 mod position;
 mod position_map;
 
-use crate::{format::format, parse::parse, position_map::PositionMap};
+use crate::{
+    format::format,
+    parse::{parse, parse_comments},
+    position_map::PositionMap,
+};
 use std::{
     error::Error,
     io::{read_to_string, stdin},
@@ -27,7 +31,8 @@ fn run() -> Result<(), Box<dyn Error>> {
         "{}",
         format(
             &parse(&source).map_err(|error| error.to_string(&source, &position_map))?,
-            &position_map
+            &parse_comments(&source).map_err(|error| error.to_string(&source, &position_map))?,
+            &position_map,
         )
     );
 

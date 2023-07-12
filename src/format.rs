@@ -1,7 +1,11 @@
-use crate::{ast::Expression, context::Context, position_map::PositionMap};
+use crate::{
+    ast::{Comment, Expression},
+    context::Context,
+    position_map::PositionMap,
+};
 use mfmt::{flatten, indent, line, r#break, sequence, Document};
 
-pub fn format(module: &[Expression], position_map: &PositionMap) -> String {
+pub fn format(module: &[Expression], _comments: &[Comment], position_map: &PositionMap) -> String {
     let context = Context::new(position_map);
     mfmt::format(&compile_module(&context, module))
 }
@@ -111,6 +115,7 @@ mod tests {
                     ],
                     Position::new(0, 2)
                 )],
+                &[],
                 &PositionMap::new("(foo bar)"),
             ),
             "(foo bar)\n"
@@ -128,6 +133,7 @@ mod tests {
                     ],
                     Position::new(0, 9)
                 )],
+                &[],
                 &PositionMap::new("(foo\nbar)"),
             ),
             indoc!(
@@ -152,6 +158,7 @@ mod tests {
                     ],
                     Position::new(0, 0)
                 )],
+                &[],
                 &PositionMap::new("a\nb"),
             ),
             indoc!(
@@ -172,6 +179,7 @@ mod tests {
                     Expression::Symbol("foo", Position::new(0, 3)).into(),
                     Position::new(0, 3)
                 )],
+                &[],
                 &PositionMap::new("'foo"),
             ),
             "'foo\n"
@@ -183,6 +191,7 @@ mod tests {
         assert_eq!(
             format(
                 &[Expression::String("foo", Position::new(0, 3))],
+                &[],
                 &PositionMap::new("\"foo\""),
             ),
             "\"foo\"\n"
@@ -194,6 +203,7 @@ mod tests {
         assert_eq!(
             format(
                 &[Expression::Symbol("foo", Position::new(0, 3))],
+                &[],
                 &PositionMap::new("foo"),
             ),
             "foo\n"
@@ -217,6 +227,7 @@ mod tests {
                         )],
                         Position::new(0, 0)
                     )],
+                    &[],
                     &PositionMap::new("\n\n\na"),
                 ),
                 indoc!(
@@ -239,6 +250,7 @@ mod tests {
                         ],
                         Position::new(0, 0)
                     )],
+                    &[],
                     &PositionMap::new("\na"),
                 ),
                 indoc!(
@@ -261,6 +273,7 @@ mod tests {
                         ],
                         Position::new(0, 0)
                     )],
+                    &[],
                     &PositionMap::new("\n\na"),
                 ),
                 indoc!(
@@ -290,6 +303,7 @@ mod tests {
                         ],
                         Position::new(0, 0)
                     )],
+                    &[],
                     &PositionMap::new("\n\n\na"),
                 ),
                 indoc!(
@@ -315,6 +329,7 @@ mod tests {
                         Expression::Symbol("foo", Position::new(0, 0)),
                         Expression::Symbol("bar", Position::new(1, 1))
                     ],
+                    &[],
                     &PositionMap::new("\na"),
                 ),
                 indoc!(
@@ -334,6 +349,7 @@ mod tests {
                         Expression::Symbol("foo", Position::new(0, 0)),
                         Expression::Symbol("bar", Position::new(2, 2))
                     ],
+                    &[],
                     &PositionMap::new("\n\na"),
                 ),
                 indoc!(
