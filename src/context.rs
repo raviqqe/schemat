@@ -34,9 +34,9 @@ impl<'a> Context<'a> {
 
     pub fn drain_current_comment(
         &mut self,
-        line_number: usize,
+        line_index: usize,
     ) -> impl Iterator<Item = &'a Comment<'a>> + '_ {
-        self.drain_comments_before(line_number + 1)
+        self.drain_comments_before(line_index + 1)
     }
 
     pub fn peek_comments_before(&self, line_index: usize) -> impl Iterator<Item = &'a Comment> {
