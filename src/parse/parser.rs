@@ -19,6 +19,17 @@ pub fn module(input: Input<'_>) -> IResult<Vec<Expression<'_>>> {
     all_consuming(delimited(many0(hash_line), many0(expression), blank))(input)
 }
 
+pub fn comments(input: Input) -> IResult<Vec<Comment>> {
+    map(
+        all_consuming(many0(alt((
+            map(comment, Some),
+            map(raw_string, |_| None),
+            map(none_of("\"#"), |_| None),
+        )))),
+        |comments| comments.into_iter().flat_map(|comment| comment).collect(),
+    )(input)
+}
+
 fn symbol<'a>(input: Input<'a>) -> IResult<Expression<'a>> {
     map(
         token(positioned(take_while1::<_, Input<'a>, _>(|character| {
@@ -53,6 +64,10 @@ fn expression(input: Input<'_>) -> IResult<Expression<'_>> {
 }
 
 fn string(input: Input<'_>) -> IResult<Expression<'_>> {
+    token(raw_string)
+}
+
+fn raw_string(input: Input<'_>) -> IResult<Expression<'_>> {
     map(
         positioned(delimited(
             char('"'),
