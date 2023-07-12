@@ -211,7 +211,7 @@ mod tests {
         assert_eq!(
             format(
                 &[
-                    Expression::Symbol("foo", Position::new(0, 2)),
+                    Expression::Symbol("foo", Position::new(0, 0)),
                     Expression::Symbol("bar", Position::new(2, 2))
                 ],
                 &PositionMap::new("\n\na"),
