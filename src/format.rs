@@ -56,13 +56,13 @@ fn compile_expression(context: &Context, expression: &Expression) -> Document {
             flatten(sequence(
                 ["(".into()]
                     .into_iter()
-                    .chain([compile_expressions(context, &first)])
+                    .chain([compile_expressions(context, first)])
                     .chain(if last.is_empty() {
                         None
                     } else {
                         Some(r#break(indent(sequence([
                             line(),
-                            compile_expressions(context, &last),
+                            compile_expressions(context, last),
                         ]))))
                     })
                     .chain([")".into()])
@@ -77,10 +77,13 @@ fn compile_expression(context: &Context, expression: &Expression) -> Document {
     }
 }
 
-fn compile_expressions(context: &Context, expressions: &[&Expression]) -> Document {
+fn compile_expressions<'a>(
+    context: &Context,
+    expressions: impl IntoIterator<Item = &'a Expression<'a>>,
+) -> Document {
     sequence(
         expressions
-            .iter()
+            .into_iter()
             .map(|expression| compile_expression(context, expression))
             .intersperse(line()),
     )
