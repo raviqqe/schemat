@@ -57,15 +57,9 @@ fn compile_expressions<'a>(
 
     for expression in expressions {
         if let Some(last_expression) = last_expression {
-            let next_line = context
-                .position_map()
-                .line_index(expression.position().end())
-                .expect("valid offset");
-            let current_line = context
-                .position_map()
-                .line_index(last_expression.position().start())
-                .expect("valid offset");
-            let difference = next_line.saturating_sub(current_line);
+            let current_line = get_line_index(context, expression);
+            let last_line = get_line_index(context, last_expression);
+            let difference = current_line.saturating_sub(last_line);
 
             documents.push(line());
             documents.extend(if difference <= 1 { None } else { Some(line()) });
@@ -77,6 +71,13 @@ fn compile_expressions<'a>(
     }
 
     sequence(documents)
+}
+
+fn get_line_index(context: &Context, expression: &Expression) -> usize {
+    context
+        .position_map()
+        .line_index(expression.position().start())
+        .expect("valid offset")
 }
 
 #[cfg(test)]
