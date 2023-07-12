@@ -56,13 +56,13 @@ fn compile_expression(context: &Context, expression: &Expression) -> Document {
             flatten(sequence(
                 ["(".into()]
                     .into_iter()
-                    .chain([compile_expressions(context, first)])
+                    .chain([compile_expressions(context, &first)])
                     .chain(if last.is_empty() {
                         None
                     } else {
                         Some(r#break(indent(sequence([
                             line(),
-                            compile_expressions(context, last),
+                            compile_expressions(context, &last),
                         ]))))
                     })
                     .chain([")".into()])
@@ -81,12 +81,31 @@ fn compile_expressions<'a>(
     context: &Context,
     expressions: impl IntoIterator<Item = &'a Expression<'a>>,
 ) -> Document {
-    sequence(
-        expressions
-            .into_iter()
-            .map(|expression| compile_expression(context, expression))
-            .intersperse(line()),
-    )
+    let documents = vec![];
+    let last_expression = None;
+
+    for expression in expressions {
+        if let Some(last_expression) = last_expression {
+            let next_line = context
+                .position_map()
+                .line_index(expression.position().end())
+                .expect("valid offset");
+            let current_line = context
+                .position_map()
+                .line_index(last_expression.position().start())
+                .expect("valid offset");
+            let difference = next_line.saturating_sub(current_line);
+
+            documents.push(line());
+            documents.extend(if difference <= 1 { None } else { Some(line()) });
+        }
+
+        documents.push(compile_expression(context, expression));
+
+        last_expression = Some(expression);
+    }
+
+    sequence(documents)
 }
 
 #[cfg(test)]
