@@ -256,18 +256,25 @@ mod tests {
                 format(
                     &[Expression::List(
                         vec![
-                            Expression::Symbol("foo", Position::new(0, 0)),
-                            Expression::Symbol("bar", Position::new(2, 2))
+                            Expression::List(
+                                vec![
+                                    Expression::Symbol("foo", Position::new(0, 0)),
+                                    Expression::Symbol("bar", Position::new(1, 1))
+                                ],
+                                Position::new(0, 1)
+                            ),
+                            Expression::Symbol("baz", Position::new(3, 3))
                         ],
                         Position::new(0, 0)
                     )],
-                    &PositionMap::new("\n\na"),
+                    &PositionMap::new("\n\n\na"),
                 ),
                 indoc!(
                     "
-                    (foo
-
+                    ((foo
                       bar)
+
+                      baz)
                     "
                 )
             );
