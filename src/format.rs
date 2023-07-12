@@ -37,12 +37,12 @@ fn compile_expression(context: &mut Context, expression: &Expression) -> Documen
                 _ => None,
             };
 
-            flatten(sequence(
+            sequence(
                 [compile_line_comment(context, expression.position(), |_| {
                     "(".into()
                 })]
                 .into_iter()
-                .chain([indent(compile_expressions(context, first))])
+                .chain([flatten(indent(compile_expressions(context, first)))])
                 .chain(if last.is_empty() {
                     None
                 } else {
@@ -54,7 +54,7 @@ fn compile_expression(context: &mut Context, expression: &Expression) -> Documen
                 })
                 .chain([")".into()])
                 .collect::<Vec<_>>(),
-            ))
+            )
         }
         Expression::String(string, _) => sequence(["\"", string, "\""]),
         Expression::Symbol(name, _) => (*name).into(),
@@ -149,7 +149,7 @@ fn compile_all_comments(
                     ";".into(),
                     comment.value().trim_end().into(),
                     r#break(line()),
-                    if get_line_index(context, comment.position().end()) + 1 < next_line_index {
+                    if get_line_index(context, comment.position().end() - 1) + 1 < next_line_index {
                         line()
                     } else {
                         empty()
@@ -164,9 +164,10 @@ fn has_extra_line(
     last_expression: &Expression,
     expression: &Expression,
 ) -> bool {
-    get_line_index(context, expression.position().start())
-        .saturating_sub(get_line_index(context, last_expression.position().end()))
-        > 1
+    get_line_index(context, expression.position().start()).saturating_sub(get_line_index(
+        context,
+        last_expression.position().end() - 1,
+    )) > 1
 }
 
 fn get_line_index(context: &Context, offset: usize) -> usize {
@@ -229,12 +230,12 @@ mod tests {
             format(
                 &[Expression::List(
                     vec![
-                        Expression::Symbol("foo", Position::new(0, 0)),
-                        Expression::Symbol("bar", Position::new(0, 0)),
-                        Expression::Symbol("baz", Position::new(2, 0)),
-                        Expression::Symbol("qux", Position::new(2, 0)),
+                        Expression::Symbol("foo", Position::new(0, 1)),
+                        Expression::Symbol("bar", Position::new(0, 1)),
+                        Expression::Symbol("baz", Position::new(2, 3)),
+                        Expression::Symbol("qux", Position::new(2, 3)),
                     ],
-                    Position::new(0, 0)
+                    Position::new(0, 1)
                 )],
                 &[],
                 &PositionMap::new("a\nb"),
@@ -298,12 +299,12 @@ mod tests {
                     &[Expression::List(
                         vec![Expression::List(
                             vec![
-                                Expression::Symbol("foo", Position::new(0, 0)),
-                                Expression::Symbol("bar", Position::new(1, 1))
+                                Expression::Symbol("foo", Position::new(0, 1)),
+                                Expression::Symbol("bar", Position::new(1, 2))
                             ],
                             Position::new(0, 1)
                         )],
-                        Position::new(0, 0)
+                        Position::new(0, 1)
                     )],
                     &[],
                     &PositionMap::new("\n\n\na"),
@@ -323,10 +324,10 @@ mod tests {
                 format(
                     &[Expression::List(
                         vec![
-                            Expression::Symbol("foo", Position::new(0, 0)),
-                            Expression::Symbol("bar", Position::new(1, 1))
+                            Expression::Symbol("foo", Position::new(0, 1)),
+                            Expression::Symbol("bar", Position::new(1, 2))
                         ],
-                        Position::new(0, 0)
+                        Position::new(0, 1)
                     )],
                     &[],
                     &PositionMap::new("\na"),
@@ -346,10 +347,10 @@ mod tests {
                 format(
                     &[Expression::List(
                         vec![
-                            Expression::Symbol("foo", Position::new(0, 0)),
-                            Expression::Symbol("bar", Position::new(2, 2))
+                            Expression::Symbol("foo", Position::new(0, 1)),
+                            Expression::Symbol("bar", Position::new(2, 3))
                         ],
-                        Position::new(0, 0)
+                        Position::new(0, 1)
                     )],
                     &[],
                     &PositionMap::new("\n\na"),
@@ -372,14 +373,14 @@ mod tests {
                         vec![
                             Expression::List(
                                 vec![
-                                    Expression::Symbol("foo", Position::new(0, 0)),
-                                    Expression::Symbol("bar", Position::new(1, 1))
+                                    Expression::Symbol("foo", Position::new(0, 1)),
+                                    Expression::Symbol("bar", Position::new(1, 2))
                                 ],
                                 Position::new(0, 1)
                             ),
-                            Expression::Symbol("baz", Position::new(3, 3))
+                            Expression::Symbol("baz", Position::new(3, 4))
                         ],
-                        Position::new(0, 0)
+                        Position::new(0, 1)
                     )],
                     &[],
                     &PositionMap::new("\n\n\na"),
@@ -424,8 +425,8 @@ mod tests {
             assert_eq!(
                 format(
                     &[
-                        Expression::Symbol("foo", Position::new(0, 0)),
-                        Expression::Symbol("bar", Position::new(1, 1))
+                        Expression::Symbol("foo", Position::new(0, 1)),
+                        Expression::Symbol("bar", Position::new(1, 2))
                     ],
                     &[],
                     &PositionMap::new("\na"),
@@ -444,8 +445,8 @@ mod tests {
             assert_eq!(
                 format(
                     &[
-                        Expression::Symbol("foo", Position::new(0, 0)),
-                        Expression::Symbol("bar", Position::new(2, 2))
+                        Expression::Symbol("foo", Position::new(0, 1)),
+                        Expression::Symbol("bar", Position::new(2, 3))
                     ],
                     &[],
                     &PositionMap::new("\n\na"),
@@ -469,8 +470,8 @@ mod tests {
         fn format_block_comment() {
             assert_eq!(
                 format(
-                    &[Expression::Symbol("foo", Position::new(1, 1))],
-                    &[Comment::new("bar", Position::new(0, 0))],
+                    &[Expression::Symbol("foo", Position::new(1, 2))],
+                    &[Comment::new("bar", Position::new(0, 1))],
                     &PositionMap::new("\na"),
                 ),
                 indoc!(
@@ -486,8 +487,8 @@ mod tests {
         fn format_block_comment_with_extra_line() {
             assert_eq!(
                 format(
-                    &[Expression::Symbol("foo", Position::new(2, 2))],
-                    &[Comment::new("bar", Position::new(0, 0))],
+                    &[Expression::Symbol("foo", Position::new(2, 3))],
+                    &[Comment::new("bar", Position::new(0, 1))],
                     &PositionMap::new("\n\na"),
                 ),
                 indoc!(
@@ -504,10 +505,10 @@ mod tests {
         fn format_block_comments() {
             assert_eq!(
                 format(
-                    &[Expression::Symbol("foo", Position::new(3, 3))],
+                    &[Expression::Symbol("foo", Position::new(3, 4))],
                     &[
-                        Comment::new("bar", Position::new(0, 0)),
-                        Comment::new("baz", Position::new(1, 1))
+                        Comment::new("bar", Position::new(0, 1)),
+                        Comment::new("baz", Position::new(1, 2))
                     ],
                     &PositionMap::new("\n\n\na"),
                 ),
@@ -526,10 +527,10 @@ mod tests {
         fn format_block_comments_with_extra_line() {
             assert_eq!(
                 format(
-                    &[Expression::Symbol("foo", Position::new(4, 4))],
+                    &[Expression::Symbol("foo", Position::new(4, 5))],
                     &[
-                        Comment::new("bar", Position::new(0, 0)),
-                        Comment::new("baz", Position::new(2, 2))
+                        Comment::new("bar", Position::new(0, 1)),
+                        Comment::new("baz", Position::new(2, 3))
                     ],
                     &PositionMap::new("\n\n\n\na"),
                 ),
@@ -549,8 +550,8 @@ mod tests {
         fn format_line_comment() {
             assert_eq!(
                 format(
-                    &[Expression::Symbol("foo", Position::new(0, 0))],
-                    &[Comment::new("bar", Position::new(0, 0))],
+                    &[Expression::Symbol("foo", Position::new(0, 1))],
+                    &[Comment::new("bar", Position::new(0, 1))],
                     &PositionMap::new("\na"),
                 ),
                 indoc!(
@@ -565,10 +566,10 @@ mod tests {
         fn format_line_comments() {
             assert_eq!(
                 format(
-                    &[Expression::Symbol("foo", Position::new(0, 0))],
+                    &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[
-                        Comment::new("bar", Position::new(0, 0)),
-                        Comment::new("baz", Position::new(0, 0))
+                        Comment::new("bar", Position::new(0, 1)),
+                        Comment::new("baz", Position::new(0, 1))
                     ],
                     &PositionMap::new("\na"),
                 ),
@@ -585,10 +586,10 @@ mod tests {
             assert_eq!(
                 format(
                     &[Expression::List(
-                        vec![Expression::Symbol("foo", Position::new(1, 1))],
-                        Position::new(0, 0)
+                        vec![Expression::Symbol("foo", Position::new(1, 2))],
+                        Position::new(0, 1)
                     )],
-                    &[Comment::new("bar", Position::new(0, 0))],
+                    &[Comment::new("bar", Position::new(0, 1))],
                     &PositionMap::new("\n\n"),
                 ),
                 indoc!(
@@ -604,8 +605,8 @@ mod tests {
         fn format_remaining_block_comment() {
             assert_eq!(
                 format(
-                    &[Expression::Symbol("foo", Position::new(0, 0))],
-                    &[Comment::new("bar", Position::new(1, 1))],
+                    &[Expression::Symbol("foo", Position::new(0, 1))],
+                    &[Comment::new("bar", Position::new(1, 2))],
                     &PositionMap::new("\n\n"),
                 ),
                 indoc!(
@@ -622,10 +623,10 @@ mod tests {
         fn format_remaining_block_comments() {
             assert_eq!(
                 format(
-                    &[Expression::Symbol("foo", Position::new(0, 0))],
+                    &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[
-                        Comment::new("bar", Position::new(1, 1)),
-                        Comment::new("baz", Position::new(2, 2))
+                        Comment::new("bar", Position::new(1, 2)),
+                        Comment::new("baz", Position::new(2, 3))
                     ],
                     &PositionMap::new("\n\n\n"),
                 ),
@@ -644,10 +645,10 @@ mod tests {
         fn format_remaining_block_comments_with_extra_line() {
             assert_eq!(
                 format(
-                    &[Expression::Symbol("foo", Position::new(0, 0))],
+                    &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[
-                        Comment::new("bar", Position::new(1, 1)),
-                        Comment::new("baz", Position::new(3, 3))
+                        Comment::new("bar", Position::new(1, 2)),
+                        Comment::new("baz", Position::new(3, 4))
                     ],
                     &PositionMap::new("\n\n\n\n"),
                 ),

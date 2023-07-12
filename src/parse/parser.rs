@@ -144,7 +144,10 @@ fn blank(input: Input<'_>) -> IResult<()> {
 
 fn comment(input: Input) -> IResult<Comment> {
     map(
-        positioned_meta(delimited(char(';'), take_until("\n"), newline)),
+        terminated(
+            positioned_meta(preceded(char(';'), take_until("\n"))),
+            newline,
+        ),
         |(input, position)| Comment::new(&input, position),
     )(input)
 }
@@ -239,7 +242,7 @@ mod tests {
         fn parse_empty() {
             assert_eq!(
                 comment(Input::new(";\n")).unwrap().1,
-                Comment::new("", Position::new(0, 2))
+                Comment::new("", Position::new(0, 1))
             );
         }
 
@@ -247,7 +250,29 @@ mod tests {
         fn parse_comment() {
             assert_eq!(
                 comment(Input::new(";foo\n")).unwrap().1,
-                Comment::new("foo", Position::new(0, 5))
+                Comment::new("foo", Position::new(0, 4))
+            );
+        }
+
+        #[test]
+        fn parse_comments() {
+            assert_eq!(
+                comments(Input::new(";foo\n;bar\n")).unwrap().1,
+                vec![
+                    Comment::new("foo", Position::new(0, 4)),
+                    Comment::new("bar", Position::new(5, 9))
+                ]
+            );
+        }
+
+        #[test]
+        fn parse_comments_with_blank_lines() {
+            assert_eq!(
+                comments(Input::new(";foo\n\n;bar\n")).unwrap().1,
+                vec![
+                    Comment::new("foo", Position::new(0, 4)),
+                    Comment::new("bar", Position::new(6, 10))
+                ]
             );
         }
     }
