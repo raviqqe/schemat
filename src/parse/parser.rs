@@ -1,5 +1,8 @@
 use super::{error::NomError, input::Input};
-use crate::{ast::Expression, position::Position};
+use crate::{
+    ast::{Comment, Expression},
+    position::Position,
+};
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_until, take_while1},
@@ -20,11 +23,14 @@ pub fn module(input: Input<'_>) -> IResult<Vec<Expression<'_>>> {
 }
 
 pub fn comments(input: Input) -> IResult<Vec<Comment>> {
-    all_consuming(many0(alt((
-        map(comment, Some),
-        map(raw_string, |_| None),
-        map(none_of("\"#"), |_| None),
-    ))))(input)
+    map(
+        all_consuming(many0(alt((
+            map(comment, Some),
+            map(raw_string, |_| None),
+            map(none_of("\"#"), |_| None),
+        )))),
+        |comments| comments.into_iter().flatten().collect(),
+    )(input)
 }
 
 fn symbol<'a>(input: Input<'a>) -> IResult<Expression<'a>> {
@@ -113,11 +119,14 @@ fn positioned<'a, T>(
 }
 
 fn blank(input: Input<'_>) -> IResult<()> {
-    value((), many0(alt((multispace1, comment))))(input)
+    value((), many0(alt((value((), multispace1), value((), comment)))))(input)
 }
 
-fn comment(input: Input<'_>) -> IResult<Input<'_>> {
-    delimited(char(';'), take_until("\n"), newline)(input)
+fn comment(input: Input) -> IResult<Comment> {
+    map(
+        positioned(delimited(char(';'), take_until("\n"), newline)),
+        |(input, position)| Comment::new(&input, position),
+    )(input)
 }
 
 fn hash_line(input: Input<'_>) -> IResult<Input<'_>> {
@@ -202,15 +211,22 @@ mod tests {
 
     mod comment {
         use super::*;
+        use pretty_assertions::assert_eq;
 
         #[test]
         fn parse_empty() {
-            assert_eq!(*comment(Input::new(";\n")).unwrap().1, "");
+            assert_eq!(
+                comment(Input::new(";\n")).unwrap().1,
+                Comment::new("", Position::new(0, 0))
+            );
         }
 
         #[test]
         fn parse_comment() {
-            assert_eq!(*comment(Input::new(";foo\n")).unwrap().1, "foo");
+            assert_eq!(
+                comment(Input::new(";foo\n")).unwrap().1,
+                Comment::new("foo", Position::new(0, 0))
+            );
         }
     }
 }
