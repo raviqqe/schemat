@@ -13,7 +13,31 @@ fn compile_module(context: &Context, module: &[Expression]) -> Document {
     sequence(
         module
             .iter()
-            .map(|expression| sequence([compile_expression(context, expression), line()])),
+            .zip(
+                module
+                    .iter()
+                    .skip(1)
+                    .map(|expression| expression.position().start())
+                    .chain([0]),
+            )
+            .map(|(expression, next_offset)| {
+                let next_line = context
+                    .position_map()
+                    .line_index(next_offset)
+                    .expect("valid offset");
+                let current_line = context
+                    .position_map()
+                    .line_index(expression.position().start())
+                    .expect("valid offset");
+                let difference = next_line.saturating_sub(current_line);
+
+                sequence(
+                    [compile_expression(context, expression)]
+                        .into_iter()
+                        .chain([line()])
+                        .chain(if difference <= 1 { None } else { Some(line()) }),
+                )
+            }),
     )
 }
 
@@ -79,7 +103,7 @@ mod tests {
                     ],
                     Position::new(0, 2)
                 )],
-                &PositionMap::new(""),
+                &PositionMap::new("(foo bar)"),
             ),
             "(foo bar)\n"
         );
@@ -140,7 +164,7 @@ mod tests {
                     Expression::Symbol("foo", Position::new(0, 3)).into(),
                     Position::new(0, 3)
                 )],
-                &PositionMap::new(""),
+                &PositionMap::new("'foo"),
             ),
             "'foo\n"
         );
@@ -151,7 +175,7 @@ mod tests {
         assert_eq!(
             format(
                 &[Expression::String("foo", Position::new(0, 3))],
-                &PositionMap::new(""),
+                &PositionMap::new("\"foo\""),
             ),
             "\"foo\"\n"
         );
@@ -162,9 +186,48 @@ mod tests {
         assert_eq!(
             format(
                 &[Expression::Symbol("foo", Position::new(0, 3))],
-                &PositionMap::new(""),
+                &PositionMap::new("foo"),
             ),
             "foo\n"
+        );
+    }
+
+    #[test]
+    fn keep_no_blank_line() {
+        assert_eq!(
+            format(
+                &[
+                    Expression::Symbol("foo", Position::new(0, 2)),
+                    Expression::Symbol("bar", Position::new(1, 2))
+                ],
+                &PositionMap::new("\na"),
+            ),
+            indoc!(
+                "
+                foo
+                bar
+                "
+            )
+        );
+    }
+
+    #[test]
+    fn keep_blank_line() {
+        assert_eq!(
+            format(
+                &[
+                    Expression::Symbol("foo", Position::new(0, 2)),
+                    Expression::Symbol("bar", Position::new(2, 2))
+                ],
+                &PositionMap::new("\n\na"),
+            ),
+            indoc!(
+                "
+                foo
+
+                bar
+                "
+            )
         );
     }
 }
