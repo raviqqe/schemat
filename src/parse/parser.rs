@@ -61,7 +61,7 @@ fn expression(input: Input<'_>) -> IResult<Expression<'_>> {
 }
 
 fn string(input: Input<'_>) -> IResult<Expression<'_>> {
-    token(raw_string)
+    token(raw_string)(input)
 }
 
 fn raw_string(input: Input<'_>) -> IResult<Expression<'_>> {
