@@ -1,6 +1,6 @@
 use super::{error::NomError, input::Input};
 use crate::{
-    ast::{Comment, Expression},
+    ast::{Comment, Expression, HashLine},
     position::Position,
 };
 use nom::{
@@ -31,6 +31,13 @@ pub fn comments(input: Input) -> IResult<Vec<Comment>> {
         )))),
         |comments| comments.into_iter().flatten().collect(),
     )(input)
+}
+
+pub fn hash_lines(input: Input<'_>) -> IResult<Vec<HashLine<'_>>> {
+    all_consuming(terminated(
+        many0(hash_line),
+        tuple((many0(expression), blank)),
+    ))(input)
 }
 
 fn symbol<'a>(input: Input<'a>) -> IResult<Expression<'a>> {
@@ -152,8 +159,14 @@ fn comment(input: Input) -> IResult<Comment> {
     )(input)
 }
 
-fn hash_line(input: Input<'_>) -> IResult<Input<'_>> {
-    delimited(char('#'), take_until("\n"), newline)(input)
+fn hash_line(input: Input<'_>) -> IResult<HashLine<'_>> {
+    map(
+        terminated(
+            positioned_meta(preceded(char('#'), take_until("\n"))),
+            newline,
+        ),
+        |(input, position)| HashLine::new(&input, position),
+    )(input)
 }
 
 fn newline(input: Input<'_>) -> IResult<()> {
@@ -194,14 +207,17 @@ mod tests {
 
     #[test]
     fn parse_shebang() {
-        assert_eq!(*hash_line(Input::new("#!/bin/sh\n")).unwrap().1, "!/bin/sh");
+        assert_eq!(
+            hash_line(Input::new("#!/bin/sh\n")).unwrap().1,
+            HashLine::new("!/bin/sh", Position::new(0, 9))
+        );
     }
 
     #[test]
     fn parse_lang_directive() {
         assert_eq!(
-            *hash_line(Input::new("#lang r7rs\n")).unwrap().1,
-            "lang r7rs"
+            hash_line(Input::new("#lang r7rs\n")).unwrap().1,
+            HashLine::new("lang r7rs", Position::new(0, 10))
         );
     }
 

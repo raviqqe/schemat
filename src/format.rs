@@ -1,28 +1,71 @@
 use crate::{
-    ast::{Comment, Expression},
+    ast::{Comment, Expression, HashLine},
     context::Context,
     position::Position,
     position_map::PositionMap,
 };
-use mfmt::{empty, flatten, indent, line, line_suffix, r#break, sequence, Document};
+use mfmt::{
+    empty, flatten, indent, line, line_suffix, r#break, sequence,
+    utility::{count_lines, is_empty},
+    Document,
+};
 
-pub fn format(module: &[Expression], comments: &[Comment], position_map: &PositionMap) -> String {
+const COMMENT_PREFIX: &str = ";";
+
+pub fn format(
+    module: &[Expression],
+    comments: &[Comment],
+    hash_lines: &[HashLine],
+    position_map: &PositionMap,
+) -> String {
     mfmt::format(&compile_module(
         &mut Context::new(comments, position_map),
         module,
+        hash_lines,
     ))
 }
 
-fn compile_module(context: &mut Context, module: &[Expression]) -> Document {
-    sequence([compile_expressions(context, module), line(), {
-        let comment = compile_remaining_block_comment(context);
-
-        if mfmt::utility::count_lines(&comment) > 0 {
-            sequence([line(), comment])
-        } else {
+fn compile_module(
+    context: &mut Context,
+    module: &[Expression],
+    hash_lines: &[HashLine],
+) -> Document {
+    [
+        if hash_lines.is_empty() {
             empty()
+        } else {
+            sequence([sequence(hash_lines.iter().map(compile_hash_line))])
+        },
+        {
+            let expressions = compile_expressions(context, module);
+
+            if is_empty(&expressions) {
+                empty()
+            } else {
+                sequence([expressions, line()])
+            }
+        },
+        compile_remaining_block_comment(context),
+    ]
+    .into_iter()
+    .fold(empty(), |all, document| {
+        if count_lines(&document) == 0 {
+            all
+        } else {
+            sequence([
+                if count_lines(&all) == 0 {
+                    empty()
+                } else {
+                    sequence([all, line()])
+                },
+                document,
+            ])
         }
-    }])
+    })
+}
+
+fn compile_hash_line(hash_line: &HashLine) -> Document {
+    sequence([("#".to_owned() + hash_line.value()).into(), line()])
 }
 
 fn compile_expression(context: &mut Context, expression: &Expression) -> Document {
@@ -105,7 +148,9 @@ fn compile_suffix_comment(context: &mut Context, position: &Position) -> Documen
     sequence(
         context
             .drain_current_comment(get_line_index(context, position.start()))
-            .map(|comment| line_suffix(" ;".to_owned() + comment.value().trim_end())),
+            .map(|comment| {
+                line_suffix(" ".to_owned() + COMMENT_PREFIX + comment.value().trim_end())
+            }),
     )
 }
 
@@ -146,7 +191,7 @@ fn compile_all_comments(
             )
             .map(|(comment, next_line_index)| {
                 sequence([
-                    ";".into(),
+                    COMMENT_PREFIX.into(),
                     comment.value().trim_end().into(),
                     r#break(line()),
                     if get_line_index(context, comment.position().end() - 1) + 1 < next_line_index {
@@ -195,6 +240,7 @@ mod tests {
                     Position::new(0, 2)
                 )],
                 &[],
+                &[],
                 &PositionMap::new("(foo bar)"),
             ),
             "(foo bar)\n"
@@ -212,6 +258,7 @@ mod tests {
                     ],
                     Position::new(0, 9)
                 )],
+                &[],
                 &[],
                 &PositionMap::new("(foo\nbar)"),
             ),
@@ -238,6 +285,7 @@ mod tests {
                     Position::new(0, 1)
                 )],
                 &[],
+                &[],
                 &PositionMap::new("a\nb"),
             ),
             indoc!(
@@ -259,6 +307,7 @@ mod tests {
                     Position::new(0, 3)
                 )],
                 &[],
+                &[],
                 &PositionMap::new("'foo"),
             ),
             "'foo\n"
@@ -271,6 +320,7 @@ mod tests {
             format(
                 &[Expression::String("foo", Position::new(0, 3))],
                 &[],
+                &[],
                 &PositionMap::new("\"foo\""),
             ),
             "\"foo\"\n"
@@ -282,6 +332,7 @@ mod tests {
         assert_eq!(
             format(
                 &[Expression::Symbol("foo", Position::new(0, 3))],
+                &[],
                 &[],
                 &PositionMap::new("foo"),
             ),
@@ -307,6 +358,7 @@ mod tests {
                         Position::new(0, 1)
                     )],
                     &[],
+                    &[],
                     &PositionMap::new("\n\n\na"),
                 ),
                 indoc!(
@@ -330,6 +382,7 @@ mod tests {
                         Position::new(0, 1)
                     )],
                     &[],
+                    &[],
                     &PositionMap::new("\na"),
                 ),
                 indoc!(
@@ -352,6 +405,7 @@ mod tests {
                         ],
                         Position::new(0, 1)
                     )],
+                    &[],
                     &[],
                     &PositionMap::new("\n\na"),
                 ),
@@ -383,6 +437,7 @@ mod tests {
                         Position::new(0, 1)
                     )],
                     &[],
+                    &[],
                     &PositionMap::new("\n\n\na"),
                 ),
                 indoc!(
@@ -404,6 +459,7 @@ mod tests {
                         vec![Expression::Symbol("foo", Position::new(1, 1))],
                         Position::new(0, 0)
                     )],
+                    &[],
                     &[],
                     &PositionMap::new("\n\n"),
                 ),
@@ -429,6 +485,7 @@ mod tests {
                         Expression::Symbol("bar", Position::new(1, 2))
                     ],
                     &[],
+                    &[],
                     &PositionMap::new("\na"),
                 ),
                 indoc!(
@@ -448,6 +505,7 @@ mod tests {
                         Expression::Symbol("foo", Position::new(0, 1)),
                         Expression::Symbol("bar", Position::new(2, 3))
                     ],
+                    &[],
                     &[],
                     &PositionMap::new("\n\na"),
                 ),
@@ -472,6 +530,7 @@ mod tests {
                 format(
                     &[Expression::Symbol("foo", Position::new(1, 2))],
                     &[Comment::new("bar", Position::new(0, 1))],
+                    &[],
                     &PositionMap::new("\na"),
                 ),
                 indoc!(
@@ -489,6 +548,7 @@ mod tests {
                 format(
                     &[Expression::Symbol("foo", Position::new(2, 3))],
                     &[Comment::new("bar", Position::new(0, 1))],
+                    &[],
                     &PositionMap::new("\n\na"),
                 ),
                 indoc!(
@@ -510,6 +570,7 @@ mod tests {
                         Comment::new("bar", Position::new(0, 1)),
                         Comment::new("baz", Position::new(1, 2))
                     ],
+                    &[],
                     &PositionMap::new("\n\n\na"),
                 ),
                 indoc!(
@@ -532,6 +593,7 @@ mod tests {
                         Comment::new("bar", Position::new(0, 1)),
                         Comment::new("baz", Position::new(2, 3))
                     ],
+                    &[],
                     &PositionMap::new("\n\n\n\na"),
                 ),
                 indoc!(
@@ -552,6 +614,7 @@ mod tests {
                 format(
                     &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[Comment::new("bar", Position::new(0, 1))],
+                    &[],
                     &PositionMap::new("\na"),
                 ),
                 indoc!(
@@ -571,6 +634,7 @@ mod tests {
                         Comment::new("bar", Position::new(0, 1)),
                         Comment::new("baz", Position::new(0, 1))
                     ],
+                    &[],
                     &PositionMap::new("\na"),
                 ),
                 indoc!(
@@ -590,6 +654,7 @@ mod tests {
                         Position::new(0, 1)
                     )],
                     &[Comment::new("bar", Position::new(0, 1))],
+                    &[],
                     &PositionMap::new("\n\n"),
                 ),
                 indoc!(
@@ -607,6 +672,7 @@ mod tests {
                 format(
                     &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[Comment::new("bar", Position::new(1, 2))],
+                    &[],
                     &PositionMap::new("\n\n"),
                 ),
                 indoc!(
@@ -628,6 +694,7 @@ mod tests {
                         Comment::new("bar", Position::new(1, 2)),
                         Comment::new("baz", Position::new(2, 3))
                     ],
+                    &[],
                     &PositionMap::new("\n\n\n"),
                 ),
                 indoc!(
@@ -650,6 +717,7 @@ mod tests {
                         Comment::new("bar", Position::new(1, 2)),
                         Comment::new("baz", Position::new(3, 4))
                     ],
+                    &[],
                     &PositionMap::new("\n\n\n\n"),
                 ),
                 indoc!(
@@ -659,6 +727,68 @@ mod tests {
                     ;bar
 
                     ;baz
+                    "
+                )
+            );
+        }
+    }
+
+    mod hash_line {
+        use super::*;
+        use pretty_assertions::assert_eq;
+
+        #[test]
+        fn format_hash_line() {
+            assert_eq!(
+                format(
+                    &[],
+                    &[],
+                    &[HashLine::new("foo", Position::new(0, 0))],
+                    &PositionMap::new("\n"),
+                ),
+                indoc!(
+                    "
+                    #foo
+                    "
+                )
+            );
+        }
+
+        #[test]
+        fn format_hash_lines() {
+            assert_eq!(
+                format(
+                    &[],
+                    &[],
+                    &[
+                        HashLine::new("foo", Position::new(0, 0)),
+                        HashLine::new("bar", Position::new(2, 2))
+                    ],
+                    &PositionMap::new("\n\n\n"),
+                ),
+                indoc!(
+                    "
+                    #foo
+                    #bar
+                    "
+                )
+            );
+        }
+
+        #[test]
+        fn format_hash_line_with_expression() {
+            assert_eq!(
+                format(
+                    &[Expression::Symbol("bar", Position::new(0, 0))],
+                    &[],
+                    &[HashLine::new("foo", Position::new(0, 0))],
+                    &PositionMap::new("\n"),
+                ),
+                indoc!(
+                    "
+                    #foo
+
+                    bar
                     "
                 )
             );
