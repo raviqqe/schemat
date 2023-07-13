@@ -14,6 +14,12 @@ It supports:
   - Shebang `#!/usr/bin/env gambit`
   - Language shorthand in Racket (e.g. `#lang racket`)
 
+## Install
+
+```sh
+cargo install schemat
+```
+
 ## Usage
 
 ```sh

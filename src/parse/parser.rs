@@ -37,9 +37,9 @@ pub fn comments<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Comment, A
             map(none_of("\";"), |_| None),
         )),
         move || Vec::new_in(allocator.clone()),
-        |mut all, x| {
-            if let Some(x) = x {
-                all.push(x);
+        |mut all, comment| {
+            if let Some(comment) = comment {
+                all.push(comment);
             }
 
             all
