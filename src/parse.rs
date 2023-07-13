@@ -5,9 +5,9 @@ mod parser;
 pub use self::error::ParseError;
 use self::{
     input::Input,
-    parser::{comments, hash_lines, module, IResult},
+    parser::{comments, hash_directives, module, IResult},
 };
-use crate::ast::{Comment, Expression, HashLine};
+use crate::ast::{Comment, Expression, HashDirective};
 
 pub fn parse(source: &str) -> Result<Vec<Expression>, ParseError> {
     convert_result(module(Input::new(source)), source)
@@ -17,8 +17,8 @@ pub fn parse_comments(source: &str) -> Result<Vec<Comment>, ParseError> {
     convert_result(comments(Input::new(source)), source)
 }
 
-pub fn parse_hash_lines(source: &str) -> Result<Vec<HashLine>, ParseError> {
-    convert_result(hash_lines(Input::new(source)), source)
+pub fn parse_hash_directives(source: &str) -> Result<Vec<HashDirective>, ParseError> {
+    convert_result(hash_directives(Input::new(source)), source)
 }
 
 fn convert_result<T>(result: IResult<T>, source: &str) -> Result<T, ParseError> {
