@@ -45,6 +45,7 @@ mod tests {
     use indoc::indoc;
     use pretty_assertions::assert_eq;
     use std::alloc::Global;
+    use nom::error::ErrorKind;
 
     #[test]
     fn to_string() {
@@ -55,7 +56,7 @@ mod tests {
             "foo",
             nom::Err::Error(Error {
                 input: Input::new_extra("foo", Global),
-                code: foo,
+                code: ErrorKind::Tag,
             }),
         );
 
