@@ -41,7 +41,7 @@ pub fn comments<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Comment, A
             },
         )),
         |comments| {
-            let vec = Vec::new_in(input.extra());
+            let vec = Vec::new_in(input.extra);
             vec.extend(comments.into_iter().flatten());
             vec
         },
