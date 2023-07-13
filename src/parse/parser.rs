@@ -66,16 +66,6 @@ fn expression<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'
     alt((
         context("symbol", symbol),
         context(
-            "quote",
-            map(
-                positioned(preceded(sign('\''), expression)),
-                move |(expression, position)| {
-                    Expression::Quote(Box::new_in(expression, allocator.clone()), position)
-                },
-            ),
-        ),
-        context("string", string),
-        context(
             "list",
             map(
                 positioned(preceded(
@@ -83,6 +73,16 @@ fn expression<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'
                     cut(terminated(many0(expression), sign(')'))),
                 )),
                 |(expressions, position)| Expression::List(expressions, position),
+            ),
+        ),
+        context("string", string),
+        context(
+            "quote",
+            map(
+                positioned(preceded(sign('\''), expression)),
+                move |(expression, position)| {
+                    Expression::Quote(Box::new_in(expression, allocator.clone()), position)
+                },
             ),
         ),
     ))(input)
