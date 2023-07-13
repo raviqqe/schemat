@@ -2,8 +2,8 @@ mod error;
 mod input;
 mod parser;
 
+pub use self::error::ParseError;
 use self::{
-    error::ParseError,
     input::Input,
     parser::{comments, hash_lines, module, IResult},
 };
