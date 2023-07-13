@@ -4,7 +4,11 @@ use crate::{
     position::Position,
     position_map::PositionMap,
 };
-use mfmt::{empty, flatten, indent, line, line_suffix, r#break, sequence, Document};
+use mfmt::{
+    empty, flatten, indent, line, line_suffix, r#break, sequence,
+    utility::{count_lines, is_empty},
+    Document,
+};
 
 const COMMENT_PREFIX: &str = ";";
 
@@ -26,32 +30,42 @@ fn compile_module(
     module: &[Expression],
     hash_lines: &[HashLine],
 ) -> Document {
-    sequence([
+    [
         if hash_lines.is_empty() {
             empty()
         } else {
-            sequence([
-                sequence(hash_lines.iter().map(compile_hash_line)),
-                line(),
-                line(),
-            ])
+            sequence([sequence(hash_lines.iter().map(compile_hash_line))])
         },
-        compile_expressions(context, module),
-        line(),
         {
-            let comment = compile_remaining_block_comment(context);
+            let expressions = compile_expressions(context, module);
 
-            if mfmt::utility::count_lines(&comment) > 0 {
-                sequence([line(), comment])
-            } else {
+            if is_empty(&expressions) {
                 empty()
+            } else {
+                sequence([expressions, line()])
             }
         },
-    ])
+        compile_remaining_block_comment(context),
+    ]
+    .into_iter()
+    .fold(empty(), |all, document| {
+        if count_lines(&document) == 0 {
+            all
+        } else {
+            sequence([
+                if count_lines(&all) == 0 {
+                    empty()
+                } else {
+                    sequence([all, line()])
+                },
+                document,
+            ])
+        }
+    })
 }
 
 fn compile_hash_line(hash_line: &HashLine) -> Document {
-    ("#".to_owned() + hash_line.value() + "\n").into()
+    sequence([("#".to_owned() + hash_line.value()).into(), line()])
 }
 
 fn compile_expression(context: &mut Context, expression: &Expression) -> Document {
@@ -713,6 +727,68 @@ mod tests {
                     ;bar
 
                     ;baz
+                    "
+                )
+            );
+        }
+    }
+
+    mod hash_line {
+        use super::*;
+        use pretty_assertions::assert_eq;
+
+        #[test]
+        fn format_hash_line() {
+            assert_eq!(
+                format(
+                    &[],
+                    &[],
+                    &[HashLine::new("foo", Position::new(0, 0))],
+                    &PositionMap::new("\n"),
+                ),
+                indoc!(
+                    "
+                    #foo
+                    "
+                )
+            );
+        }
+
+        #[test]
+        fn format_hash_lines() {
+            assert_eq!(
+                format(
+                    &[],
+                    &[],
+                    &[
+                        HashLine::new("foo", Position::new(0, 0)),
+                        HashLine::new("bar", Position::new(2, 2))
+                    ],
+                    &PositionMap::new("\n\n\n"),
+                ),
+                indoc!(
+                    "
+                    #foo
+                    #bar
+                    "
+                )
+            );
+        }
+
+        #[test]
+        fn format_hash_line_with_expression() {
+            assert_eq!(
+                format(
+                    &[Expression::Symbol("bar", Position::new(0, 0))],
+                    &[],
+                    &[HashLine::new("foo", Position::new(0, 0))],
+                    &PositionMap::new("\n"),
+                ),
+                indoc!(
+                    "
+                    #foo
+
+                    bar
                     "
                 )
             );
