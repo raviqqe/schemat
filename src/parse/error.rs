@@ -4,7 +4,7 @@ use core::str;
 use nom::error::{VerboseError, VerboseErrorKind};
 use std::alloc::Allocator;
 
-pub type NomError<'a, A: Allocator> = VerboseError<Input<'a, Allocator>>;
+pub type NomError<'a, A: Allocator> = VerboseError<Input<'a, A>>;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParseError {
@@ -13,7 +13,7 @@ pub struct ParseError {
 }
 
 impl ParseError {
-    pub fn new(source: &str, error: nom::Err<NomError<'_>>) -> Self {
+    pub fn new<A: Allocator>(source: &str, error: nom::Err<NomError<'_, A>>) -> Self {
         match error {
             nom::Err::Incomplete(_) => Self::unexpected_end(source),
             nom::Err::Error(error) | nom::Err::Failure(error) => {
