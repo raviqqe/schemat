@@ -7,7 +7,7 @@ mod position_map;
 
 use crate::{
     format::format,
-    parse::{parse, parse_comments, parse_hash_lines, ParseError},
+    parse::{parse, parse_comments, parse_hash_directives, ParseError},
     position_map::PositionMap,
 };
 use std::{
@@ -33,7 +33,7 @@ fn run() -> Result<(), Box<dyn Error>> {
         format(
             &parse(&source).map_err(convert_error)?,
             &parse_comments(&source).map_err(convert_error)?,
-            &parse_hash_lines(&source).map_err(convert_error)?,
+            &parse_hash_directives(&source).map_err(convert_error)?,
             &position_map,
         )
     );

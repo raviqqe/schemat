@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Comment, Expression, HashLine},
+    ast::{Comment, Expression, HashDirective},
     context::Context,
     position::Position,
     position_map::PositionMap,
@@ -15,26 +15,26 @@ const COMMENT_PREFIX: &str = ";";
 pub fn format(
     module: &[Expression],
     comments: &[Comment],
-    hash_lines: &[HashLine],
+    hash_directives: &[HashDirective],
     position_map: &PositionMap,
 ) -> String {
     mfmt::format(&compile_module(
         &mut Context::new(comments, position_map),
         module,
-        hash_lines,
+        hash_directives,
     ))
 }
 
 fn compile_module(
     context: &mut Context,
     module: &[Expression],
-    hash_lines: &[HashLine],
+    hash_directives: &[HashDirective],
 ) -> Document {
     [
-        if hash_lines.is_empty() {
+        if hash_directives.is_empty() {
             empty()
         } else {
-            sequence([sequence(hash_lines.iter().map(compile_hash_line))])
+            sequence([sequence(hash_directives.iter().map(compile_hash_directive))])
         },
         {
             let expressions = compile_expressions(context, module);
@@ -64,8 +64,8 @@ fn compile_module(
     })
 }
 
-fn compile_hash_line(hash_line: &HashLine) -> Document {
-    sequence([("#".to_owned() + hash_line.value()).into(), line()])
+fn compile_hash_directive(hash_line: &HashDirective) -> Document {
+    sequence([("#".to_owned() + hash_directive.value()).into(), line()])
 }
 
 fn compile_expression(context: &mut Context, expression: &Expression) -> Document {
@@ -733,17 +733,17 @@ mod tests {
         }
     }
 
-    mod hash_line {
+    mod hash_directive {
         use super::*;
         use pretty_assertions::assert_eq;
 
         #[test]
-        fn format_hash_line() {
+        fn format_hash_directive() {
             assert_eq!(
                 format(
                     &[],
                     &[],
-                    &[HashLine::new("foo", Position::new(0, 0))],
+                    &[HashDirective::new("foo", Position::new(0, 0))],
                     &PositionMap::new("\n"),
                 ),
                 indoc!(
@@ -755,14 +755,14 @@ mod tests {
         }
 
         #[test]
-        fn format_hash_lines() {
+        fn format_hash_directives() {
             assert_eq!(
                 format(
                     &[],
                     &[],
                     &[
-                        HashLine::new("foo", Position::new(0, 0)),
-                        HashLine::new("bar", Position::new(2, 2))
+                        HashDirective::new("foo", Position::new(0, 0)),
+                        HashDirective::new("bar", Position::new(2, 2))
                     ],
                     &PositionMap::new("\n\n\n"),
                 ),
@@ -776,12 +776,12 @@ mod tests {
         }
 
         #[test]
-        fn format_hash_line_with_expression() {
+        fn format_hash_directive_with_expression() {
             assert_eq!(
                 format(
                     &[Expression::Symbol("bar", Position::new(0, 0))],
                     &[],
-                    &[HashLine::new("foo", Position::new(0, 0))],
+                    &[HashDirective::new("foo", Position::new(0, 0))],
                     &PositionMap::new("\n"),
                 ),
                 indoc!(
