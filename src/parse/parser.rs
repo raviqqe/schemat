@@ -33,6 +33,13 @@ pub fn comments(input: Input) -> IResult<Vec<Comment>> {
     )(input)
 }
 
+pub fn hash_lines(input: Input<'_>) -> IResult<Vec<HashLine<'_>>> {
+    all_consuming(terminated(
+        many0(hash_line),
+        tuple((many0(expression), blank)),
+    ))(input)
+}
+
 fn symbol<'a>(input: Input<'a>) -> IResult<Expression<'a>> {
     map(
         token(positioned(take_while1::<_, Input<'a>, _>(|character| {
