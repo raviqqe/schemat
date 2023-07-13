@@ -48,13 +48,13 @@ mod tests {
 
     #[test]
     fn parse_nothing() {
-        assert_eq!(parse::<Global>(""), Ok(vec![]));
+        assert_eq!(parse("", Global), Ok(vec![]));
     }
 
     #[test]
     fn parse_symbol() {
         assert_eq!(
-            parse::<Global>("foo"),
+            parse("foo", Global),
             Ok(vec![Expression::Symbol("foo", Position::new(0, 3))])
         );
     }
@@ -62,7 +62,7 @@ mod tests {
     #[test]
     fn parse_shebang() {
         assert_eq!(
-            parse::<Global>("#!/bin/sh\n#t"),
+            parse("#!/bin/sh\n#t", Global),
             Ok(vec![Expression::Symbol("#t", Position::new(10, 12))])
         );
     }
@@ -70,7 +70,7 @@ mod tests {
     #[test]
     fn parse_lang_directive() {
         assert_eq!(
-            parse::<Global>("#lang racket\n#t"),
+            parse("#lang racket\n#t", Global),
             Ok(vec![Expression::Symbol("#t", Position::new(13, 15))])
         );
     }
@@ -78,7 +78,7 @@ mod tests {
     #[test]
     fn parse_empty_list() {
         assert_eq!(
-            parse::<Global>("()"),
+            parse("()", Global),
             Ok(vec![Expression::List(vec![], Position::new(0, 2))])
         );
     }
@@ -86,7 +86,7 @@ mod tests {
     #[test]
     fn parse_list_with_element() {
         assert_eq!(
-            parse::<Global>("(foo)"),
+            parse("(foo)", Global),
             Ok(vec![Expression::List(
                 vec![Expression::Symbol("foo", Position::new(1, 4))],
                 Position::new(0, 5)
@@ -97,7 +97,7 @@ mod tests {
     #[test]
     fn parse_list_with_elements() {
         assert_eq!(
-            parse::<Global>("(foo bar)"),
+            parse("(foo bar)", Global),
             Ok(vec![Expression::List(
                 vec![
                     Expression::Symbol("foo", Position::new(1, 4)),
