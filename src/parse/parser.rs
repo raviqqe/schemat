@@ -239,15 +239,16 @@ fn newline<A: Allocator + Clone>(input: Input<A>) -> IResult<(), A> {
 mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
+    use std::alloc::Global;
 
     #[test]
     fn parse_false() {
         assert_eq!(
-            expression(Input::new("#f")).unwrap().1,
+            expression(Input::new_extra("#f", Global)).unwrap().1,
             Expression::Symbol("#f", Position::new(0, 2))
         );
         assert_eq!(
-            expression(Input::new("#false")).unwrap().1,
+            expression(Input::new_extra("#false", Global)).unwrap().1,
             Expression::Symbol("#false", Position::new(0, 6))
         );
     }
@@ -255,11 +256,11 @@ mod tests {
     #[test]
     fn parse_true() {
         assert_eq!(
-            expression(Input::new("#t")).unwrap().1,
+            expression(Input::new_extra("#t", Global)).unwrap().1,
             Expression::Symbol("#t", Position::new(0, 2))
         );
         assert_eq!(
-            expression(Input::new("#true")).unwrap().1,
+            expression(Input::new_extra("#true", Global)).unwrap().1,
             Expression::Symbol("#true", Position::new(0, 5))
         );
     }
@@ -267,7 +268,9 @@ mod tests {
     #[test]
     fn parse_shebang() {
         assert_eq!(
-            hash_directive(Input::new("#!/bin/sh\n")).unwrap().1,
+            hash_directive(Input::new_extra("#!/bin/sh\n", Global))
+                .unwrap()
+                .1,
             HashDirective::new("!/bin/sh", Position::new(0, 9))
         );
     }
@@ -275,7 +278,9 @@ mod tests {
     #[test]
     fn parse_lang_directive() {
         assert_eq!(
-            hash_directive(Input::new("#lang r7rs\n")).unwrap().1,
+            hash_directive(Input::new_extra("#lang r7rs\n", Global))
+                .unwrap()
+                .1,
             HashDirective::new("lang r7rs", Position::new(0, 10))
         );
     }
@@ -287,7 +292,7 @@ mod tests {
         #[test]
         fn parse_empty() {
             assert_eq!(
-                string(Input::new("\"\"")).unwrap().1,
+                string(Input::new_extra("\"\"", Global)).unwrap().1,
                 Expression::String("", Position::new(0, 2))
             );
         }
@@ -295,7 +300,7 @@ mod tests {
         #[test]
         fn parse_non_empty() {
             assert_eq!(
-                string(Input::new("\"foo\"")).unwrap().1,
+                string(Input::new_extra("\"foo\"", Global)).unwrap().1,
                 Expression::String("foo", Position::new(0, 5))
             );
         }
@@ -303,7 +308,9 @@ mod tests {
         #[test]
         fn parse_escaped_characters() {
             assert_eq!(
-                string(Input::new("\"\\\\\\n\\r\\t\"")).unwrap().1,
+                string(Input::new_extra("\"\\\\\\n\\r\\t\"", Global))
+                    .unwrap()
+                    .1,
                 Expression::String("\\\\\\n\\r\\t", Position::new(0, 10))
             );
         }
@@ -316,7 +323,7 @@ mod tests {
         #[test]
         fn parse_empty() {
             assert_eq!(
-                comment(Input::new(";\n")).unwrap().1,
+                comment(Input::new_extra(";\n", Global)).unwrap().1,
                 Comment::new("", Position::new(0, 1))
             );
         }
@@ -324,7 +331,7 @@ mod tests {
         #[test]
         fn parse_comment() {
             assert_eq!(
-                comment(Input::new(";foo\n")).unwrap().1,
+                comment(Input::new_extra(";foo\n", Global)).unwrap().1,
                 Comment::new("foo", Position::new(0, 4))
             );
         }
@@ -332,7 +339,9 @@ mod tests {
         #[test]
         fn parse_comments() {
             assert_eq!(
-                comments(Input::new(";foo\n;bar\n")).unwrap().1,
+                comments(Input::new_extra(";foo\n;bar\n", Global))
+                    .unwrap()
+                    .1,
                 vec![
                     Comment::new("foo", Position::new(0, 4)),
                     Comment::new("bar", Position::new(5, 9))
@@ -343,7 +352,9 @@ mod tests {
         #[test]
         fn parse_comments_with_blank_lines() {
             assert_eq!(
-                comments(Input::new(";foo\n\n;bar\n")).unwrap().1,
+                comments(Input::new_extra(";foo\n\n;bar\n", Global))
+                    .unwrap()
+                    .1,
                 vec![
                     Comment::new("foo", Position::new(0, 4)),
                     Comment::new("bar", Position::new(6, 10))

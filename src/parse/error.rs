@@ -88,6 +88,7 @@ mod tests {
     use super::*;
     use indoc::indoc;
     use pretty_assertions::assert_eq;
+    use std::alloc::Global;
 
     #[test]
     fn to_string() {
@@ -97,7 +98,10 @@ mod tests {
         let error = ParseError::new(
             "foo",
             nom::Err::Error(VerboseError {
-                errors: vec![(Input::new("foo"), VerboseErrorKind::Context("bar"))],
+                errors: vec![(
+                    Input::new_extra("foo", Global),
+                    VerboseErrorKind::Context("bar"),
+                )],
             }),
         );
 
