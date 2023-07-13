@@ -20,18 +20,11 @@ const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&~^.:#";
 pub type IResult<'a, T, A> = nom::IResult<Input<'a, A>, T, NomError<'a, A>>;
 
 pub fn module<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Vec<Expression<'_, A>, A>, A> {
-    let allocator = input.extra.clone();
+    let _allocator = input.extra.clone();
 
     all_consuming(delimited(
         many0_count(hash_directive),
-        fold_many0(
-            expression,
-            move || Vec::new_in(allocator.clone()),
-            |mut all, expression| {
-                all.push(expression);
-                all
-            },
-        ),
+        many0(expression),
         blank,
     ))(input)
 }
@@ -57,17 +50,10 @@ pub fn comments<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Comment, A
 }
 
 pub fn hash_directives<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<HashDirective, A>, A> {
-    let allocator = input.extra.clone();
+    let _allocator = input.extra.clone();
 
     all_consuming(terminated(
-        fold_many0(
-            hash_directive,
-            move || Vec::new_in(allocator.clone()),
-            |mut all, x| {
-                all.push(x);
-                all
-            },
-        ),
+        many0(hash_directive),
         tuple((many0_count(expression), blank)),
     ))(input)
 }
@@ -83,7 +69,7 @@ fn symbol<'a, A: Allocator + Clone>(input: Input<'a, A>) -> IResult<Expression<'
 
 fn expression<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'_, A>, A> {
     let allocator = input.extra.clone();
-    let allocator2 = allocator.clone();
+    let _allocator2 = allocator.clone();
 
     alt((
         context("symbol", symbol),
@@ -102,17 +88,7 @@ fn expression<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'
             map(
                 positioned(preceded(
                     sign('('),
-                    cut(terminated(
-                        fold_many0(
-                            expression,
-                            move || Vec::new_in(allocator2.clone()),
-                            |mut all, expression| {
-                                all.push(expression);
-                                all
-                            },
-                        ),
-                        sign(')'),
-                    )),
+                    cut(terminated(many0(expression), sign(')'))),
                 )),
                 |(expressions, position)| Expression::List(expressions, position),
             ),
@@ -125,26 +101,19 @@ fn string<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'_, A
 }
 
 fn raw_string<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'_, A>, A> {
-    let allocator = input.extra.clone();
+    let _allocator = input.extra.clone();
 
     map(
         positioned(delimited(
             char('"'),
-            recognize(fold_many0(
-                alt((
-                    recognize(none_of("\\\"")),
-                    tag("\\\\"),
-                    tag("\\\""),
-                    tag("\\n"),
-                    tag("\\r"),
-                    tag("\\t"),
-                )),
-                move || Vec::new_in(allocator.clone()),
-                |mut all, expression| {
-                    all.push(expression);
-                    all
-                },
-            )),
+            recognize(many0(alt((
+                recognize(none_of("\\\"")),
+                tag("\\\\"),
+                tag("\\\""),
+                tag("\\n"),
+                tag("\\r"),
+                tag("\\t"),
+            )))),
             char('"'),
         )),
         |(input, position)| Expression::String(*input, position),
@@ -233,6 +202,23 @@ fn newline<A: Allocator + Clone>(input: Input<A>) -> IResult<(), A> {
         (),
         many1_count(delimited(space0, nom::character::complete::newline, space0)),
     )(input)
+}
+
+fn many0<'a, T, A: Allocator + Clone>(
+    mut parser: impl Parser<Input<'a, A>, T, NomError<'a, A>>,
+) -> impl FnMut(Input<'a, A>) -> IResult<Vec<T, A>, A> {
+    move |input| {
+        let allocator = input.extra.clone();
+
+        fold_many0(
+            |input| parser.parse(input),
+            move || Vec::new_in(allocator.clone()),
+            |mut all, value| {
+                all.push(value);
+                all
+            },
+        )(input)
+    }
 }
 
 #[cfg(test)]

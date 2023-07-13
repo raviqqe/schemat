@@ -1,69 +1,28 @@
 use super::input::Input;
 use crate::position_map::PositionMap;
 use core::str;
-use nom::error::{VerboseError, VerboseErrorKind};
+use nom::error::Error;
 use std::alloc::Allocator;
 
-pub type NomError<'a, A> = VerboseError<Input<'a, A>>;
+pub type NomError<'a, A> = Error<Input<'a, A>>;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParseError {
-    message: String,
+    message: &'static str,
     offset: usize,
 }
 
 impl ParseError {
     pub fn new<A: Allocator>(source: &str, error: nom::Err<NomError<'_, A>>) -> Self {
         match error {
-            nom::Err::Incomplete(_) => Self::unexpected_end(source),
-            nom::Err::Error(error) | nom::Err::Failure(error) => {
-                let context = error
-                    .errors
-                    .iter()
-                    .find_map(|(_, kind)| {
-                        if let VerboseErrorKind::Context(context) = kind {
-                            Some(context)
-                        } else {
-                            None
-                        }
-                    })
-                    .copied();
-
-                if let Some((input, _)) = error.errors.first() {
-                    Self {
-                        message: if let Some(character) =
-                            error.errors.iter().find_map(|(_, kind)| {
-                                if let VerboseErrorKind::Char(character) = kind {
-                                    Some(character)
-                                } else {
-                                    None
-                                }
-                            }) {
-                            [format!("'{character}' expected")]
-                                .into_iter()
-                                .chain(context.map(|context| format!("in {context}")))
-                                .collect::<Vec<_>>()
-                                .join(" ")
-                        } else {
-                            ["failed to parse"]
-                                .into_iter()
-                                .chain(context)
-                                .collect::<Vec<_>>()
-                                .join(" ")
-                        },
-                        offset: input.location_offset(),
-                    }
-                } else {
-                    Self::unexpected_end(source)
-                }
-            }
-        }
-    }
-
-    fn unexpected_end(source: &str) -> Self {
-        Self {
-            message: "unexpected end of source".into(),
-            offset: source.as_bytes().len() - 1,
+            nom::Err::Incomplete(_) => Self {
+                message: "parsing requires more data",
+                offset: source.as_bytes().len() - 1,
+            },
+            nom::Err::Error(error) | nom::Err::Failure(error) => Self {
+                message: "failed to parse",
+                offset: error.input.location_offset(),
+            },
         }
     }
 
@@ -87,6 +46,7 @@ impl ParseError {
 mod tests {
     use super::*;
     use indoc::indoc;
+    use nom::error::ErrorKind;
     use pretty_assertions::assert_eq;
     use std::alloc::Global;
 
@@ -97,11 +57,9 @@ mod tests {
 
         let error = ParseError::new(
             "foo",
-            nom::Err::Error(VerboseError {
-                errors: vec![(
-                    Input::new_extra("foo", Global),
-                    VerboseErrorKind::Context("bar"),
-                )],
+            nom::Err::Error(Error {
+                input: Input::new_extra("foo", Global),
+                code: ErrorKind::Tag,
             }),
         );
 
@@ -109,7 +67,7 @@ mod tests {
             error.to_string(source, &position_map),
             indoc!(
                 "
-                    failed to parse bar
+                    failed to parse
                     1:1: foo
                 "
             )
