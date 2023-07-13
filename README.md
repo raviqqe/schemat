@@ -6,7 +6,7 @@
 
 Scheme formatter written in Rust
 
-It currently supports:
+It supports:
 
 - S-expressions
 - Comments
