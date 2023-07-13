@@ -26,7 +26,7 @@ pub fn module<A: Allocator>(input: Input<'_>) -> IResult<Vec<Expression<'_, A>>>
     all_consuming(delimited(many0(hash_directive), many0(expression), blank))(input)
 }
 
-pub fn comments(input: Input) -> IResult<Vec<Comment>> {
+pub fn comments<A: Allocator>(input: Input) -> IResult<Vec<Comment, A>> {
     map(
         all_consuming(fold_many0(
             alt((
@@ -44,7 +44,7 @@ pub fn comments(input: Input) -> IResult<Vec<Comment>> {
     )(input)
 }
 
-pub fn hash_directives(input: Input<'_>) -> IResult<Vec<HashDirective<'_>>> {
+pub fn hash_directives<A: Allocator>(input: Input) -> IResult<Vec<HashDirective, A>> {
     all_consuming(terminated(
         many0(hash_directive),
         tuple((many0(expression), blank)),
