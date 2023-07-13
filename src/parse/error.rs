@@ -14,13 +14,17 @@ pub struct ParseError {
 
 impl ParseError {
     pub fn new<A: Allocator>(source: &str, error: nom::Err<NomError<'_, A>>) -> Self {
-        Self {
-            message: match error {
-                nom::Err::Incomplete(_) => "parsing requires more data",
-                nom::Err::Error(error) | nom::Err::Failure(error) => "failed to parse",
-            },
+match error {
+                nom::Err::Incomplete(_) =>Self {
+            message:  "parsing requires more data",
             offset: source.as_bytes().len() - 1,
-        }
+        },
+                nom::Err::Error(error) | nom::Err::Failure(error) =>
+        Self {
+            message: "failed to parse",
+            offset: source.as_bytes().len() - 1,
+        },
+            }
     }
 
     pub fn to_string(&self, source: &str, position_map: &PositionMap) -> String {
@@ -64,7 +68,7 @@ mod tests {
             error.to_string(source, &position_map),
             indoc!(
                 "
-                    failed to parse bar
+                    failed to parse
                     1:1: foo
                 "
             )
