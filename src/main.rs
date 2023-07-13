@@ -34,9 +34,9 @@ fn run() -> Result<(), Box<dyn Error>> {
     print!(
         "{}",
         format(
-            &parse::<Global>(&source).map_err(convert_error)?,
-            &parse_comments::<Global>(&source).map_err(convert_error)?,
-            &parse_hash_directives::<Global>(&source).map_err(convert_error)?,
+            &parse::<Global>(&source, Global).map_err(convert_error)?,
+            &parse_comments::<Global>(&source, Global).map_err(convert_error)?,
+            &parse_hash_directives::<Global>(&source, Global).map_err(convert_error)?,
             &position_map,
         )
     );

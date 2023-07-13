@@ -20,13 +20,13 @@ const BUFFER_SIZE: usize = 128;
 
 const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&~^.:#";
 
-pub type IResult<'a, T, A: Allocator> = nom::IResult<Input<'a, A>, T, NomError<'a, A>>;
+pub type IResult<'a, T, A: Allocator + Clone> = nom::IResult<Input<'a, A>, T, NomError<'a, A>>;
 
-pub fn module<A: Allocator>(input: Input<'_, A>) -> IResult<Vec<Expression<'_, A>, A>, A> {
+pub fn module<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Vec<Expression<'_, A>, A>, A> {
     all_consuming(delimited(many0(hash_directive), many0(expression), blank))(input)
 }
 
-pub fn comments<A: Allocator>(input: Input<A>) -> IResult<Vec<Comment, A>, A> {
+pub fn comments<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Comment, A>, A> {
     map(
         all_consuming(fold_many0(
             alt((
@@ -48,23 +48,23 @@ pub fn comments<A: Allocator>(input: Input<A>) -> IResult<Vec<Comment, A>, A> {
     )(input)
 }
 
-pub fn hash_directives<A: Allocator>(input: Input<A>) -> IResult<Vec<HashDirective, A>, A> {
+pub fn hash_directives<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<HashDirective, A>, A> {
     all_consuming(terminated(
         many0(hash_directive),
         tuple((many0_count(expression), blank)),
     ))(input)
 }
 
-fn symbol<'a, A: Allocator>(input: Input<'a, A>) -> IResult<Expression<'a, A>, A> {
+fn symbol<'a, A: Allocator + Clone>(input: Input<'a, A>) -> IResult<Expression<'a, A>, A> {
     map(
-        token(positioned(take_while1::<_, Input<'a>, _>(|character| {
+        token(positioned(take_while1::<_, Input<'a, A>, _>(|character| {
             character.is_alphanumeric() || SYMBOL_SIGNS.contains(character)
         }))),
         |(input, position)| Expression::Symbol(&input, position),
     )(input)
 }
 
-fn expression<A: Allocator>(input: Input<'_, A>) -> IResult<Expression<'_, A>, A> {
+fn expression<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'_, A>, A> {
     alt((
         context("symbol", symbol),
         context(
@@ -90,11 +90,11 @@ fn expression<A: Allocator>(input: Input<'_, A>) -> IResult<Expression<'_, A>, A
     ))(input)
 }
 
-fn string<A: Allocator>(input: Input<'_, A>) -> IResult<Expression<'_, A>, A> {
+fn string<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'_, A>, A> {
     token(raw_string)(input)
 }
 
-fn raw_string<A: Allocator>(input: Input<'_, A>) -> IResult<Expression<'_, A>, A> {
+fn raw_string<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'_, A>, A> {
     map(
         positioned(delimited(
             char('"'),
@@ -112,7 +112,7 @@ fn raw_string<A: Allocator>(input: Input<'_, A>) -> IResult<Expression<'_, A>, A
     )(input)
 }
 
-fn sign<'a, A: Allocator>(character: char) -> impl Fn(Input<'a, A>) -> IResult<(), A> {
+fn sign<'a, A: Allocator + Clone>(character: char) -> impl Fn(Input<'a, A>) -> IResult<(), A> {
     move |input| value((), token(char(character)))(input)
 }
 
@@ -122,7 +122,7 @@ fn token<'a, T>(
     move |input| preceded(blank, |input| parser.parse(input))(input)
 }
 
-fn positioned<'a, T, A: Allocator>(
+fn positioned<'a, T, A: Allocator + Clone>(
     mut parser: impl Parser<Input<'a, A>, T, NomError<'a, A>>,
 ) -> impl FnMut(Input<'a, A>) -> IResult<'a, (T, Position), A> {
     move |input| {
@@ -142,7 +142,7 @@ fn positioned<'a, T, A: Allocator>(
     }
 }
 
-fn positioned_meta<'a, T, A: Allocator>(
+fn positioned_meta<'a, T, A: Allocator + Clone>(
     mut parser: impl Parser<Input<'a, A>, T, NomError<'a, A>>,
 ) -> impl FnMut(Input<'a, A>) -> IResult<'a, (T, Position), A> {
     move |input| {
@@ -162,11 +162,11 @@ fn positioned_meta<'a, T, A: Allocator>(
     }
 }
 
-fn blank<A: Allocator>(input: Input<A>) -> IResult<(), A> {
+fn blank<A: Allocator + Clone>(input: Input<A>) -> IResult<(), A> {
     value((), many0(alt((value((), multispace1), value((), comment)))))(input)
 }
 
-fn comment<A: Allocator>(input: Input<A>) -> IResult<Comment, A> {
+fn comment<A: Allocator + Clone>(input: Input<A>) -> IResult<Comment, A> {
     map(
         terminated(
             positioned_meta(preceded(char(';'), take_until("\n"))),
@@ -176,7 +176,7 @@ fn comment<A: Allocator>(input: Input<A>) -> IResult<Comment, A> {
     )(input)
 }
 
-fn hash_directive<A: Allocator>(input: Input<A>) -> IResult<HashDirective<'_>, A> {
+fn hash_directive<A: Allocator + Clone>(input: Input<A>) -> IResult<HashDirective<'_>, A> {
     map(
         terminated(
             positioned_meta(preceded(char('#'), take_until("\n"))),
@@ -186,7 +186,7 @@ fn hash_directive<A: Allocator>(input: Input<A>) -> IResult<HashDirective<'_>, A
     )(input)
 }
 
-fn newline<A: Allocator>(input: Input< A>) -> IResult<(), A> {
+fn newline<A: Allocator + Clone>(input: Input< A>) -> IResult<(), A> {
     value(
         (),
         many1(delimited(space0, nom::character::complete::newline, space0)),
