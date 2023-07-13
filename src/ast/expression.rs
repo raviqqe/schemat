@@ -1,7 +1,8 @@
 use crate::position::Position;
+use std::alloc::Allocator;
 
 #[derive(Debug, Eq, PartialEq)]
-pub enum Expression<'a, A> {
+pub enum Expression<'a, A: Allocator> {
     List(Vec<Expression<'a, A>, A>, Position),
     Quote(Box<Expression<'a, A>>, Position),
     String(&'a str, Position),

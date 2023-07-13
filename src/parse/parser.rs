@@ -21,7 +21,7 @@ const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&~^.:#";
 
 pub type IResult<'a, T> = nom::IResult<Input<'a>, T, NomError<'a>>;
 
-pub fn module(input: Input<'_>) -> IResult<Vec<Expression<'_>>> {
+pub fn module<A>(input: Input<'_>) -> IResult<Vec<Expression<'_, A>>> {
     all_consuming(delimited(many0(hash_directive), many0(expression), blank))(input)
 }
 
@@ -50,7 +50,7 @@ pub fn hash_directives(input: Input<'_>) -> IResult<Vec<HashDirective<'_>>> {
     ))(input)
 }
 
-fn symbol<'a>(input: Input<'a>) -> IResult<Expression<'a>> {
+fn symbol<'a, A>(input: Input<'a>) -> IResult<Expression<'a, A>> {
     map(
         token(positioned(take_while1::<_, Input<'a>, _>(|character| {
             character.is_alphanumeric() || SYMBOL_SIGNS.contains(character)
@@ -59,7 +59,7 @@ fn symbol<'a>(input: Input<'a>) -> IResult<Expression<'a>> {
     )(input)
 }
 
-fn expression(input: Input<'_>) -> IResult<Expression<'_>> {
+fn expression<A>(input: Input<'_>) -> IResult<Expression<'_, A>> {
     alt((
         context("symbol", symbol),
         context(
@@ -83,11 +83,11 @@ fn expression(input: Input<'_>) -> IResult<Expression<'_>> {
     ))(input)
 }
 
-fn string(input: Input<'_>) -> IResult<Expression<'_>> {
+fn string<A>(input: Input<'_>) -> IResult<Expression<'_, A>> {
     token(raw_string)(input)
 }
 
-fn raw_string(input: Input<'_>) -> IResult<Expression<'_>> {
+fn raw_string<A>(input: Input<'_>) -> IResult<Expression<'_, A>> {
     map(
         positioned(delimited(
             char('"'),

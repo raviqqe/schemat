@@ -12,8 +12,8 @@ use mfmt::{
 
 const COMMENT_PREFIX: &str = ";";
 
-pub fn format(
-    module: &[Expression],
+pub fn format<A>(
+    module: &[Expression<A>],
     comments: &[Comment],
     hash_directives: &[HashDirective],
     position_map: &PositionMap,
@@ -25,9 +25,9 @@ pub fn format(
     ))
 }
 
-fn compile_module(
+fn compile_module<A>(
     context: &mut Context,
-    module: &[Expression],
+    module: &[Expression<A>],
     hash_directives: &[HashDirective],
 ) -> Document {
     [
@@ -68,7 +68,7 @@ fn compile_hash_directive(hash_directive: &HashDirective) -> Document {
     sequence([("#".to_owned() + hash_directive.value()).into(), line()])
 }
 
-fn compile_expression(context: &mut Context, expression: &Expression) -> Document {
+fn compile_expression<A>(context: &mut Context, expression: &Expression<A>) -> Document {
     compile_line_comment(context, expression.position(), |context| match expression {
         Expression::List(expressions, position) => {
             let line_index = get_line_index(context, position.start());
@@ -107,9 +107,9 @@ fn compile_expression(context: &mut Context, expression: &Expression) -> Documen
     })
 }
 
-fn compile_expressions<'a>(
+fn compile_expressions<'a, A>(
     context: &mut Context,
-    expressions: impl IntoIterator<Item = &'a Expression<'a>>,
+    expressions: impl IntoIterator<Item = &'a Expression<'a, A>>,
 ) -> Document {
     let mut documents = vec![];
     let mut last_expression = None::<&Expression>;
@@ -204,10 +204,10 @@ fn compile_all_comments(
     )
 }
 
-fn has_extra_line(
+fn has_extra_line<A>(
     context: &Context,
-    last_expression: &Expression,
-    expression: &Expression,
+    last_expression: &Expression<A>,
+    expression: &Expression<A>,
 ) -> bool {
     let line_index = get_line_index(context, expression.position().start());
 

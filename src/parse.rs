@@ -9,7 +9,7 @@ use self::{
 };
 use crate::ast::{Comment, Expression, HashDirective};
 
-pub fn parse(source: &str) -> Result<Vec<Expression>, ParseError> {
+pub fn parse<A>(source: &str) -> Result<Vec<Expression<A>>, ParseError> {
     convert_result(module(Input::new(source)), source)
 }
 
