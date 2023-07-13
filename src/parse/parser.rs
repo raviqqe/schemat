@@ -9,7 +9,7 @@ use nom::{
     character::complete::{char, multispace0, multispace1, none_of, space0},
     combinator::{all_consuming, cut, map, recognize, value},
     error::context,
-    multi::{fold_many0, many0, many0_count, many1},
+    multi::{fold_many0, many0_count, many1_count},
     sequence::{delimited, preceded, terminated, tuple},
     Parser,
 };
@@ -202,7 +202,10 @@ fn positioned_meta<'a, T, A: Allocator + Clone>(
 }
 
 fn blank<A: Allocator + Clone>(input: Input<A>) -> IResult<(), A> {
-    value((), many0(alt((value((), multispace1), value((), comment)))))(input)
+    value(
+        (),
+        many0_count(alt((value((), multispace1), value((), comment)))),
+    )(input)
 }
 
 fn comment<A: Allocator + Clone>(input: Input<A>) -> IResult<Comment, A> {
@@ -228,7 +231,7 @@ fn hash_directive<A: Allocator + Clone>(input: Input<A>) -> IResult<HashDirectiv
 fn newline<A: Allocator + Clone>(input: Input<A>) -> IResult<(), A> {
     value(
         (),
-        many1(delimited(space0, nom::character::complete::newline, space0)),
+        many1_count(delimited(space0, nom::character::complete::newline, space0)),
     )(input)
 }
 
