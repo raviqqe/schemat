@@ -61,7 +61,14 @@ pub fn comments<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Comment, A
 
 pub fn hash_directives<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<HashDirective, A>, A> {
     all_consuming(terminated(
-        many0(hash_directive),
+        fold_many0(
+            hash_directive,
+            || Vec::new_in(input.extra),
+            |mut all, x| {
+                all.push(x);
+                all
+            },
+        ),
         tuple((many0_count(expression), blank)),
     ))(input)
 }
