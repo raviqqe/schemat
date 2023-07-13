@@ -21,7 +21,7 @@ impl ParseError {
             },
             nom::Err::Error(error) | nom::Err::Failure(error) => Self {
                 message: "failed to parse",
-                offset: source.as_bytes().len() - 1,
+                offset: error.input.location_offset(),
             },
         }
     }
