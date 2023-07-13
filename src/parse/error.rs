@@ -14,49 +14,14 @@ pub struct ParseError {
 
 impl ParseError {
     pub fn new<A: Allocator>(source: &str, error: nom::Err<NomError<'_, A>>) -> Self {
-        match error {
-            nom::Err::Incomplete(_) => Self::unexpected_end(source),
-            nom::Err::Error(error) | nom::Err::Failure(error) => {
-                let context = error
-                    .errors
-                    .iter()
-                    .find_map(|(_, kind)| {
-                        if let VerboseErrorKind::Context(context) = kind {
-                            Some(context)
-                        } else {
-                            None
-                        }
-                    })
-                    .copied();
-
-                if let Some((input, _)) = error.errors.first() {
-                    Self {
-                        message: if let Some(character) =
-                            error.errors.iter().find_map(|(_, kind)| {
-                                if let VerboseErrorKind::Char(character) = kind {
-                                    Some(character)
-                                } else {
-                                    None
-                                }
-                            }) {
-                            [format!("'{character}' expected")]
-                                .into_iter()
-                                .chain(context.map(|context| format!("in {context}")))
-                                .collect::<Vec<_>>()
-                                .join(" ")
-                        } else {
-                            ["failed to parse"]
-                                .into_iter()
-                                .chain(context)
-                                .collect::<Vec<_>>()
-                                .join(" ")
-                        },
-                        offset: input.location_offset(),
-                    }
-                } else {
-                    Self::unexpected_end(source)
+        Self {
+            message: match error {
+                nom::Err::Incomplete(Needed::Size(size)) => {
+                    format!("parsing requires {} bytes/chars", size)
                 }
-            }
+                nom::Err::Incomplete(Needed::Unknown) => ("parsing requires more data").into(),
+                nom::Err::Error(error) | nom::Err::Failure(error) => foo,
+            },
         }
     }
 
