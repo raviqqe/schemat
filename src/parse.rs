@@ -11,17 +11,17 @@ use crate::ast::{Comment, Expression, HashDirective};
 use std::alloc::Allocator;
 
 pub fn parse<A: Allocator>(source: &str) -> Result<Vec<Expression<A>>, ParseError> {
-    convert_result(module::<A>(Input::new(source)), source)
+    convert_result(module(Input::new(source)), source)
 }
 
 pub fn parse_comments<A: Allocator>(source: &str) -> Result<Vec<Comment, A>, ParseError> {
-    convert_result(comments::<A>(Input::new(source)), source)
+    convert_result(comments(Input::new(source)), source)
 }
 
 pub fn parse_hash_directives<A: Allocator>(
     source: &str,
 ) -> Result<Vec<HashDirective, A>, ParseError> {
-    convert_result(hash_directives::<A>(Input::new(source)), source)
+    convert_result(hash_directives(Input::new(source)), source)
 }
 
 fn convert_result<T>(result: IResult<T>, source: &str) -> Result<T, ParseError> {
