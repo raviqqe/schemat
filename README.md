@@ -6,6 +6,14 @@
 
 Scheme formatter written in Rust
 
+It currently supports:
+
+- S-expressions
+- Comments
+- Hash directives
+  - Shebang `#!/usr/bin/env gambit`
+  - Language shorthand in Racket (e.g. `#lang racket`)
+
 ## License
 
 [The Unlicense](UNLICENSE)
