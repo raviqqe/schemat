@@ -13,6 +13,7 @@ use crate::{
     position_map::PositionMap,
 };
 use std::{
+    alloc::Global,
     error::Error,
     io::{read_to_string, stdin},
     process::exit,
@@ -33,9 +34,9 @@ fn run() -> Result<(), Box<dyn Error>> {
     print!(
         "{}",
         format(
-            &parse(&source).map_err(convert_error)?,
-            &parse_comments(&source).map_err(convert_error)?,
-            &parse_hash_directives(&source).map_err(convert_error)?,
+            &parse::<Global>(&source).map_err(convert_error)?,
+            &parse_comments::<Global>(&source).map_err(convert_error)?,
+            &parse_hash_directives::<Global>(&source).map_err(convert_error)?,
             &position_map,
         )
     );

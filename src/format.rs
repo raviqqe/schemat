@@ -9,10 +9,11 @@ use mfmt::{
     utility::{count_lines, is_empty},
     Document,
 };
+use std::alloc::Allocator;
 
 const COMMENT_PREFIX: &str = ";";
 
-pub fn format<A>(
+pub fn format<A: Allocator>(
     module: &[Expression<A>],
     comments: &[Comment],
     hash_directives: &[HashDirective],
@@ -25,7 +26,7 @@ pub fn format<A>(
     ))
 }
 
-fn compile_module<A>(
+fn compile_module<A: Allocator>(
     context: &mut Context,
     module: &[Expression<A>],
     hash_directives: &[HashDirective],
@@ -68,7 +69,7 @@ fn compile_hash_directive(hash_directive: &HashDirective) -> Document {
     sequence([("#".to_owned() + hash_directive.value()).into(), line()])
 }
 
-fn compile_expression<A>(context: &mut Context, expression: &Expression<A>) -> Document {
+fn compile_expression<A: Allocator>(context: &mut Context, expression: &Expression<A>) -> Document {
     compile_line_comment(context, expression.position(), |context| match expression {
         Expression::List(expressions, position) => {
             let line_index = get_line_index(context, position.start());
@@ -107,7 +108,7 @@ fn compile_expression<A>(context: &mut Context, expression: &Expression<A>) -> D
     })
 }
 
-fn compile_expressions<'a, A>(
+fn compile_expressions<'a, A: Allocator + 'a>(
     context: &mut Context,
     expressions: impl IntoIterator<Item = &'a Expression<'a, A>>,
 ) -> Document {
@@ -204,7 +205,7 @@ fn compile_all_comments(
     )
 }
 
-fn has_extra_line<A>(
+fn has_extra_line<A: Allocator>(
     context: &Context,
     last_expression: &Expression<A>,
     expression: &Expression<A>,

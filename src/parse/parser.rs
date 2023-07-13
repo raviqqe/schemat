@@ -14,6 +14,7 @@ use nom::{
     Parser,
 };
 use smallvec::SmallVec;
+use std::alloc::Allocator;
 
 const BUFFER_SIZE: usize = 128;
 
@@ -21,7 +22,7 @@ const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&~^.:#";
 
 pub type IResult<'a, T> = nom::IResult<Input<'a>, T, NomError<'a>>;
 
-pub fn module<A>(input: Input<'_>) -> IResult<Vec<Expression<'_, A>>> {
+pub fn module<A: Allocator>(input: Input<'_>) -> IResult<Vec<Expression<'_, A>>> {
     all_consuming(delimited(many0(hash_directive), many0(expression), blank))(input)
 }
 
@@ -50,7 +51,7 @@ pub fn hash_directives(input: Input<'_>) -> IResult<Vec<HashDirective<'_>>> {
     ))(input)
 }
 
-fn symbol<'a, A>(input: Input<'a>) -> IResult<Expression<'a, A>> {
+fn symbol<'a, A: Allocator>(input: Input<'a>) -> IResult<Expression<'a, A>> {
     map(
         token(positioned(take_while1::<_, Input<'a>, _>(|character| {
             character.is_alphanumeric() || SYMBOL_SIGNS.contains(character)
@@ -59,7 +60,7 @@ fn symbol<'a, A>(input: Input<'a>) -> IResult<Expression<'a, A>> {
     )(input)
 }
 
-fn expression<A>(input: Input<'_>) -> IResult<Expression<'_, A>> {
+fn expression<A: Allocator>(input: Input<'_>) -> IResult<Expression<'_, A>> {
     alt((
         context("symbol", symbol),
         context(
@@ -83,11 +84,11 @@ fn expression<A>(input: Input<'_>) -> IResult<Expression<'_, A>> {
     ))(input)
 }
 
-fn string<A>(input: Input<'_>) -> IResult<Expression<'_, A>> {
+fn string<A: Allocator>(input: Input<'_>) -> IResult<Expression<'_, A>> {
     token(raw_string)(input)
 }
 
-fn raw_string<A>(input: Input<'_>) -> IResult<Expression<'_, A>> {
+fn raw_string<A: Allocator>(input: Input<'_>) -> IResult<Expression<'_, A>> {
     map(
         positioned(delimited(
             char('"'),

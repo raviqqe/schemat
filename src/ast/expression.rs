@@ -9,7 +9,7 @@ pub enum Expression<'a, A: Allocator> {
     Symbol(&'a str, Position),
 }
 
-impl<'a, A> Expression<'a, A> {
+impl<'a, A: Allocator> Expression<'a, A> {
     pub fn position(&self) -> &Position {
         match self {
             Self::List(_, position) => position,
