@@ -4,7 +4,7 @@ use core::str;
 use nom::error::{VerboseError, VerboseErrorKind};
 use std::alloc::Allocator;
 
-pub type NomError<'a, A: Allocator> = VerboseError<Input<'a, A>>;
+pub type NomError<'a, A> = VerboseError<Input<'a, A>>;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParseError {
@@ -29,7 +29,7 @@ impl ParseError {
                     })
                     .copied();
 
-                if let Some(&(input, _)) = error.errors.first() {
+                if let Some(&(ref input, _)) = error.errors.first() {
                     Self {
                         message: if let Some(character) =
                             error.errors.iter().find_map(|(_, kind)| {
