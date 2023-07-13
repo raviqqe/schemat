@@ -32,6 +32,7 @@ fn run() -> Result<(), Box<dyn Error>> {
         format(
             &parse(&source).map_err(|error| error.to_string(&source, &position_map))?,
             &parse_comments(&source).map_err(|error| error.to_string(&source, &position_map))?,
+            &parse_hash_lines(&source).map_err(|error| error.to_string(&source, &position_map))?,
             &position_map,
         )
     );

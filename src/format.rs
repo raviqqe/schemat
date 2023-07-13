@@ -1,12 +1,17 @@
 use crate::{
-    ast::{Comment, Expression},
+    ast::{Comment, Expression, HashLine},
     context::Context,
     position::Position,
     position_map::PositionMap,
 };
 use mfmt::{empty, flatten, indent, line, line_suffix, r#break, sequence, Document};
 
-pub fn format(module: &[Expression], comments: &[Comment], position_map: &PositionMap) -> String {
+pub fn format(
+    module: &[Expression],
+    comments: &[Comment],
+    hash_lines: &[HashLine],
+    position_map: &PositionMap,
+) -> String {
     mfmt::format(&compile_module(
         &mut Context::new(comments, position_map),
         module,
