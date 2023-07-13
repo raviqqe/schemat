@@ -209,10 +209,18 @@ fn has_extra_line(
     last_expression: &Expression,
     expression: &Expression,
 ) -> bool {
-    get_line_index(context, expression.position().start()).saturating_sub(get_line_index(
-        context,
-        last_expression.position().end() - 1,
-    )) > 1
+    let line_index = get_line_index(context, expression.position().start());
+
+    context
+        .peek_comments_before(line_index)
+        .next()
+        .map(|comment| get_line_index(context, comment.position().start()))
+        .unwrap_or(line_index)
+        .saturating_sub(get_line_index(
+            context,
+            last_expression.position().end() - 1,
+        ))
+        > 1
 }
 
 fn get_line_index(context: &Context, offset: usize) -> usize {
@@ -603,6 +611,53 @@ mod tests {
                     ;baz
 
                     foo
+                    "
+                )
+            );
+        }
+
+        #[test]
+        fn format_block_comment_after_expression() {
+            assert_eq!(
+                format(
+                    &[
+                        Expression::Symbol("foo", Position::new(0, 1)),
+                        Expression::Symbol("baz", Position::new(2, 3))
+                    ],
+                    &[Comment::new("bar", Position::new(1, 2))],
+                    &[],
+                    &PositionMap::new("\n\n\n"),
+                ),
+                indoc!(
+                    "
+                    foo
+                    ;bar
+                    baz
+                    "
+                )
+            );
+        }
+
+        #[test]
+        fn format_block_comment_after_expression_in_list() {
+            assert_eq!(
+                format(
+                    &[Expression::List(
+                        vec![
+                            Expression::Symbol("foo", Position::new(0, 1)),
+                            Expression::Symbol("baz", Position::new(2, 3))
+                        ],
+                        Position::new(0, 1)
+                    )],
+                    &[Comment::new("bar", Position::new(1, 2))],
+                    &[],
+                    &PositionMap::new("\n\n\n"),
+                ),
+                indoc!(
+                    "
+                    (foo
+                      ;bar
+                      baz)
                     "
                 )
             );
