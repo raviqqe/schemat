@@ -82,7 +82,17 @@ fn expression<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'
             map(
                 positioned(preceded(
                     sign('('),
-                    cut(terminated(many0(expression), sign(')'))),
+                    cut(terminated(
+                        fold_many0(
+                            expression,
+                            || Vec::new_in(input.extra),
+                            |mut all, expression| {
+                                all.push(expression);
+                                all
+                            },
+                        ),
+                        sign(')'),
+                    )),
                 )),
                 |(expressions, position)| Expression::List(expressions, position),
             ),
@@ -98,14 +108,21 @@ fn raw_string<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'
     map(
         positioned(delimited(
             char('"'),
-            recognize(many0(alt((
-                recognize(none_of("\\\"")),
-                tag("\\\\"),
-                tag("\\\""),
-                tag("\\n"),
-                tag("\\r"),
-                tag("\\t"),
-            )))),
+            recognize(fold_many0(
+                alt((
+                    recognize(none_of("\\\"")),
+                    tag("\\\\"),
+                    tag("\\\""),
+                    tag("\\n"),
+                    tag("\\r"),
+                    tag("\\t"),
+                )),
+                || Vec::new_in(input.extra),
+                |mut all, expression| {
+                    all.push(expression);
+                    all
+                },
+            )),
             char('"'),
         )),
         |(input, position)| Expression::String(*input, position),
@@ -186,7 +203,7 @@ fn hash_directive<A: Allocator + Clone>(input: Input<A>) -> IResult<HashDirectiv
     )(input)
 }
 
-fn newline<A: Allocator + Clone>(input: Input< A>) -> IResult<(), A> {
+fn newline<A: Allocator + Clone>(input: Input<A>) -> IResult<(), A> {
     value(
         (),
         many1(delimited(space0, nom::character::complete::newline, space0)),

@@ -4,7 +4,7 @@ use std::alloc::Allocator;
 #[derive(Debug, Eq, PartialEq)]
 pub enum Expression<'a, A: Allocator> {
     List(Vec<Expression<'a, A>, A>, Position),
-    Quote(Box<Expression<'a, A>>, Position),
+    Quote(Box<Expression<'a, A>, A>, Position),
     String(&'a str, Position),
     Symbol(&'a str, Position),
 }
