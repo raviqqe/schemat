@@ -14,8 +14,4 @@ impl<'a> HashLine<'a> {
     pub fn value(&self) -> &'a str {
         self.value
     }
-
-    pub fn position(&self) -> &Position {
-        &self.position
-    }
 }

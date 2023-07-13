@@ -6,6 +6,8 @@ use crate::{
 };
 use mfmt::{empty, flatten, indent, line, line_suffix, r#break, sequence, Document};
 
+const COMMENT_PREFIX: &str = ";";
+
 pub fn format(
     module: &[Expression],
     comments: &[Comment],
@@ -15,19 +17,41 @@ pub fn format(
     mfmt::format(&compile_module(
         &mut Context::new(comments, position_map),
         module,
+        hash_lines,
     ))
 }
 
-fn compile_module(context: &mut Context, module: &[Expression]) -> Document {
-    sequence([compile_expressions(context, module), line(), {
-        let comment = compile_remaining_block_comment(context);
-
-        if mfmt::utility::count_lines(&comment) > 0 {
-            sequence([line(), comment])
-        } else {
+fn compile_module(
+    context: &mut Context,
+    module: &[Expression],
+    hash_lines: &[HashLine],
+) -> Document {
+    sequence([
+        if hash_lines.is_empty() {
             empty()
-        }
-    }])
+        } else {
+            sequence([
+                sequence(hash_lines.iter().map(compile_hash_line)),
+                line(),
+                line(),
+            ])
+        },
+        compile_expressions(context, module),
+        line(),
+        {
+            let comment = compile_remaining_block_comment(context);
+
+            if mfmt::utility::count_lines(&comment) > 0 {
+                sequence([line(), comment])
+            } else {
+                empty()
+            }
+        },
+    ])
+}
+
+fn compile_hash_line(hash_line: &HashLine) -> Document {
+    ("#".to_owned() + hash_line.value() + "\n").into()
 }
 
 fn compile_expression(context: &mut Context, expression: &Expression) -> Document {
@@ -110,7 +134,9 @@ fn compile_suffix_comment(context: &mut Context, position: &Position) -> Documen
     sequence(
         context
             .drain_current_comment(get_line_index(context, position.start()))
-            .map(|comment| line_suffix(" ;".to_owned() + comment.value().trim_end())),
+            .map(|comment| {
+                line_suffix(" ".to_owned() + COMMENT_PREFIX + comment.value().trim_end())
+            }),
     )
 }
 
@@ -151,7 +177,7 @@ fn compile_all_comments(
             )
             .map(|(comment, next_line_index)| {
                 sequence([
-                    ";".into(),
+                    COMMENT_PREFIX.into(),
                     comment.value().trim_end().into(),
                     r#break(line()),
                     if get_line_index(context, comment.position().end() - 1) + 1 < next_line_index {
