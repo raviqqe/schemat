@@ -14,17 +14,16 @@ pub struct ParseError {
 
 impl ParseError {
     pub fn new<A: Allocator>(source: &str, error: nom::Err<NomError<'_, A>>) -> Self {
-match error {
-                nom::Err::Incomplete(_) =>Self {
-            message:  "parsing requires more data",
-            offset: source.as_bytes().len() - 1,
-        },
-                nom::Err::Error(error) | nom::Err::Failure(error) =>
-        Self {
-            message: "failed to parse",
-            offset: source.as_bytes().len() - 1,
-        },
-            }
+        match error {
+            nom::Err::Incomplete(_) => Self {
+                message: "parsing requires more data",
+                offset: source.as_bytes().len() - 1,
+            },
+            nom::Err::Error(error) | nom::Err::Failure(error) => Self {
+                message: "failed to parse",
+                offset: source.as_bytes().len() - 1,
+            },
+        }
     }
 
     pub fn to_string(&self, source: &str, position_map: &PositionMap) -> String {
@@ -47,9 +46,9 @@ match error {
 mod tests {
     use super::*;
     use indoc::indoc;
+    use nom::error::ErrorKind;
     use pretty_assertions::assert_eq;
     use std::alloc::Global;
-    use nom::error::ErrorKind;
 
     #[test]
     fn to_string() {
