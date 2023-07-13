@@ -23,7 +23,18 @@ const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&~^.:#";
 pub type IResult<'a, T, A: Allocator + Clone> = nom::IResult<Input<'a, A>, T, NomError<'a, A>>;
 
 pub fn module<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Vec<Expression<'_, A>, A>, A> {
-    all_consuming(delimited(many0(hash_directive), many0(expression), blank))(input)
+    all_consuming(delimited(
+        many0_count(hash_directive),
+        fold_many0(
+            expression,
+            || Vec::new_in(input.extra),
+            |mut all, expression| {
+                all.push(expression);
+                all
+            },
+        ),
+        blank,
+    ))(input)
 }
 
 pub fn comments<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Comment, A>, A> {
@@ -133,7 +144,7 @@ fn sign<'a, A: Allocator + Clone>(character: char) -> impl Fn(Input<'a, A>) -> I
     move |input| value((), token(char(character)))(input)
 }
 
-fn token<'a, T>(
+fn token<'a, T, A: Allocator + Clone>(
     mut parser: impl Parser<Input<'a, A>, T, NomError<'a, A>>,
 ) -> impl FnMut(Input<'a, A>) -> IResult<T, A> {
     move |input| preceded(blank, |input| parser.parse(input))(input)
