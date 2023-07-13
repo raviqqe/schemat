@@ -7,12 +7,12 @@ mod parse;
 mod position;
 mod position_map;
 
-use bumpalo::Bump;
 use crate::{
     format::format,
     parse::{parse, parse_comments, parse_hash_directives, ParseError},
     position_map::PositionMap,
 };
+use bumpalo::Bump;
 use std::{
     error::Error,
     io::{read_to_string, stdin},
@@ -30,7 +30,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     let source = read_to_string(stdin())?;
     let position_map = PositionMap::new(&source);
     let convert_error = |error: ParseError| error.to_string(&source, &position_map);
-    let allocator= Bump::new();
+    let allocator = Bump::new();
 
     print!(
         "{}",

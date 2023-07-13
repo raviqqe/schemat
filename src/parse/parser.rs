@@ -13,10 +13,7 @@ use nom::{
     sequence::{delimited, preceded, terminated, tuple},
     Parser,
 };
-use smallvec::SmallVec;
 use std::alloc::Allocator;
-
-const BUFFER_SIZE: usize = 128;
 
 const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&~^.:#";
 
@@ -42,25 +39,21 @@ pub fn module<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Vec<Expressi
 pub fn comments<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Comment, A>, A> {
     let allocator = input.extra.clone();
 
-    map(
-        all_consuming(fold_many0(
-            alt((
-                map(comment, Some),
-                map(raw_string, |_| None),
-                map(none_of("\";"), |_| None),
-            )),
-            SmallVec::<[Option<Comment>; BUFFER_SIZE]>::new,
-            |mut all, x| {
-                all.push(x);
-                all
-            },
+    all_consuming(fold_many0(
+        alt((
+            map(comment, Some),
+            map(raw_string, |_| None),
+            map(none_of("\";"), |_| None),
         )),
-        move |comments| {
-            let mut vec = Vec::new_in(allocator.clone());
-            vec.extend(comments.into_iter().flatten());
-            vec
+        move || Vec::new_in(allocator.clone()),
+        |mut all, x| {
+            if let Some(x) = x {
+                all.push(x);
+            }
+
+            all
         },
-    )(input)
+    ))(input)
 }
 
 pub fn hash_directives<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<HashDirective, A>, A> {
@@ -90,7 +83,7 @@ fn symbol<'a, A: Allocator + Clone>(input: Input<'a, A>) -> IResult<Expression<'
 
 fn expression<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'_, A>, A> {
     let allocator = input.extra.clone();
-    let allocator2= allocator.clone();
+    let allocator2 = allocator.clone();
 
     alt((
         context("symbol", symbol),
