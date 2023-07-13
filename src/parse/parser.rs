@@ -209,7 +209,7 @@ mod tests {
     fn parse_shebang() {
         assert_eq!(
             hash_line(Input::new("#!/bin/sh\n")).unwrap().1,
-            HashLine::new("!/bin/sh", Position::new(0, 10))
+            HashLine::new("!/bin/sh", Position::new(0, 9))
         );
     }
 
