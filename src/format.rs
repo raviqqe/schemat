@@ -631,6 +631,31 @@ mod tests {
         }
 
         #[test]
+        fn format_block_comment_after_expression_in_list() {
+            assert_eq!(
+                format(
+                    &[Expression::List(
+                        vec![
+                            Expression::Symbol("foo", Position::new(0, 1)),
+                            Expression::Symbol("baz", Position::new(2, 3))
+                        ],
+                        Position::new(0, 1)
+                    )],
+                    &[Comment::new("bar", Position::new(1, 2))],
+                    &[],
+                    &PositionMap::new("\n\n\n"),
+                ),
+                indoc!(
+                    "
+                    foo
+                    ;bar
+                    baz
+                    "
+                )
+            );
+        }
+
+        #[test]
         fn format_line_comment() {
             assert_eq!(
                 format(
