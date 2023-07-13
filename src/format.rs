@@ -609,6 +609,28 @@ mod tests {
         }
 
         #[test]
+        fn format_block_comment_after_expression() {
+            assert_eq!(
+                format(
+                    &[
+                        Expression::Symbol("foo", Position::new(0, 1)),
+                        Expression::Symbol("foo", Position::new(2, 3))
+                    ],
+                    &[Comment::new("bar", Position::new(1, 2))],
+                    &[],
+                    &PositionMap::new("\n\n\n"),
+                ),
+                indoc!(
+                    "
+                    foo
+                    ;bar
+                    baz
+                    "
+                )
+            );
+        }
+
+        #[test]
         fn format_line_comment() {
             assert_eq!(
                 format(
