@@ -29,7 +29,7 @@ impl ParseError {
                     })
                     .copied();
 
-                if let Some(&(ref input, _)) = error.errors.first() {
+                if let Some((input, _)) = error.errors.first() {
                     Self {
                         message: if let Some(character) =
                             error.errors.iter().find_map(|(_, kind)| {
