@@ -1,7 +1,7 @@
 use super::input::Input;
 use crate::position_map::PositionMap;
 use core::str;
-use nom::{error::Error, Needed};
+use nom::error::Error;
 use std::alloc::Allocator;
 
 pub type NomError<'a, A> = Error<Input<'a, A>>;
