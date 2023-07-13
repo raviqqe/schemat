@@ -200,6 +200,7 @@ mod tests {
                     Position::new(0, 2)
                 )],
                 &[],
+                &[],
                 &PositionMap::new("(foo bar)"),
             ),
             "(foo bar)\n"
@@ -217,6 +218,7 @@ mod tests {
                     ],
                     Position::new(0, 9)
                 )],
+                &[],
                 &[],
                 &PositionMap::new("(foo\nbar)"),
             ),
@@ -243,6 +245,7 @@ mod tests {
                     Position::new(0, 1)
                 )],
                 &[],
+                &[],
                 &PositionMap::new("a\nb"),
             ),
             indoc!(
@@ -264,6 +267,7 @@ mod tests {
                     Position::new(0, 3)
                 )],
                 &[],
+                &[],
                 &PositionMap::new("'foo"),
             ),
             "'foo\n"
@@ -276,6 +280,7 @@ mod tests {
             format(
                 &[Expression::String("foo", Position::new(0, 3))],
                 &[],
+                &[],
                 &PositionMap::new("\"foo\""),
             ),
             "\"foo\"\n"
@@ -287,6 +292,7 @@ mod tests {
         assert_eq!(
             format(
                 &[Expression::Symbol("foo", Position::new(0, 3))],
+                &[],
                 &[],
                 &PositionMap::new("foo"),
             ),
@@ -312,6 +318,7 @@ mod tests {
                         Position::new(0, 1)
                     )],
                     &[],
+                    &[],
                     &PositionMap::new("\n\n\na"),
                 ),
                 indoc!(
@@ -335,6 +342,7 @@ mod tests {
                         Position::new(0, 1)
                     )],
                     &[],
+                    &[],
                     &PositionMap::new("\na"),
                 ),
                 indoc!(
@@ -357,6 +365,7 @@ mod tests {
                         ],
                         Position::new(0, 1)
                     )],
+                    &[],
                     &[],
                     &PositionMap::new("\n\na"),
                 ),
@@ -388,6 +397,7 @@ mod tests {
                         Position::new(0, 1)
                     )],
                     &[],
+                    &[],
                     &PositionMap::new("\n\n\na"),
                 ),
                 indoc!(
@@ -409,6 +419,7 @@ mod tests {
                         vec![Expression::Symbol("foo", Position::new(1, 1))],
                         Position::new(0, 0)
                     )],
+                    &[],
                     &[],
                     &PositionMap::new("\n\n"),
                 ),
@@ -434,6 +445,7 @@ mod tests {
                         Expression::Symbol("bar", Position::new(1, 2))
                     ],
                     &[],
+                    &[],
                     &PositionMap::new("\na"),
                 ),
                 indoc!(
@@ -453,6 +465,7 @@ mod tests {
                         Expression::Symbol("foo", Position::new(0, 1)),
                         Expression::Symbol("bar", Position::new(2, 3))
                     ],
+                    &[],
                     &[],
                     &PositionMap::new("\n\na"),
                 ),
@@ -477,6 +490,7 @@ mod tests {
                 format(
                     &[Expression::Symbol("foo", Position::new(1, 2))],
                     &[Comment::new("bar", Position::new(0, 1))],
+                    &[],
                     &PositionMap::new("\na"),
                 ),
                 indoc!(
@@ -494,6 +508,7 @@ mod tests {
                 format(
                     &[Expression::Symbol("foo", Position::new(2, 3))],
                     &[Comment::new("bar", Position::new(0, 1))],
+                    &[],
                     &PositionMap::new("\n\na"),
                 ),
                 indoc!(
@@ -515,6 +530,7 @@ mod tests {
                         Comment::new("bar", Position::new(0, 1)),
                         Comment::new("baz", Position::new(1, 2))
                     ],
+                    &[],
                     &PositionMap::new("\n\n\na"),
                 ),
                 indoc!(
@@ -537,6 +553,7 @@ mod tests {
                         Comment::new("bar", Position::new(0, 1)),
                         Comment::new("baz", Position::new(2, 3))
                     ],
+                    &[],
                     &PositionMap::new("\n\n\n\na"),
                 ),
                 indoc!(
@@ -557,6 +574,7 @@ mod tests {
                 format(
                     &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[Comment::new("bar", Position::new(0, 1))],
+                    &[],
                     &PositionMap::new("\na"),
                 ),
                 indoc!(
@@ -576,6 +594,7 @@ mod tests {
                         Comment::new("bar", Position::new(0, 1)),
                         Comment::new("baz", Position::new(0, 1))
                     ],
+                    &[],
                     &PositionMap::new("\na"),
                 ),
                 indoc!(
@@ -595,6 +614,7 @@ mod tests {
                         Position::new(0, 1)
                     )],
                     &[Comment::new("bar", Position::new(0, 1))],
+                    &[],
                     &PositionMap::new("\n\n"),
                 ),
                 indoc!(
@@ -612,6 +632,7 @@ mod tests {
                 format(
                     &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[Comment::new("bar", Position::new(1, 2))],
+                    &[],
                     &PositionMap::new("\n\n"),
                 ),
                 indoc!(
@@ -633,6 +654,7 @@ mod tests {
                         Comment::new("bar", Position::new(1, 2)),
                         Comment::new("baz", Position::new(2, 3))
                     ],
+                    &[],
                     &PositionMap::new("\n\n\n"),
                 ),
                 indoc!(
@@ -655,6 +677,7 @@ mod tests {
                         Comment::new("bar", Position::new(1, 2)),
                         Comment::new("baz", Position::new(3, 4))
                     ],
+                    &[],
                     &PositionMap::new("\n\n\n\n"),
                 ),
                 indoc!(
