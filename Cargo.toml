@@ -9,7 +9,7 @@ readme = "./README.md"
 keywords = ["format", "scheme"]
 
 [dependencies]
-bumpalo = "3.13.0"
+bumpalo = { version = "3.13.0", features = ["allocator_api"] }
 mfmt = "0.1.1"
 nom = "7.1.3"
 nom_locate = "4.1.0"
