@@ -64,7 +64,7 @@ fn compile_module(
     })
 }
 
-fn compile_hash_directive(hash_line: &HashDirective) -> Document {
+fn compile_hash_directive(hash_directive: &HashDirective) -> Document {
     sequence([("#".to_owned() + hash_directive.value()).into(), line()])
 }
 
