@@ -1,6 +1,6 @@
 use super::{error::NomError, input::Input};
 use crate::{
-    ast::{Comment, Expression, HashLine},
+    ast::{Comment, Expression, HashDirective},
     position::Position,
 };
 use nom::{
@@ -19,7 +19,7 @@ const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&~^.:#";
 pub type IResult<'a, T> = nom::IResult<Input<'a>, T, NomError<'a>>;
 
 pub fn module(input: Input<'_>) -> IResult<Vec<Expression<'_>>> {
-    all_consuming(delimited(many0(hash_line), many0(expression), blank))(input)
+    all_consuming(delimited(many0(hash_directive), many0(expression), blank))(input)
 }
 
 pub fn comments(input: Input) -> IResult<Vec<Comment>> {
@@ -33,9 +33,9 @@ pub fn comments(input: Input) -> IResult<Vec<Comment>> {
     )(input)
 }
 
-pub fn hash_lines(input: Input<'_>) -> IResult<Vec<HashLine<'_>>> {
+pub fn hash_directives(input: Input<'_>) -> IResult<Vec<HashDirective<'_>>> {
     all_consuming(terminated(
-        many0(hash_line),
+        many0(hash_directive),
         tuple((many0(expression), blank)),
     ))(input)
 }
@@ -159,13 +159,13 @@ fn comment(input: Input) -> IResult<Comment> {
     )(input)
 }
 
-fn hash_line(input: Input<'_>) -> IResult<HashLine<'_>> {
+fn hash_directive(input: Input<'_>) -> IResult<HashDirective<'_>> {
     map(
         terminated(
             positioned_meta(preceded(char('#'), take_until("\n"))),
             newline,
         ),
-        |(input, position)| HashLine::new(&input, position),
+        |(input, position)| HashDirective::new(&input, position),
     )(input)
 }
 
@@ -208,16 +208,16 @@ mod tests {
     #[test]
     fn parse_shebang() {
         assert_eq!(
-            hash_line(Input::new("#!/bin/sh\n")).unwrap().1,
-            HashLine::new("!/bin/sh", Position::new(0, 9))
+            hash_directive(Input::new("#!/bin/sh\n")).unwrap().1,
+            HashDirective::new("!/bin/sh", Position::new(0, 9))
         );
     }
 
     #[test]
     fn parse_lang_directive() {
         assert_eq!(
-            hash_line(Input::new("#lang r7rs\n")).unwrap().1,
-            HashLine::new("lang r7rs", Position::new(0, 10))
+            hash_directive(Input::new("#lang r7rs\n")).unwrap().1,
+            HashDirective::new("lang r7rs", Position::new(0, 10))
         );
     }
 
