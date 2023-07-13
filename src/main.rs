@@ -7,7 +7,7 @@ mod position_map;
 
 use crate::{
     format::format,
-    parse::{parse, parse_comments},
+    parse::{parse, parse_comments, parse_hash_lines},
     position_map::PositionMap,
 };
 use std::{
