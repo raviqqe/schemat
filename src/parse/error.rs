@@ -1,14 +1,14 @@
 use super::input::Input;
 use crate::position_map::PositionMap;
 use core::str;
-use nom::error::Error;
+use nom::{error::Error, Needed};
 use std::alloc::Allocator;
 
 pub type NomError<'a, A> = Error<Input<'a, A>>;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParseError {
-    message: String,
+    message: &'static str,
     offset: usize,
 }
 
@@ -16,18 +16,9 @@ impl ParseError {
     pub fn new<A: Allocator>(source: &str, error: nom::Err<NomError<'_, A>>) -> Self {
         Self {
             message: match error {
-                nom::Err::Incomplete(Needed::Size(size)) => {
-                    format!("parsing requires {} bytes/chars", size)
-                }
-                nom::Err::Incomplete(Needed::Unknown) => ("parsing requires more data").into(),
-                nom::Err::Error(error) | nom::Err::Failure(error) => foo,
+                nom::Err::Incomplete(_) => "parsing requires more data",
+                nom::Err::Error(error) | nom::Err::Failure(error) => "failed to parse",
             },
-        }
-    }
-
-    fn unexpected_end(source: &str) -> Self {
-        Self {
-            message: "unexpected end of source".into(),
             offset: source.as_bytes().len() - 1,
         }
     }
@@ -62,11 +53,9 @@ mod tests {
 
         let error = ParseError::new(
             "foo",
-            nom::Err::Error(VerboseError {
-                errors: vec![(
-                    Input::new_extra("foo", Global),
-                    VerboseErrorKind::Context("bar"),
-                )],
+            nom::Err::Error(Error {
+                input: Input::new_extra("foo", Global),
+                code: foo,
             }),
         );
 
