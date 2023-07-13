@@ -614,7 +614,7 @@ mod tests {
                 format(
                     &[
                         Expression::Symbol("foo", Position::new(0, 1)),
-                        Expression::Symbol("foo", Position::new(2, 3))
+                        Expression::Symbol("baz", Position::new(2, 3))
                     ],
                     &[Comment::new("bar", Position::new(1, 2))],
                     &[],
