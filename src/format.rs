@@ -113,7 +113,7 @@ fn compile_expressions<'a, A: Allocator + 'a>(
     expressions: impl IntoIterator<Item = &'a Expression<'a, A>>,
 ) -> Document {
     let mut documents = vec![];
-    let mut last_expression = None::<&Expression>;
+    let mut last_expression = None::<&Expression<A>>;
 
     for expression in expressions {
         if let Some(last_expression) = last_expression {

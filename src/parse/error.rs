@@ -2,8 +2,9 @@ use super::input::Input;
 use crate::position_map::PositionMap;
 use core::str;
 use nom::error::{VerboseError, VerboseErrorKind};
+use std::alloc::Allocator;
 
-pub type NomError<'a> = VerboseError<Input<'a>>;
+pub type NomError<'a, A: Allocator> = VerboseError<Input<'a, Allocator>>;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParseError {

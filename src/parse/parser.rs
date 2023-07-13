@@ -9,7 +9,7 @@ use nom::{
     character::complete::{char, multispace0, multispace1, none_of, space0},
     combinator::{all_consuming, cut, map, recognize, value},
     error::context,
-    multi::{fold_many0, many0, many1},
+    multi::{fold_many0, many0, many0_count, many1},
     sequence::{delimited, preceded, terminated, tuple},
     Parser,
 };
@@ -20,13 +20,13 @@ const BUFFER_SIZE: usize = 128;
 
 const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&~^.:#";
 
-pub type IResult<'a, T> = nom::IResult<Input<'a>, T, NomError<'a>>;
+pub type IResult<'a, T, A: Allocator> = nom::IResult<Input<'a, A>, T, NomError<'a, A>>;
 
-pub fn module<A: Allocator>(input: Input<'_>) -> IResult<Vec<Expression<'_, A>>> {
+pub fn module<A: Allocator>(input: Input<'_>) -> IResult<Vec<Expression<'_, A>>, A> {
     all_consuming(delimited(many0(hash_directive), many0(expression), blank))(input)
 }
 
-pub fn comments<A: Allocator>(input: Input) -> IResult<Vec<Comment, A>> {
+pub fn comments<A: Allocator>(input: Input) -> IResult<Vec<Comment, A>, A> {
     map(
         all_consuming(fold_many0(
             alt((
@@ -40,14 +40,18 @@ pub fn comments<A: Allocator>(input: Input) -> IResult<Vec<Comment, A>> {
                 all
             },
         )),
-        |comments| comments.into_iter().flatten().collect(),
+        |comments| {
+            let vec = Vec::new_in(input.extra());
+            vec.extend(comments.into_iter().flatten());
+            vec
+        },
     )(input)
 }
 
-pub fn hash_directives<A: Allocator>(input: Input) -> IResult<Vec<HashDirective, A>> {
+pub fn hash_directives<A: Allocator>(input: Input) -> IResult<Vec<HashDirective, A>, A> {
     all_consuming(terminated(
         many0(hash_directive),
-        tuple((many0(expression), blank)),
+        tuple((many0_count(expression), blank)),
     ))(input)
 }
 
@@ -60,14 +64,16 @@ fn symbol<'a, A: Allocator>(input: Input<'a>) -> IResult<Expression<'a, A>> {
     )(input)
 }
 
-fn expression<A: Allocator>(input: Input<'_>) -> IResult<Expression<'_, A>> {
+fn expression<A: Allocator>(input: Input<'_>) -> IResult<Expression<'_, A>, A> {
     alt((
         context("symbol", symbol),
         context(
             "quote",
             map(
                 positioned(preceded(sign('\''), expression)),
-                |(expression, position)| Expression::Quote(expression.into(), position),
+                |(expression, position)| {
+                    Expression::Quote(Box::new_in(expression, allcator), position)
+                },
             ),
         ),
         context("string", string),
@@ -84,11 +90,11 @@ fn expression<A: Allocator>(input: Input<'_>) -> IResult<Expression<'_, A>> {
     ))(input)
 }
 
-fn string<A: Allocator>(input: Input<'_>) -> IResult<Expression<'_, A>> {
+fn string<A: Allocator>(input: Input<'_>) -> IResult<Expression<'_, A>, A> {
     token(raw_string)(input)
 }
 
-fn raw_string<A: Allocator>(input: Input<'_>) -> IResult<Expression<'_, A>> {
+fn raw_string<A: Allocator>(input: Input<'_>) -> IResult<Expression<'_, A>, A> {
     map(
         positioned(delimited(
             char('"'),
@@ -106,7 +112,7 @@ fn raw_string<A: Allocator>(input: Input<'_>) -> IResult<Expression<'_, A>> {
     )(input)
 }
 
-fn sign<'a>(character: char) -> impl Fn(Input<'a>) -> IResult<()> {
+fn sign<'a, A: Allocator>(character: char) -> impl Fn(Input<'a>) -> IResult<(), A> {
     move |input| value((), token(char(character)))(input)
 }
 

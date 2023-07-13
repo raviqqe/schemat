@@ -24,7 +24,7 @@ pub fn parse_hash_directives<A: Allocator>(
     convert_result(hash_directives(Input::new(source)), source)
 }
 
-fn convert_result<T>(result: IResult<T>, source: &str) -> Result<T, ParseError> {
+fn convert_result<T, A: Allocator>(result: IResult<T, A>, source: &str) -> Result<T, ParseError> {
     result
         .map(|(_, value)| value)
         .map_err(|error| ParseError::new(source, error))
