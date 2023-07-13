@@ -1,14 +1,14 @@
 use crate::position::Position;
 
 #[derive(Debug, Eq, PartialEq)]
-pub enum Expression<'a> {
-    List(Vec<Expression<'a>>, Position),
-    Quote(Box<Expression<'a>>, Position),
+pub enum Expression<'a, A> {
+    List(Vec<Expression<'a, A>, A>, Position),
+    Quote(Box<Expression<'a, A>>, Position),
     String(&'a str, Position),
     Symbol(&'a str, Position),
 }
 
-impl<'a> Expression<'a> {
+impl<'a, A> Expression<'a, A> {
     pub fn position(&self) -> &Position {
         match self {
             Self::List(_, position) => position,

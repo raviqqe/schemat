@@ -1,3 +1,5 @@
+#![feature(allocator_api)]
+
 mod ast;
 mod context;
 mod format;
