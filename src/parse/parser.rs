@@ -20,8 +20,6 @@ const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&~^.:#";
 pub type IResult<'a, T, A> = nom::IResult<Input<'a, A>, T, NomError<'a, A>>;
 
 pub fn module<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Vec<Expression<'_, A>, A>, A> {
-    let _allocator = input.extra.clone();
-
     all_consuming(delimited(
         many0_count(hash_directive),
         many0(expression),
@@ -50,12 +48,7 @@ pub fn comments<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Comment, A
 }
 
 pub fn hash_directives<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<HashDirective, A>, A> {
-    let _allocator = input.extra.clone();
-
-    all_consuming(terminated(
-        many0(hash_directive),
-        tuple((many0_count(expression), blank)),
-    ))(input)
+    many0(hash_directive)(input)
 }
 
 fn symbol<'a, A: Allocator + Clone>(input: Input<'a, A>) -> IResult<Expression<'a, A>, A> {
@@ -69,7 +62,6 @@ fn symbol<'a, A: Allocator + Clone>(input: Input<'a, A>) -> IResult<Expression<'
 
 fn expression<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'_, A>, A> {
     let allocator = input.extra.clone();
-    let _allocator2 = allocator.clone();
 
     alt((
         context("symbol", symbol),
@@ -101,8 +93,6 @@ fn string<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'_, A
 }
 
 fn raw_string<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'_, A>, A> {
-    let _allocator = input.extra.clone();
-
     map(
         positioned(delimited(
             char('"'),
