@@ -9,10 +9,11 @@ use nom::{
     character::complete::{char, multispace0, multispace1, none_of, space0},
     combinator::{all_consuming, cut, map, recognize, value},
     error::context,
-    multi::{many0, many1},
+    multi::{fold_many0, many0, many1},
     sequence::{delimited, preceded, terminated, tuple},
     Parser,
 };
+use smallvec::SmallVec;
 
 const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&~^.:#";
 
@@ -24,11 +25,18 @@ pub fn module(input: Input<'_>) -> IResult<Vec<Expression<'_>>> {
 
 pub fn comments(input: Input) -> IResult<Vec<Comment>> {
     map(
-        all_consuming(many0(alt((
-            map(comment, Some),
-            map(raw_string, |_| None),
-            map(none_of("\";"), |_| None),
-        )))),
+        all_consuming(fold_many0(
+            alt((
+                map(comment, Some),
+                map(raw_string, |_| None),
+                map(none_of("\";"), |_| None),
+            )),
+            SmallVec::<[Option<Comment>; 128]>::new,
+            |mut all, x| {
+                all.push(x);
+                all
+            },
+        )),
         |comments| comments.into_iter().flatten().collect(),
     )(input)
 }
