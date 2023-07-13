@@ -12,6 +12,7 @@ keywords = ["format", "scheme"]
 mfmt = "0.1.1"
 nom = "7.1.3"
 nom_locate = "4.1.0"
+typed-arena = "2.0.2"
 
 [dev-dependencies]
 indoc = "2.0.2"
