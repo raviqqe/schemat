@@ -15,6 +15,8 @@ use nom::{
 };
 use smallvec::SmallVec;
 
+const BUFFER_SIZE: usize = 128;
+
 const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&~^.:#";
 
 pub type IResult<'a, T> = nom::IResult<Input<'a>, T, NomError<'a>>;
@@ -31,7 +33,7 @@ pub fn comments(input: Input) -> IResult<Vec<Comment>> {
                 map(raw_string, |_| None),
                 map(none_of("\";"), |_| None),
             )),
-            SmallVec::<[Option<Comment>; 128]>::new,
+            SmallVec::<[Option<Comment>; BUFFER_SIZE]>::new,
             |mut all, x| {
                 all.push(x);
                 all
