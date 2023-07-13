@@ -1,11 +1,15 @@
 {
   "words": [
+    "bumpalo",
+    "clippy",
     "indoc",
     "itertools",
     "lcov",
     "mfmt",
     "multispace",
+    "rustfmt",
     "rustup",
-    "schemat"
+    "schemat",
+    "smallvec"
   ]
 }

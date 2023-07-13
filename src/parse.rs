@@ -8,20 +8,33 @@ use self::{
     parser::{comments, hash_directives, module, IResult},
 };
 use crate::ast::{Comment, Expression, HashDirective};
+use std::alloc::Allocator;
 
-pub fn parse(source: &str) -> Result<Vec<Expression>, ParseError> {
-    convert_result(module(Input::new(source)), source)
+pub fn parse<A: Allocator + Clone>(
+    source: &str,
+    allocator: A,
+) -> Result<Vec<Expression<A>, A>, ParseError> {
+    convert_result(module(Input::new_extra(source, allocator)), source)
 }
 
-pub fn parse_comments(source: &str) -> Result<Vec<Comment>, ParseError> {
-    convert_result(comments(Input::new(source)), source)
+pub fn parse_comments<A: Allocator + Clone>(
+    source: &str,
+    allocator: A,
+) -> Result<Vec<Comment, A>, ParseError> {
+    convert_result(comments(Input::new_extra(source, allocator)), source)
 }
 
-pub fn parse_hash_directives(source: &str) -> Result<Vec<HashDirective>, ParseError> {
-    convert_result(hash_directives(Input::new(source)), source)
+pub fn parse_hash_directives<A: Allocator + Clone>(
+    source: &str,
+    allocator: A,
+) -> Result<Vec<HashDirective, A>, ParseError> {
+    convert_result(hash_directives(Input::new_extra(source, allocator)), source)
 }
 
-fn convert_result<T>(result: IResult<T>, source: &str) -> Result<T, ParseError> {
+fn convert_result<T, A: Allocator + Clone>(
+    result: IResult<T, A>,
+    source: &str,
+) -> Result<T, ParseError> {
     result
         .map(|(_, value)| value)
         .map_err(|error| ParseError::new(source, error))
@@ -31,16 +44,17 @@ fn convert_result<T>(result: IResult<T>, source: &str) -> Result<T, ParseError> 
 mod tests {
     use super::*;
     use crate::position::Position;
+    use std::alloc::Global;
 
     #[test]
     fn parse_nothing() {
-        assert_eq!(parse(""), Ok(vec![]));
+        assert_eq!(parse("", Global), Ok(vec![]));
     }
 
     #[test]
     fn parse_symbol() {
         assert_eq!(
-            parse("foo"),
+            parse("foo", Global),
             Ok(vec![Expression::Symbol("foo", Position::new(0, 3))])
         );
     }
@@ -48,7 +62,7 @@ mod tests {
     #[test]
     fn parse_shebang() {
         assert_eq!(
-            parse("#!/bin/sh\n#t"),
+            parse("#!/bin/sh\n#t", Global),
             Ok(vec![Expression::Symbol("#t", Position::new(10, 12))])
         );
     }
@@ -56,7 +70,7 @@ mod tests {
     #[test]
     fn parse_lang_directive() {
         assert_eq!(
-            parse("#lang racket\n#t"),
+            parse("#lang racket\n#t", Global),
             Ok(vec![Expression::Symbol("#t", Position::new(13, 15))])
         );
     }
@@ -64,7 +78,7 @@ mod tests {
     #[test]
     fn parse_empty_list() {
         assert_eq!(
-            parse("()"),
+            parse("()", Global),
             Ok(vec![Expression::List(vec![], Position::new(0, 2))])
         );
     }
@@ -72,7 +86,7 @@ mod tests {
     #[test]
     fn parse_list_with_element() {
         assert_eq!(
-            parse("(foo)"),
+            parse("(foo)", Global),
             Ok(vec![Expression::List(
                 vec![Expression::Symbol("foo", Position::new(1, 4))],
                 Position::new(0, 5)
@@ -83,7 +97,7 @@ mod tests {
     #[test]
     fn parse_list_with_elements() {
         assert_eq!(
-            parse("(foo bar)"),
+            parse("(foo bar)", Global),
             Ok(vec![Expression::List(
                 vec![
                     Expression::Symbol("foo", Position::new(1, 4)),

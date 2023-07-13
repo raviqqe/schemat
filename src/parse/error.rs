@@ -2,8 +2,9 @@ use super::input::Input;
 use crate::position_map::PositionMap;
 use core::str;
 use nom::error::{VerboseError, VerboseErrorKind};
+use std::alloc::Allocator;
 
-pub type NomError<'a> = VerboseError<Input<'a>>;
+pub type NomError<'a, A> = VerboseError<Input<'a, A>>;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParseError {
@@ -12,7 +13,7 @@ pub struct ParseError {
 }
 
 impl ParseError {
-    pub fn new(source: &str, error: nom::Err<NomError<'_>>) -> Self {
+    pub fn new<A: Allocator>(source: &str, error: nom::Err<NomError<'_, A>>) -> Self {
         match error {
             nom::Err::Incomplete(_) => Self::unexpected_end(source),
             nom::Err::Error(error) | nom::Err::Failure(error) => {
@@ -28,7 +29,7 @@ impl ParseError {
                     })
                     .copied();
 
-                if let Some(&(input, _)) = error.errors.first() {
+                if let Some((input, _)) = error.errors.first() {
                     Self {
                         message: if let Some(character) =
                             error.errors.iter().find_map(|(_, kind)| {
@@ -87,6 +88,7 @@ mod tests {
     use super::*;
     use indoc::indoc;
     use pretty_assertions::assert_eq;
+    use std::alloc::Global;
 
     #[test]
     fn to_string() {
@@ -96,7 +98,10 @@ mod tests {
         let error = ParseError::new(
             "foo",
             nom::Err::Error(VerboseError {
-                errors: vec![(Input::new("foo"), VerboseErrorKind::Context("bar"))],
+                errors: vec![(
+                    Input::new_extra("foo", Global),
+                    VerboseErrorKind::Context("bar"),
+                )],
             }),
         );
 

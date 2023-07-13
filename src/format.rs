@@ -9,11 +9,12 @@ use mfmt::{
     utility::{count_lines, is_empty},
     Document,
 };
+use std::alloc::Allocator;
 
 const COMMENT_PREFIX: &str = ";";
 
-pub fn format(
-    module: &[Expression],
+pub fn format<A: Allocator>(
+    module: &[Expression<A>],
     comments: &[Comment],
     hash_directives: &[HashDirective],
     position_map: &PositionMap,
@@ -25,9 +26,9 @@ pub fn format(
     ))
 }
 
-fn compile_module(
+fn compile_module<A: Allocator>(
     context: &mut Context,
-    module: &[Expression],
+    module: &[Expression<A>],
     hash_directives: &[HashDirective],
 ) -> Document {
     [
@@ -68,7 +69,7 @@ fn compile_hash_directive(hash_directive: &HashDirective) -> Document {
     sequence([("#".to_owned() + hash_directive.value()).into(), line()])
 }
 
-fn compile_expression(context: &mut Context, expression: &Expression) -> Document {
+fn compile_expression<A: Allocator>(context: &mut Context, expression: &Expression<A>) -> Document {
     compile_line_comment(context, expression.position(), |context| match expression {
         Expression::List(expressions, position) => {
             let line_index = get_line_index(context, position.start());
@@ -107,12 +108,12 @@ fn compile_expression(context: &mut Context, expression: &Expression) -> Documen
     })
 }
 
-fn compile_expressions<'a>(
+fn compile_expressions<'a, A: Allocator + 'a>(
     context: &mut Context,
-    expressions: impl IntoIterator<Item = &'a Expression<'a>>,
+    expressions: impl IntoIterator<Item = &'a Expression<'a, A>>,
 ) -> Document {
     let mut documents = vec![];
-    let mut last_expression = None::<&Expression>;
+    let mut last_expression = None::<&Expression<A>>;
 
     for expression in expressions {
         if let Some(last_expression) = last_expression {
@@ -204,10 +205,10 @@ fn compile_all_comments(
     )
 }
 
-fn has_extra_line(
+fn has_extra_line<A: Allocator>(
     context: &Context,
-    last_expression: &Expression,
-    expression: &Expression,
+    last_expression: &Expression<A>,
+    expression: &Expression<A>,
 ) -> bool {
     let line_index = get_line_index(context, expression.position().start());
 
@@ -235,6 +236,7 @@ mod tests {
     use super::*;
     use crate::{position::Position, position_map::PositionMap};
     use indoc::indoc;
+    use std::alloc::Global;
 
     #[test]
     fn format_list() {
@@ -325,7 +327,7 @@ mod tests {
     #[test]
     fn format_string() {
         assert_eq!(
-            format(
+            format::<Global>(
                 &[Expression::String("foo", Position::new(0, 3))],
                 &[],
                 &[],
@@ -338,7 +340,7 @@ mod tests {
     #[test]
     fn format_symbol() {
         assert_eq!(
-            format(
+            format::<Global>(
                 &[Expression::Symbol("foo", Position::new(0, 3))],
                 &[],
                 &[],
@@ -487,7 +489,7 @@ mod tests {
         #[test]
         fn keep_no_blank_line() {
             assert_eq!(
-                format(
+                format::<Global>(
                     &[
                         Expression::Symbol("foo", Position::new(0, 1)),
                         Expression::Symbol("bar", Position::new(1, 2))
@@ -508,7 +510,7 @@ mod tests {
         #[test]
         fn keep_blank_line() {
             assert_eq!(
-                format(
+                format::<Global>(
                     &[
                         Expression::Symbol("foo", Position::new(0, 1)),
                         Expression::Symbol("bar", Position::new(2, 3))
@@ -535,7 +537,7 @@ mod tests {
         #[test]
         fn format_block_comment() {
             assert_eq!(
-                format(
+                format::<Global>(
                     &[Expression::Symbol("foo", Position::new(1, 2))],
                     &[Comment::new("bar", Position::new(0, 1))],
                     &[],
@@ -553,7 +555,7 @@ mod tests {
         #[test]
         fn format_block_comment_with_extra_line() {
             assert_eq!(
-                format(
+                format::<Global>(
                     &[Expression::Symbol("foo", Position::new(2, 3))],
                     &[Comment::new("bar", Position::new(0, 1))],
                     &[],
@@ -572,7 +574,7 @@ mod tests {
         #[test]
         fn format_block_comments() {
             assert_eq!(
-                format(
+                format::<Global>(
                     &[Expression::Symbol("foo", Position::new(3, 4))],
                     &[
                         Comment::new("bar", Position::new(0, 1)),
@@ -595,7 +597,7 @@ mod tests {
         #[test]
         fn format_block_comments_with_extra_line() {
             assert_eq!(
-                format(
+                format::<Global>(
                     &[Expression::Symbol("foo", Position::new(4, 5))],
                     &[
                         Comment::new("bar", Position::new(0, 1)),
@@ -619,7 +621,7 @@ mod tests {
         #[test]
         fn format_block_comment_after_expression() {
             assert_eq!(
-                format(
+                format::<Global>(
                     &[
                         Expression::Symbol("foo", Position::new(0, 1)),
                         Expression::Symbol("baz", Position::new(2, 3))
@@ -666,7 +668,7 @@ mod tests {
         #[test]
         fn format_line_comment() {
             assert_eq!(
-                format(
+                format::<Global>(
                     &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[Comment::new("bar", Position::new(0, 1))],
                     &[],
@@ -683,7 +685,7 @@ mod tests {
         #[test]
         fn format_line_comments() {
             assert_eq!(
-                format(
+                format::<Global>(
                     &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[
                         Comment::new("bar", Position::new(0, 1)),
@@ -724,7 +726,7 @@ mod tests {
         #[test]
         fn format_remaining_block_comment() {
             assert_eq!(
-                format(
+                format::<Global>(
                     &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[Comment::new("bar", Position::new(1, 2))],
                     &[],
@@ -743,7 +745,7 @@ mod tests {
         #[test]
         fn format_remaining_block_comments() {
             assert_eq!(
-                format(
+                format::<Global>(
                     &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[
                         Comment::new("bar", Position::new(1, 2)),
@@ -766,7 +768,7 @@ mod tests {
         #[test]
         fn format_remaining_block_comments_with_extra_line() {
             assert_eq!(
-                format(
+                format::<Global>(
                     &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[
                         Comment::new("bar", Position::new(1, 2)),
@@ -795,7 +797,7 @@ mod tests {
         #[test]
         fn format_hash_directive() {
             assert_eq!(
-                format(
+                format::<Global>(
                     &[],
                     &[],
                     &[HashDirective::new("foo", Position::new(0, 0))],
@@ -812,7 +814,7 @@ mod tests {
         #[test]
         fn format_hash_directives() {
             assert_eq!(
-                format(
+                format::<Global>(
                     &[],
                     &[],
                     &[
@@ -833,7 +835,7 @@ mod tests {
         #[test]
         fn format_hash_directive_with_expression() {
             assert_eq!(
-                format(
+                format::<Global>(
                     &[Expression::Symbol("bar", Position::new(0, 0))],
                     &[],
                     &[HashDirective::new("foo", Position::new(0, 0))],
