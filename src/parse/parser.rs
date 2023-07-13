@@ -207,14 +207,17 @@ mod tests {
 
     #[test]
     fn parse_shebang() {
-        assert_eq!(*hash_line(Input::new("#!/bin/sh\n")).unwrap().1, "!/bin/sh");
+        assert_eq!(
+            hash_line(Input::new("#!/bin/sh\n")).unwrap().1,
+            HashLine::new("!/bin/sh", Position::new(0, 10))
+        );
     }
 
     #[test]
     fn parse_lang_directive() {
         assert_eq!(
-            *hash_line(Input::new("#lang r7rs\n")).unwrap().1,
-            "lang r7rs"
+            hash_line(Input::new("#lang r7rs\n")).unwrap().1,
+            HashLine::new("lang r7rs", Position::new(0, 10))
         );
     }
 
