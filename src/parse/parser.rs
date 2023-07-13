@@ -1,6 +1,6 @@
 use super::{error::NomError, input::Input};
 use crate::{
-    ast::{Comment, Expression},
+    ast::{Comment, Expression, HashLine},
     position::Position,
 };
 use nom::{
@@ -159,8 +159,14 @@ fn comment(input: Input) -> IResult<Comment> {
     )(input)
 }
 
-fn hash_line(input: Input<'_>) -> IResult<Input<'_>> {
-    delimited(char('#'), take_until("\n"), newline)(input)
+fn hash_line(input: Input<'_>) -> IResult<HashLine<'_>> {
+    map(
+        terminated(
+            positioned_meta(preceded(char('#'), take_until("\n"))),
+            newline,
+        ),
+        |(input, position)| HashLine::new(&input, position),
+    )(input)
 }
 
 fn newline(input: Input<'_>) -> IResult<()> {
