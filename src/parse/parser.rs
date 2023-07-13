@@ -32,9 +32,9 @@ pub fn comments<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Comment, A
 
     all_consuming(fold_many0(
         alt((
-            map(comment, Some),
-            map(raw_string, |_| None),
             map(none_of("\";"), |_| None),
+            map(raw_string, |_| None),
+            map(comment, Some),
         )),
         move || Vec::new_in(allocator.clone()),
         |mut all, comment| {
