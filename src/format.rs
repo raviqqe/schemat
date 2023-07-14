@@ -158,7 +158,7 @@ fn compile_expressions<'a, A: Allocator + Clone + 'a>(
     expressions: impl IntoIterator<Item = &'a Expression<'a, A>>,
 ) -> Document<'a> {
     let mut documents = Vec::new_in(context.allocator());
-    let mut last_expression = None::<&Expression<A>>;
+    let mut last_expression = None;
 
     for expression in expressions {
         if let Some(last_expression) = last_expression {
