@@ -35,7 +35,7 @@ checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
 [[package]]
 name = "mfmt"
 version = "0.1.4"
-source = "git+https://github.com/raviqqe/mfmt#8b422d6aa499706a2c59e81d66b1189e3b3b7117"
+source = "git+https://github.com/raviqqe/mfmt?branch=chore/box#6f29f0e9ea23732ccf47ec447b82655a9ed67db7"
 
 [[package]]
 name = "minimal-lexical"
