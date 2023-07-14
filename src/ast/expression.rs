@@ -4,9 +4,11 @@ use std::alloc::Allocator;
 #[derive(Debug)]
 pub enum Expression<'a, A: Allocator> {
     List(Vec<Expression<'a, A>, A>, Position),
+    QuasiQuote(Box<Expression<'a, A>, A>, Position),
     Quote(Box<Expression<'a, A>, A>, Position),
     String(&'a str, Position),
     Symbol(&'a str, Position),
+    Unquote(Box<Expression<'a, A>, A>, Position),
     Vector(Vec<Expression<'a, A>, A>, Position),
 }
 
@@ -14,9 +16,11 @@ impl<'a, A: Allocator> Expression<'a, A> {
     pub fn position(&self) -> &Position {
         match self {
             Self::List(_, position) => position,
+            Self::QuasiQuote(_, position) => position,
             Self::Quote(_, position) => position,
             Self::String(_, position) => position,
             Self::Symbol(_, position) => position,
+            Self::Unquote(_, position) => position,
             Self::Vector(_, position) => position,
         }
     }
@@ -29,6 +33,9 @@ impl<'a, A: Allocator> PartialEq for Expression<'a, A> {
             (Self::List(one, position), Self::List(other, other_position)) => {
                 one == other && position == other_position
             }
+            (Self::QuasiQuote(one, position), Self::QuasiQuote(other, other_position)) => {
+                one == other && position == other_position
+            }
             (Self::Quote(one, position), Self::Quote(other, other_position)) => {
                 one == other && position == other_position
             }
@@ -36,6 +43,9 @@ impl<'a, A: Allocator> PartialEq for Expression<'a, A> {
                 one == other && position == other_position
             }
             (Self::Symbol(one, position), Self::Symbol(other, other_position)) => {
+                one == other && position == other_position
+            }
+            (Self::Unquote(one, position), Self::Unquote(other, other_position)) => {
                 one == other && position == other_position
             }
             (Self::Vector(one, position), Self::Vector(other, other_position)) => {
