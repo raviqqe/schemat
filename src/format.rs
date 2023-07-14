@@ -1,6 +1,3 @@
-pub mod builder;
-
-use self::builder::Builder;
 use crate::{
     ast::{Comment, Expression, HashDirective},
     context::Context,
@@ -10,7 +7,7 @@ use crate::{
 use mfmt::{
     empty, line, line_suffix, sequence,
     utility::{count_lines, is_empty},
-    Document,
+    Builder, Document,
 };
 use std::alloc::Allocator;
 
