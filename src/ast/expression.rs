@@ -3,7 +3,7 @@ use std::alloc::Allocator;
 
 #[derive(Debug)]
 pub enum Expression<'a, A: Allocator> {
-    List(&'a str, Vec<Expression<'a, A>, A>, &'a str, Position),
+    List(&'a str, &'a str, Vec<Expression<'a, A>, A>, Position),
     Quote(&'a str, Box<Expression<'a, A>, A>, Position),
     String(&'a str, Position),
     Symbol(&'a str, Position),
@@ -25,8 +25,8 @@ impl<'a, A: Allocator> PartialEq for Expression<'a, A> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (
-                Self::List(left, one, right, position),
-                Self::List(other_left, other, other_right, other_position),
+                Self::List(left, right, one, position),
+                Self::List(other_left, other_right, other, other_position),
             ) => {
                 left == other_left
                     && right == other_right

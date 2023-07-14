@@ -85,8 +85,8 @@ fn compile_expression<'a, A: Allocator + Clone + 'a>(
     expression: &'a Expression<'a, A>,
 ) -> Document<'a> {
     compile_line_comment(context, expression.position(), |context| match expression {
-        Expression::List(expressions, position) => {
-            compile_list_like(context, expressions, position, "(", ")")
+        Expression::List(left, right, expressions, position) => {
+            compile_list(context, expressions, position, left, right)
         }
         Expression::Quote(sign, expression, _) => {
             let builder = context.builder().clone();
@@ -95,18 +95,15 @@ fn compile_expression<'a, A: Allocator + Clone + 'a>(
         }
         Expression::String(string, _) => context.builder().sequence(["\"", *string, "\""]),
         Expression::Symbol(name, _) => (*name).into(),
-        Expression::Vector(expressions, position) => {
-            compile_list_like(context, expressions, position, "[", "]")
-        }
     })
 }
 
-fn compile_list_like<'a, A: Allocator + Clone + 'a>(
+fn compile_list<'a, A: Allocator + Clone + 'a>(
     context: &mut Context<'a, A>,
     expressions: &'a [Expression<'a, A>],
     position: &Position,
-    left: &'static str,
-    right: &'static str,
+    left: &'a str,
+    right: &'a str,
 ) -> Document<'a> {
     let line_index = get_line_index(context, position.start());
 
@@ -286,6 +283,8 @@ mod tests {
         assert_eq!(
             format(
                 &[Expression::List(
+                    "(",
+                    ")",
                     vec![
                         Expression::Symbol("foo", Position::new(0, 2)),
                         Expression::Symbol("bar", Position::new(0, 2))
@@ -306,6 +305,8 @@ mod tests {
         assert_eq!(
             format(
                 &[Expression::List(
+                    "(",
+                    ")",
                     vec![
                         Expression::Symbol("foo", Position::new(1, 4)),
                         Expression::Symbol("bar", Position::new(5, 8))
@@ -331,6 +332,8 @@ mod tests {
         assert_eq!(
             format(
                 &[Expression::List(
+                    "(",
+                    ")",
                     vec![
                         Expression::Symbol("foo", Position::new(0, 1)),
                         Expression::Symbol("bar", Position::new(0, 1)),
@@ -422,7 +425,9 @@ mod tests {
     fn format_vector() {
         assert_eq!(
             format(
-                &[Expression::Vector(
+                &[Expression::List(
+                    "[",
+                    "]",
                     vec![
                         Expression::Symbol("foo", Position::new(0, 2)),
                         Expression::Symbol("bar", Position::new(0, 2))
@@ -447,7 +452,11 @@ mod tests {
             assert_eq!(
                 format(
                     &[Expression::List(
+                        "(",
+                        ")",
                         vec![Expression::List(
+                            "(",
+                            ")",
                             vec![
                                 Expression::Symbol("foo", Position::new(0, 1)),
                                 Expression::Symbol("bar", Position::new(1, 2))
@@ -475,6 +484,8 @@ mod tests {
             assert_eq!(
                 format(
                     &[Expression::List(
+                        "(",
+                        ")",
                         vec![
                             Expression::Symbol("foo", Position::new(0, 1)),
                             Expression::Symbol("bar", Position::new(1, 2))
@@ -500,6 +511,8 @@ mod tests {
             assert_eq!(
                 format(
                     &[Expression::List(
+                        "(",
+                        ")",
                         vec![
                             Expression::Symbol("foo", Position::new(0, 1)),
                             Expression::Symbol("bar", Position::new(2, 3))
@@ -526,8 +539,12 @@ mod tests {
             assert_eq!(
                 format(
                     &[Expression::List(
+                        "(",
+                        ")",
                         vec![
                             Expression::List(
+                                "(",
+                                ")",
                                 vec![
                                     Expression::Symbol("foo", Position::new(0, 1)),
                                     Expression::Symbol("bar", Position::new(1, 2))
@@ -559,6 +576,8 @@ mod tests {
             assert_eq!(
                 format(
                     &[Expression::List(
+                        "(",
+                        ")",
                         vec![Expression::Symbol("foo", Position::new(1, 1))],
                         Position::new(0, 0)
                     )],
@@ -747,6 +766,8 @@ mod tests {
             assert_eq!(
                 format(
                     &[Expression::List(
+                        "(",
+                        ")",
                         vec![
                             Expression::Symbol("foo", Position::new(0, 1)),
                             Expression::Symbol("baz", Position::new(2, 3))
@@ -812,6 +833,8 @@ mod tests {
             assert_eq!(
                 format(
                     &[Expression::List(
+                        "(",
+                        ")",
                         vec![Expression::Symbol("foo", Position::new(1, 2))],
                         Position::new(0, 1)
                     )],

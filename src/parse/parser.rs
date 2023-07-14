@@ -66,7 +66,7 @@ fn expression<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'
 
     alt((
         context("symbol", symbol),
-        context("list", list_like("(", ")", Expression::List)),
+        context("list", list_like("(", ")")),
         context("string", string),
         context(
             "quote",
@@ -77,22 +77,24 @@ fn expression<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'
                 },
             ),
         ),
-        context("vector", list_like("[", "]", Expression::Vector)),
+        context("vector", list_like("[", "]")),
+        context("hash map", list_like("#{", "}")),
     ))(input)
 }
 
 fn list_like<'a, A: Allocator + Clone>(
     left: &'static str,
     right: &'static str,
-    create: fn(Vec<Expression<'a, A>, A>, Position) -> Expression<'a, A>,
 ) -> impl FnMut(Input<'a, A>) -> IResult<Expression<'a, A>, A> {
     move |input| {
         map(
-            positioned(preceded(
+            positioned(tuple((
                 sign(left),
-                cut(terminated(many0(expression), sign(right))),
-            )),
-            |(expressions, position)| create(expressions, position),
+                cut(tuple((many0(expression), sign(right)))),
+            ))),
+            |((left, (expressions, right)), position)| {
+                Expression::List(&left, &right, expressions, position)
+            },
         )(input)
     }
 }
@@ -119,8 +121,10 @@ fn raw_string<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'
     )(input)
 }
 
-fn sign<'a, A: Allocator + Clone>(sign: &'static str) -> impl Fn(Input<'a, A>) -> IResult<(), A> {
-    move |input| value((), token(tag(sign)))(input)
+fn sign<'a, A: Allocator + Clone>(
+    sign: &'static str,
+) -> impl Fn(Input<'a, A>) -> IResult<Input<'a, A>, A> {
+    move |input| token(tag(sign))(input)
 }
 
 fn token<'a, T, A: Allocator + Clone>(
@@ -255,6 +259,8 @@ mod tests {
         assert_eq!(
             expression(Input::new_extra("(1 2 3)", Global)).unwrap().1,
             Expression::List(
+                "(",
+                ")",
                 vec![
                     Expression::Symbol("1", Position::new(1, 2)),
                     Expression::Symbol("2", Position::new(3, 4)),
@@ -269,7 +275,9 @@ mod tests {
     fn parse_vector() {
         assert_eq!(
             expression(Input::new_extra("[1 2 3]", Global)).unwrap().1,
-            Expression::Vector(
+            Expression::List(
+                "[",
+                "]",
                 vec![
                     Expression::Symbol("1", Position::new(1, 2)),
                     Expression::Symbol("2", Position::new(3, 4)),
