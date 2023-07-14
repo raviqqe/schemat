@@ -13,29 +13,38 @@ use std::alloc::Allocator;
 
 const COMMENT_PREFIX: &str = ";";
 
-pub fn format<A: Allocator>(
+pub fn format<A: Allocator + Clone>(
     module: &[Expression<A>],
     comments: &[Comment],
     hash_directives: &[HashDirective],
     position_map: &PositionMap,
+    allocator: A,
 ) -> String {
     mfmt::format(&compile_module(
-        &mut Context::new(comments, position_map),
+        &mut Context::new(comments, position_map, allocator),
         module,
         hash_directives,
     ))
 }
 
-fn compile_module<A: Allocator>(
-    context: &mut Context,
-    module: &[Expression<A>],
+fn compile_module<'a, A: Allocator + Clone + 'a>(
+    context: &mut Context<'a, A>,
+    module: &'a [Expression<'a, A>],
     hash_directives: &[HashDirective],
-) -> Document {
+) -> Document<'a> {
     [
         if hash_directives.is_empty() {
             empty()
         } else {
-            sequence([sequence(hash_directives.iter().map(compile_hash_directive))])
+            sequence(allocate(
+                context.allocator(),
+                [sequence(allocate_vec(
+                    context.allocator(),
+                    hash_directives
+                        .iter()
+                        .map(|directive| compile_hash_directive(context, directive)),
+                ))],
+            ))
         },
         {
             let expressions = compile_expressions(context, module);
@@ -43,7 +52,7 @@ fn compile_module<A: Allocator>(
             if is_empty(&expressions) {
                 empty()
             } else {
-                sequence([expressions, line()])
+                sequence(allocate(context.allocator(), [expressions, line()]))
             }
         },
         compile_remaining_block_comment(context),
@@ -53,23 +62,40 @@ fn compile_module<A: Allocator>(
         if count_lines(&document) == 0 {
             all
         } else {
-            sequence([
-                if count_lines(&all) == 0 {
-                    empty()
-                } else {
-                    sequence([all, line()])
-                },
-                document,
-            ])
+            sequence(allocate(
+                context.allocator(),
+                [
+                    if count_lines(&all) == 0 {
+                        empty()
+                    } else {
+                        sequence(allocate(context.allocator(), [all, line()]))
+                    },
+                    document,
+                ],
+            ))
         }
     })
 }
 
-fn compile_hash_directive(hash_directive: &HashDirective) -> Document {
-    sequence([("#".to_owned() + hash_directive.value()).into(), line()])
+fn compile_hash_directive<'a, A: Allocator + Clone + 'a>(
+    context: &Context<A>,
+    hash_directive: &HashDirective,
+) -> Document<'a> {
+    sequence(allocate(
+        context.allocator(),
+        [
+            allocate(context.allocator(), "#".to_owned() + hash_directive.value())
+                .as_str()
+                .into(),
+            line(),
+        ],
+    ))
 }
 
-fn compile_expression<A: Allocator>(context: &mut Context, expression: &Expression<A>) -> Document {
+fn compile_expression<'a, A: Allocator + Clone + 'a>(
+    context: &mut Context<'a, A>,
+    expression: &'a Expression<'a, A>,
+) -> Document<'a> {
     compile_line_comment(context, expression.position(), |context| match expression {
         Expression::List(expressions, position) => {
             let line_index = get_line_index(context, position.start());
@@ -80,39 +106,58 @@ fn compile_expression<A: Allocator>(context: &mut Context, expression: &Expressi
                 (Some(first), Some(last)) if has_extra_line(context, first, last) => Some(line()),
                 _ => None,
             };
+            let comment = compile_line_comment(context, expression.position(), |_| "(".into());
 
-            sequence(
-                [compile_line_comment(context, expression.position(), |_| {
-                    "(".into()
-                })]
-                .into_iter()
-                .chain([flatten(indent(compile_expressions(context, first)))])
-                .chain(if last.is_empty() {
-                    None
-                } else {
-                    Some(r#break(indent(sequence(
-                        extra_line
-                            .into_iter()
-                            .chain([line(), compile_expressions(context, last)]),
-                    ))))
-                })
-                .chain([")".into()])
-                .collect::<Vec<_>>(),
-            )
+            sequence(allocate_vec(
+                context.allocator(),
+                [comment]
+                    .into_iter()
+                    .chain([flatten(allocate(
+                        context.allocator(),
+                        indent(allocate(
+                            context.allocator(),
+                            compile_expressions(context, first),
+                        )),
+                    ))])
+                    .chain(if last.is_empty() {
+                        None
+                    } else {
+                        Some(r#break(allocate(
+                            context.allocator(),
+                            indent(allocate(
+                                context.allocator(),
+                                sequence(allocate_vec(
+                                    context.allocator(),
+                                    extra_line
+                                        .into_iter()
+                                        .chain([line(), compile_expressions(context, last)]),
+                                )),
+                            )),
+                        )))
+                    })
+                    .chain([")".into()]),
+            ))
         }
-        Expression::String(string, _) => sequence(["\"", string, "\""]),
+        Expression::String(string, _) => sequence(allocate(
+            context.allocator(),
+            ["\"".into(), (*string).into(), "\"".into()],
+        )),
         Expression::Symbol(name, _) => (*name).into(),
         Expression::Quote(expression, _) => {
-            sequence(["'".into(), compile_expression(context, expression)])
+            // let expression = compile_expression(context, expression);
+            sequence(allocate(
+                context.allocator(),
+                ["'".into(), compile_expression(context, expression)],
+            ))
         }
     })
 }
 
-fn compile_expressions<'a, A: Allocator + 'a>(
-    context: &mut Context,
+fn compile_expressions<'a, A: Allocator + Clone + 'a>(
+    context: &mut Context<'a, A>,
     expressions: impl IntoIterator<Item = &'a Expression<'a, A>>,
-) -> Document {
-    let mut documents = vec![];
+) -> Document<'a> {
+    let mut documents = Vec::new_in(context.allocator());
     let mut last_expression = None::<&Expression<A>>;
 
     for expression in expressions {
@@ -130,57 +175,77 @@ fn compile_expressions<'a, A: Allocator + 'a>(
         last_expression = Some(expression);
     }
 
-    sequence(documents)
+    sequence(allocate(context.allocator(), documents))
 }
 
-fn compile_line_comment(
-    context: &mut Context,
+fn compile_line_comment<'a, A: Allocator + Clone + 'a>(
+    context: &mut Context<'a, A>,
     position: &Position,
-    document: impl Fn(&mut Context) -> Document,
-) -> Document {
-    sequence([
-        compile_block_comment(context, position),
-        document(context),
-        compile_suffix_comment(context, position),
-    ])
+    document: impl Fn(&mut Context<'a, A>) -> Document<'a>,
+) -> Document<'a> {
+    let block_comment = compile_block_comment(context, position);
+    let document = document(context);
+    let suffix_comment = compile_suffix_comment(context, position);
+
+    sequence(allocate(
+        context.allocator(),
+        [block_comment, document, suffix_comment],
+    ))
 }
 
-fn compile_suffix_comment(context: &mut Context, position: &Position) -> Document {
-    sequence(
+fn compile_suffix_comment<'a, A: Allocator + Clone + 'a>(
+    context: &mut Context<A>,
+    position: &Position,
+) -> Document<'a> {
+    let allocator = context.allocator();
+
+    sequence(allocate_vec(
+        context.allocator(),
         context
             .drain_current_comment(get_line_index(context, position.start()))
             .map(|comment| {
-                line_suffix(" ".to_owned() + COMMENT_PREFIX + comment.value().trim_end())
+                line_suffix(allocate(
+                    allocator.clone(),
+                    " ".to_owned() + COMMENT_PREFIX + comment.value().trim_end(),
+                ))
             }),
-    )
+    ))
 }
 
-fn compile_block_comment(context: &mut Context, position: &Position) -> Document {
-    let comments = context
-        .drain_comments_before(get_line_index(context, position.start()))
-        .collect::<Vec<_>>();
+fn compile_block_comment<'a, A: Allocator + Clone + 'a>(
+    context: &mut Context<'a, A>,
+    position: &Position,
+) -> Document<'a> {
+    let comments = allocate_vec(
+        context.allocator(),
+        context.drain_comments_before(get_line_index(context, position.start())),
+    );
 
     compile_all_comments(
         context,
-        &comments,
+        comments,
         Some(get_line_index(context, position.start())),
     )
 }
 
-fn compile_remaining_block_comment(context: &mut Context) -> Document {
-    let comments = context
-        .drain_comments_before(usize::MAX)
-        .collect::<Vec<_>>();
+fn compile_remaining_block_comment<'a, A: Allocator + Clone + 'a>(
+    context: &mut Context<'a, A>,
+) -> Document<'a> {
+    let comments = allocate_vec(
+        context.allocator(),
+        context.drain_comments_before(usize::MAX),
+    );
 
-    compile_all_comments(context, &comments, None)
+    compile_all_comments(context, comments, None)
 }
 
-fn compile_all_comments(
-    context: &Context,
-    comments: &[&Comment],
+fn compile_all_comments<'a, A: Allocator + Clone + 'a>(
+    context: &Context<A>,
+    comments: &'a [&'a Comment<'a>],
     last_line_index: Option<usize>,
-) -> Document {
-    sequence(
+) -> Document<'a> {
+    sequence(allocate_vec(
+        context.allocator(),
         comments
             .iter()
             .zip(
@@ -191,22 +256,27 @@ fn compile_all_comments(
                     .chain([last_line_index.unwrap_or(0)]),
             )
             .map(|(comment, next_line_index)| {
-                sequence([
-                    COMMENT_PREFIX.into(),
-                    comment.value().trim_end().into(),
-                    r#break(line()),
-                    if get_line_index(context, comment.position().end() - 1) + 1 < next_line_index {
-                        line()
-                    } else {
-                        empty()
-                    },
-                ])
+                sequence(allocate(
+                    context.allocator(),
+                    [
+                        COMMENT_PREFIX.into(),
+                        comment.value().trim_end().into(),
+                        r#break(allocate(context.allocator(), line())),
+                        if get_line_index(context, comment.position().end() - 1) + 1
+                            < next_line_index
+                        {
+                            line()
+                        } else {
+                            empty()
+                        },
+                    ],
+                ))
             }),
-    )
+    ))
 }
 
-fn has_extra_line<A: Allocator>(
-    context: &Context,
+fn has_extra_line<A: Allocator + Clone>(
+    context: &Context<A>,
     last_expression: &Expression<A>,
     expression: &Expression<A>,
 ) -> bool {
@@ -224,11 +294,32 @@ fn has_extra_line<A: Allocator>(
         > 1
 }
 
-fn get_line_index(context: &Context, offset: usize) -> usize {
+fn get_line_index<A: Allocator + Clone>(context: &Context<A>, offset: usize) -> usize {
     context
         .position_map()
         .line_index(offset)
         .expect("valid offset")
+}
+
+fn allocate<'a, A: Allocator + 'a, T>(allocator: A, value: T) -> &'a T
+where
+    A: 'a,
+{
+    Box::leak(Box::new_in(value, allocator))
+}
+
+fn allocate_vec<'a, A: Allocator + 'a, T>(
+    allocator: A,
+    values: impl IntoIterator<Item = T>,
+) -> &'a [T]
+where
+    A: 'a,
+{
+    let mut vec = Vec::new_in(allocator);
+
+    vec.extend(values);
+
+    Vec::leak(vec)
 }
 
 #[cfg(test)]
@@ -252,6 +343,7 @@ mod tests {
                 &[],
                 &[],
                 &PositionMap::new("(foo bar)"),
+                Global,
             ),
             "(foo bar)\n"
         );
@@ -271,6 +363,7 @@ mod tests {
                 &[],
                 &[],
                 &PositionMap::new("(foo\nbar)"),
+                Global,
             ),
             indoc!(
                 "
@@ -297,6 +390,7 @@ mod tests {
                 &[],
                 &[],
                 &PositionMap::new("a\nb"),
+                Global,
             ),
             indoc!(
                 "
@@ -319,6 +413,7 @@ mod tests {
                 &[],
                 &[],
                 &PositionMap::new("'foo"),
+                Global,
             ),
             "'foo\n"
         );
@@ -332,6 +427,7 @@ mod tests {
                 &[],
                 &[],
                 &PositionMap::new("\"foo\""),
+                Global,
             ),
             "\"foo\"\n"
         );
@@ -345,6 +441,7 @@ mod tests {
                 &[],
                 &[],
                 &PositionMap::new("foo"),
+                Global,
             ),
             "foo\n"
         );
@@ -370,6 +467,7 @@ mod tests {
                     &[],
                     &[],
                     &PositionMap::new("\n\n\na"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -394,6 +492,7 @@ mod tests {
                     &[],
                     &[],
                     &PositionMap::new("\na"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -418,6 +517,7 @@ mod tests {
                     &[],
                     &[],
                     &PositionMap::new("\n\na"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -449,6 +549,7 @@ mod tests {
                     &[],
                     &[],
                     &PositionMap::new("\n\n\na"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -472,6 +573,7 @@ mod tests {
                     &[],
                     &[],
                     &PositionMap::new("\n\n"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -497,6 +599,7 @@ mod tests {
                     &[],
                     &[],
                     &PositionMap::new("\na"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -518,6 +621,7 @@ mod tests {
                     &[],
                     &[],
                     &PositionMap::new("\n\na"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -542,6 +646,7 @@ mod tests {
                     &[Comment::new("bar", Position::new(0, 1))],
                     &[],
                     &PositionMap::new("\na"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -560,6 +665,7 @@ mod tests {
                     &[Comment::new("bar", Position::new(0, 1))],
                     &[],
                     &PositionMap::new("\n\na"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -582,6 +688,7 @@ mod tests {
                     ],
                     &[],
                     &PositionMap::new("\n\n\na"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -605,6 +712,7 @@ mod tests {
                     ],
                     &[],
                     &PositionMap::new("\n\n\n\na"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -629,6 +737,7 @@ mod tests {
                     &[Comment::new("bar", Position::new(1, 2))],
                     &[],
                     &PositionMap::new("\n\n\n"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -654,6 +763,7 @@ mod tests {
                     &[Comment::new("bar", Position::new(1, 2))],
                     &[],
                     &PositionMap::new("\n\n\n"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -673,6 +783,7 @@ mod tests {
                     &[Comment::new("bar", Position::new(0, 1))],
                     &[],
                     &PositionMap::new("\na"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -693,6 +804,7 @@ mod tests {
                     ],
                     &[],
                     &PositionMap::new("\na"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -713,6 +825,7 @@ mod tests {
                     &[Comment::new("bar", Position::new(0, 1))],
                     &[],
                     &PositionMap::new("\n\n"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -731,6 +844,7 @@ mod tests {
                     &[Comment::new("bar", Position::new(1, 2))],
                     &[],
                     &PositionMap::new("\n\n"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -753,6 +867,7 @@ mod tests {
                     ],
                     &[],
                     &PositionMap::new("\n\n\n"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -776,6 +891,7 @@ mod tests {
                     ],
                     &[],
                     &PositionMap::new("\n\n\n\n"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -802,6 +918,7 @@ mod tests {
                     &[],
                     &[HashDirective::new("foo", Position::new(0, 0))],
                     &PositionMap::new("\n"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -822,6 +939,7 @@ mod tests {
                         HashDirective::new("bar", Position::new(2, 2))
                     ],
                     &PositionMap::new("\n\n\n"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -840,6 +958,7 @@ mod tests {
                     &[],
                     &[HashDirective::new("foo", Position::new(0, 0))],
                     &PositionMap::new("\n"),
+                    Global,
                 ),
                 indoc!(
                     "

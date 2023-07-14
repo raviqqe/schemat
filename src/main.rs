@@ -39,6 +39,7 @@ fn run() -> Result<(), Box<dyn Error>> {
             &parse_comments(&source, &allocator).map_err(convert_error)?,
             &parse_hash_directives(&source, &allocator).map_err(convert_error)?,
             &position_map,
+            &allocator,
         )
     );
 
