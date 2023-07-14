@@ -6,7 +6,7 @@ use crate::{
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_until, take_while1},
-    character::complete::{char, multispace0, multispace1, none_of, space0},
+    character::complete::{char, multispace0, multispace1, none_of, one_of, space0},
     combinator::{all_consuming, cut, map, recognize, value},
     error::context,
     multi::{fold_many0, many0_count, many1_count},
@@ -71,9 +71,9 @@ fn expression<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'
         context(
             "quote",
             map(
-                positioned(preceded(sign('\''), expression)),
-                move |(expression, position)| {
-                    Expression::Quote(Box::new_in(expression, allocator.clone()), position)
+                positioned(tuple((token(recognize(one_of(QUOTE_SIGNS))), expression))),
+                move |((sign, expression), position)| {
+                    Expression::Quote(&sign, Box::new_in(expression, allocator.clone()), position)
                 },
             ),
         ),

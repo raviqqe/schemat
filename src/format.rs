@@ -367,6 +367,7 @@ mod tests {
         assert_eq!(
             format(
                 &[Expression::Quote(
+                    "'",
                     Expression::Symbol("foo", Position::new(0, 3)).into(),
                     Position::new(0, 3)
                 )],
