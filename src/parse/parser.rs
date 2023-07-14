@@ -151,9 +151,7 @@ fn raw_string<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A
     )(input)
 }
 
-fn sign<'a, A: Allocator + Clone>(
-    sign: &'static str,
-) -> impl Fn(Input<'a, A>) -> IResult<Input<'a, A>, A> {
+fn sign<A: Allocator + Clone>(sign: &'static str) -> impl Fn(Input<A>) -> IResult<Input<A>, A> {
     move |input| token(tag(sign))(input)
 }
 
