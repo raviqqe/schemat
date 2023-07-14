@@ -79,7 +79,12 @@ mod tests {
     fn parse_empty_list() {
         assert_eq!(
             parse("()", Global),
-            Ok(vec![Expression::List(vec![], Position::new(0, 2))])
+            Ok(vec![Expression::List(
+                "(",
+                ")",
+                vec![],
+                Position::new(0, 2)
+            )])
         );
     }
 
@@ -88,6 +93,8 @@ mod tests {
         assert_eq!(
             parse("(foo)", Global),
             Ok(vec![Expression::List(
+                "(",
+                ")",
                 vec![Expression::Symbol("foo", Position::new(1, 4))],
                 Position::new(0, 5)
             )])
@@ -99,6 +106,8 @@ mod tests {
         assert_eq!(
             parse("(foo bar)", Global),
             Ok(vec![Expression::List(
+                "(",
+                ")",
                 vec![
                     Expression::Symbol("foo", Position::new(1, 4)),
                     Expression::Symbol("bar", Position::new(5, 8))

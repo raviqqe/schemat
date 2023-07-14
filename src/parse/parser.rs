@@ -5,8 +5,8 @@ use crate::{
 };
 use nom::{
     branch::alt,
-    bytes::complete::{tag, take_until, take_while1},
-    character::complete::{char, multispace0, multispace1, none_of, one_of, space0},
+    bytes::complete::{tag, take_until, take_while, take_while1},
+    character::complete::{char, multispace0, multispace1, none_of, satisfy, space0},
     combinator::{all_consuming, cut, map, recognize, value},
     error::context,
     multi::{fold_many0, many0_count, many1_count},
@@ -15,12 +15,12 @@ use nom::{
 };
 use std::alloc::Allocator;
 
-const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&~^.:#";
-const QUOTE_SIGNS: &str = "'`,";
+const HASH_CHARACTER: char = '#';
+const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&|~^.:\\";
 
 pub type IResult<'a, T, A> = nom::IResult<Input<'a, A>, T, NomError<'a, A>>;
 
-pub fn module<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Vec<Expression<'_, A>, A>, A> {
+pub fn module<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Expression<A>, A>, A> {
     all_consuming(delimited(
         many0_count(hash_directive),
         many0(expression),
@@ -33,8 +33,10 @@ pub fn comments<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Comment, A
 
     all_consuming(fold_many0(
         alt((
-            map(none_of("\";"), |_| None),
+            map(none_of("\";#"), |_| None),
             map(raw_string, |_| None),
+            map(hash_semicolon, |_| None),
+            map(tag("#"), |_| None),
             map(comment, Some),
         )),
         move || Vec::new_in(allocator.clone()),
@@ -52,56 +54,86 @@ pub fn hash_directives<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Has
     many0(hash_directive)(input)
 }
 
-fn symbol<'a, A: Allocator + Clone>(input: Input<'a, A>) -> IResult<Expression<'a, A>, A> {
+fn symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
     map(
-        token(positioned(take_while1::<_, Input<'a, A>, _>(|character| {
-            character.is_alphanumeric() || SYMBOL_SIGNS.contains(character)
-        }))),
+        token(positioned(alt((
+            recognize(tuple((
+                satisfy(is_head_symbol_character),
+                take_while(is_tail_symbol_character),
+            ))),
+            recognize(tuple((
+                char(HASH_CHARACTER),
+                take_while1(is_tail_symbol_character),
+            ))),
+        )))),
         |(input, position)| Expression::Symbol(&input, position),
     )(input)
 }
 
-fn expression<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'_, A>, A> {
+fn is_head_symbol_character(character: char) -> bool {
+    character.is_alphanumeric() || SYMBOL_SIGNS.contains(character)
+}
+
+fn is_tail_symbol_character(character: char) -> bool {
+    is_head_symbol_character(character) || character == HASH_CHARACTER
+}
+
+fn expression<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
     let allocator = input.extra.clone();
 
     alt((
         context("symbol", symbol),
-        context("list", list_like('(', ')', Expression::List)),
+        context("list", list_like("(", ")")),
         context("string", string),
         context(
             "quote",
             map(
-                positioned(tuple((token(recognize(one_of(QUOTE_SIGNS))), expression))),
+                positioned(tuple((
+                    token(recognize(alt((
+                        tag("'"),
+                        tag("`"),
+                        tag(","),
+                        hash_semicolon,
+                        tag("#"),
+                    )))),
+                    expression,
+                ))),
                 move |((sign, expression), position)| {
                     Expression::Quote(&sign, Box::new_in(expression, allocator.clone()), position)
                 },
             ),
         ),
-        context("vector", list_like('[', ']', Expression::Vector)),
+        context("vector", list_like("[", "]")),
+        context("map", list_like("{", "}")),
     ))(input)
 }
 
+fn hash_semicolon<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
+    tag("#;")(input)
+}
+
 fn list_like<'a, A: Allocator + Clone>(
-    left: char,
-    right: char,
-    create: fn(Vec<Expression<'a, A>, A>, Position) -> Expression<'a, A>,
+    left: &'static str,
+    right: &'static str,
 ) -> impl FnMut(Input<'a, A>) -> IResult<Expression<'a, A>, A> {
     move |input| {
         map(
-            positioned(preceded(
+            positioned(tuple((
                 sign(left),
-                cut(terminated(many0(expression), sign(right))),
-            )),
-            |(expressions, position)| create(expressions, position),
+                cut(tuple((many0(expression), sign(right)))),
+            ))),
+            |((left, (expressions, right)), position)| {
+                Expression::List(&left, &right, expressions, position)
+            },
         )(input)
     }
 }
 
-fn string<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'_, A>, A> {
+fn string<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
     token(raw_string)(input)
 }
 
-fn raw_string<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'_, A>, A> {
+fn raw_string<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
     map(
         positioned(delimited(
             char('"'),
@@ -119,8 +151,8 @@ fn raw_string<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'
     )(input)
 }
 
-fn sign<'a, A: Allocator + Clone>(character: char) -> impl Fn(Input<'a, A>) -> IResult<(), A> {
-    move |input| value((), token(char(character)))(input)
+fn sign<A: Allocator + Clone>(sign: &'static str) -> impl Fn(Input<A>) -> IResult<Input<A>, A> {
+    move |input| token(tag(sign))(input)
 }
 
 fn token<'a, T, A: Allocator + Clone>(
@@ -186,7 +218,7 @@ fn comment<A: Allocator + Clone>(input: Input<A>) -> IResult<Comment, A> {
     )(input)
 }
 
-fn hash_directive<A: Allocator + Clone>(input: Input<A>) -> IResult<HashDirective<'_>, A> {
+fn hash_directive<A: Allocator + Clone>(input: Input<A>) -> IResult<HashDirective, A> {
     map(
         terminated(
             positioned_meta(preceded(char('#'), take_until("\n"))),
@@ -251,10 +283,41 @@ mod tests {
     }
 
     #[test]
+    fn parse_symbol() {
+        assert_eq!(
+            expression(Input::new_extra("x", Global)).unwrap().1,
+            Expression::Symbol("x", Position::new(0, 1))
+        );
+        assert_eq!(
+            expression(Input::new_extra("foo", Global)).unwrap().1,
+            Expression::Symbol("foo", Position::new(0, 3))
+        );
+        assert_eq!(
+            expression(Input::new_extra("1", Global)).unwrap().1,
+            Expression::Symbol("1", Position::new(0, 1))
+        );
+        assert_eq!(
+            expression(Input::new_extra("42", Global)).unwrap().1,
+            Expression::Symbol("42", Position::new(0, 2))
+        );
+        assert_eq!(
+            expression(Input::new_extra("3.14", Global)).unwrap().1,
+            Expression::Symbol("3.14", Position::new(0, 4))
+        );
+    }
+
+    #[test]
+    fn parse_invalid_symbol() {
+        assert!(expression(Input::new_extra("#", Global)).is_err());
+    }
+
+    #[test]
     fn parse_list() {
         assert_eq!(
             expression(Input::new_extra("(1 2 3)", Global)).unwrap().1,
             Expression::List(
+                "(",
+                ")",
                 vec![
                     Expression::Symbol("1", Position::new(1, 2)),
                     Expression::Symbol("2", Position::new(3, 4)),
@@ -269,13 +332,37 @@ mod tests {
     fn parse_vector() {
         assert_eq!(
             expression(Input::new_extra("[1 2 3]", Global)).unwrap().1,
-            Expression::Vector(
+            Expression::List(
+                "[",
+                "]",
                 vec![
                     Expression::Symbol("1", Position::new(1, 2)),
                     Expression::Symbol("2", Position::new(3, 4)),
                     Expression::Symbol("3", Position::new(5, 6))
                 ],
                 Position::new(0, 7)
+            )
+        );
+    }
+
+    #[test]
+    fn parse_map() {
+        assert_eq!(
+            expression(Input::new_extra("#{1 2 3}", Global)).unwrap().1,
+            Expression::Quote(
+                "#",
+                Expression::List(
+                    "{",
+                    "}",
+                    vec![
+                        Expression::Symbol("1", Position::new(2, 3)),
+                        Expression::Symbol("2", Position::new(4, 5)),
+                        Expression::Symbol("3", Position::new(6, 7))
+                    ],
+                    Position::new(1, 8)
+                )
+                .into(),
+                Position::new(0, 8)
             )
         );
     }
@@ -299,6 +386,30 @@ mod tests {
             Expression::Quote(
                 ",",
                 Expression::Symbol("foo", Position::new(1, 4)).into(),
+                Position::new(0, 4)
+            )
+        );
+    }
+
+    #[test]
+    fn parse_hash_quote() {
+        assert_eq!(
+            expression(Input::new_extra("#()", Global)).unwrap().1,
+            Expression::Quote(
+                "#",
+                Expression::List("(", ")", vec![], Position::new(1, 3)).into(),
+                Position::new(0, 3)
+            )
+        );
+    }
+
+    #[test]
+    fn parse_hash_semicolon_quote() {
+        assert_eq!(
+            expression(Input::new_extra("#;()", Global)).unwrap().1,
+            Expression::Quote(
+                "#;",
+                Expression::List("(", ")", vec![], Position::new(2, 4)).into(),
                 Position::new(0, 4)
             )
         );
@@ -398,6 +509,26 @@ mod tests {
                     Comment::new("foo", Position::new(0, 4)),
                     Comment::new("bar", Position::new(6, 10))
                 ]
+            );
+        }
+
+        #[test]
+        fn parse_comments_skipping_hash_semicolon() {
+            assert_eq!(
+                comments(Input::new_extra("#;foo\n;bar\n", Global))
+                    .unwrap()
+                    .1,
+                vec![Comment::new("bar", Position::new(6, 10))]
+            );
+        }
+
+        #[test]
+        fn parse_comments_skipping_hash_character() {
+            assert_eq!(
+                comments(Input::new_extra("#foo\n;bar\n", Global))
+                    .unwrap()
+                    .1,
+                vec![Comment::new("bar", Position::new(5, 9))]
             );
         }
     }

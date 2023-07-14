@@ -14,14 +14,16 @@ pub struct ParseError {
 
 impl ParseError {
     pub fn new<A: Allocator>(source: &str, error: nom::Err<NomError<'_, A>>) -> Self {
+        let end_offset = source.as_bytes().len() - 1;
+
         match error {
             nom::Err::Incomplete(_) => Self {
                 message: "parsing requires more data",
-                offset: source.as_bytes().len() - 1,
+                offset: end_offset,
             },
             nom::Err::Error(error) | nom::Err::Failure(error) => Self {
                 message: "failed to parse",
-                offset: error.input.location_offset(),
+                offset: error.input.location_offset().min(end_offset),
             },
         }
     }
