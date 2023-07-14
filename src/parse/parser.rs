@@ -20,7 +20,7 @@ const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&|~^.:\\";
 
 pub type IResult<'a, T, A> = nom::IResult<Input<'a, A>, T, NomError<'a, A>>;
 
-pub fn module<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Vec<Expression<'_, A>, A>, A> {
+pub fn module<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Expression<A>, A>, A> {
     all_consuming(delimited(
         many0_count(hash_directive),
         many0(expression),
@@ -54,16 +54,16 @@ pub fn hash_directives<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Has
     many0(hash_directive)(input)
 }
 
-fn symbol<'a, A: Allocator + Clone>(input: Input<'a, A>) -> IResult<Expression<'a, A>, A> {
+fn symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
     map(
         token(positioned(alt((
             recognize(tuple((
-                satisfy::<_, Input<'a, A>, _>(is_head_symbol_character),
-                take_while::<_, Input<'a, A>, _>(is_tail_symbol_character),
+                satisfy(is_head_symbol_character),
+                take_while(is_tail_symbol_character),
             ))),
             recognize(tuple((
                 char(HASH_CHARACTER),
-                take_while1::<_, Input<'a, A>, _>(is_tail_symbol_character),
+                take_while1(is_tail_symbol_character),
             ))),
         )))),
         |(input, position)| Expression::Symbol(&input, position),
@@ -78,7 +78,7 @@ fn is_tail_symbol_character(character: char) -> bool {
     is_head_symbol_character(character) || character == HASH_CHARACTER
 }
 
-fn expression<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'_, A>, A> {
+fn expression<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
     let allocator = input.extra.clone();
 
     alt((
@@ -108,7 +108,7 @@ fn expression<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'
     ))(input)
 }
 
-fn hash_semicolon<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Input<'_, A>, A> {
+fn hash_semicolon<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
     tag("#;")(input)
 }
 
@@ -129,11 +129,11 @@ fn list_like<'a, A: Allocator + Clone>(
     }
 }
 
-fn string<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'_, A>, A> {
+fn string<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
     token(raw_string)(input)
 }
 
-fn raw_string<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'_, A>, A> {
+fn raw_string<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
     map(
         positioned(delimited(
             char('"'),
@@ -220,7 +220,7 @@ fn comment<A: Allocator + Clone>(input: Input<A>) -> IResult<Comment, A> {
     )(input)
 }
 
-fn hash_directive<A: Allocator + Clone>(input: Input<A>) -> IResult<HashDirective<'_>, A> {
+fn hash_directive<A: Allocator + Clone>(input: Input<A>) -> IResult<HashDirective, A> {
     map(
         terminated(
             positioned_meta(preceded(char('#'), take_until("\n"))),
