@@ -255,6 +255,11 @@ mod tests {
     }
 
     #[test]
+    fn parse_invalid_symbol() {
+        assert!(expression(Input::new_extra("#", Global)).is_err());
+    }
+
+    #[test]
     fn parse_list() {
         assert_eq!(
             expression(Input::new_extra("(1 2 3)", Global)).unwrap().1,
