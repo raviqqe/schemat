@@ -96,7 +96,7 @@ fn compile_expression<'a, A: Allocator + Clone + 'a>(
         Expression::Quote(sign, expression, _) => {
             let builder = context.builder().clone();
 
-            builder.sequence([sign.into(), compile_expression(context, expression)])
+            builder.sequence([(*sign).into(), compile_expression(context, expression)])
         }
         Expression::String(string, _) => context.builder().sequence(["\"", *string, "\""]),
         Expression::Symbol(name, _) => (*name).into(),
