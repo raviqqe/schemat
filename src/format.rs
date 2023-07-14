@@ -91,51 +91,56 @@ fn compile_expression<'a, A: Allocator + Clone + 'a>(
 ) -> Document<'a> {
     compile_line_comment(context, expression.position(), |context| match expression {
         Expression::List(expressions, position) => {
-            let line_index = get_line_index(context, position.start());
-
-            let index = expressions
-                .iter()
-                .position(|expression| {
-                    get_line_index(context, expression.position().start()) != line_index
-                })
-                .unwrap_or(expressions.len());
-            let first = &expressions[..index];
-            let last = &expressions[index..];
-
-            let builder = context.builder().clone();
-
-            builder.sequence(
-                [compile_line_comment(context, expression.position(), |_| {
-                    "(".into()
-                })]
-                .into_iter()
-                .chain([builder.flatten(builder.indent(compile_expressions(context, first)))])
-                .chain(match (first.last(), last.first()) {
-                    (Some(first), Some(last)) if has_extra_line(context, first, last) => {
-                        Some(line())
-                    }
-                    _ => None,
-                })
-                .chain(if last.is_empty() {
-                    None
-                } else {
-                    Some(
-                        builder.r#break(builder.indent(
-                            builder.sequence([line(), compile_expressions(context, last)]),
-                        )),
-                    )
-                })
-                .chain([")".into()]),
-            )
+            compile_list_like(context, expressions, position, "(", ")")
         }
-        Expression::String(string, _) => context.builder().sequence(["\"", *string, "\""]),
-        Expression::Symbol(name, _) => (*name).into(),
         Expression::Quote(expression, _) => {
             let builder = context.builder().clone();
 
             builder.sequence(["'".into(), compile_expression(context, expression)])
         }
+        Expression::String(string, _) => context.builder().sequence(["\"", *string, "\""]),
+        Expression::Symbol(name, _) => (*name).into(),
+        Expression::Vector(expressions, position) => {
+            compile_list_like(context, expressions, position, "[", "]")
+        }
     })
+}
+
+fn compile_list_like<'a, A: Allocator + Clone + 'a>(
+    context: &mut Context<'a, A>,
+    expressions: &'a [Expression<'a, A>],
+    position: &Position,
+    left: &'static str,
+    right: &'static str,
+) -> Document<'a> {
+    let line_index = get_line_index(context, position.start());
+
+    let index = expressions
+        .iter()
+        .position(|expression| get_line_index(context, expression.position().start()) != line_index)
+        .unwrap_or(expressions.len());
+    let first = &expressions[..index];
+    let last = &expressions[index..];
+
+    let builder = context.builder().clone();
+
+    builder.sequence(
+        [compile_line_comment(context, position, |_| left.into())]
+            .into_iter()
+            .chain([builder.flatten(builder.indent(compile_expressions(context, first)))])
+            .chain(match (first.last(), last.first()) {
+                (Some(first), Some(last)) if has_extra_line(context, first, last) => Some(line()),
+                _ => None,
+            })
+            .chain(if last.is_empty() {
+                None
+            } else {
+                Some(builder.r#break(
+                    builder.indent(builder.sequence([line(), compile_expressions(context, last)])),
+                ))
+            })
+            .chain([right.into()]),
+    )
 }
 
 fn compile_expressions<'a, A: Allocator + Clone + 'a>(
@@ -281,6 +286,7 @@ mod tests {
     use super::*;
     use crate::{position::Position, position_map::PositionMap};
     use indoc::indoc;
+    use pretty_assertions::assert_eq;
     use std::alloc::Global;
 
     #[test]
@@ -401,8 +407,29 @@ mod tests {
         );
     }
 
+    #[test]
+    fn format_vector() {
+        assert_eq!(
+            format(
+                &[Expression::Vector(
+                    vec![
+                        Expression::Symbol("foo", Position::new(0, 2)),
+                        Expression::Symbol("bar", Position::new(0, 2))
+                    ],
+                    Position::new(0, 2)
+                )],
+                &[],
+                &[],
+                &PositionMap::new("[foo bar]"),
+                Global,
+            ),
+            "[foo bar]\n"
+        );
+    }
+
     mod list {
         use super::*;
+        use pretty_assertions::assert_eq;
 
         #[test]
         fn double_indent_of_nested_list() {
@@ -541,6 +568,7 @@ mod tests {
 
     mod module {
         use super::*;
+        use pretty_assertions::assert_eq;
 
         #[test]
         fn keep_no_blank_line() {
