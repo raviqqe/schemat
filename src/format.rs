@@ -18,7 +18,7 @@ pub fn format<A: Allocator>(
     comments: &[Comment],
     hash_directives: &[HashDirective],
     position_map: &PositionMap,
-    allocator: A,
+    _allocator: A,
 ) -> String {
     mfmt::format(&compile_module(
         &mut Context::new(comments, position_map),
