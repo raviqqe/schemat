@@ -5,7 +5,7 @@ use crate::{
     position_map::PositionMap,
 };
 use mfmt::{
-    empty, line, line_suffix, sequence,
+    empty, line, sequence,
     utility::{count_lines, is_empty},
     Builder, Document,
 };
@@ -74,13 +74,8 @@ fn compile_hash_directive<'a, A: Allocator + Clone + 'a>(
     context: &Context<A>,
     hash_directive: &HashDirective,
 ) -> Document<'a> {
-    // TODO Allocate `str` instead of `String` directly.
     context.builder().sequence([
-        context
-            .builder()
-            .allocate("#".to_owned() + hash_directive.value())
-            .as_str()
-            .into(),
+        context.builder().strings(["#", hash_directive.value()]),
         line(),
     ])
 }
@@ -193,10 +188,7 @@ fn compile_suffix_comment<'a, A: Allocator + Clone + 'a>(
         context
             .drain_current_comment(get_line_index(context, position.start()))
             .map(|comment| {
-                // TODO Allocate `str` instead of `String` directly.
-                line_suffix(
-                    builder.allocate(" ".to_owned() + COMMENT_PREFIX + comment.value().trim_end()),
-                )
+                builder.line_suffixes([" ", COMMENT_PREFIX, (comment.value().trim_end())])
             }),
     )
 }
