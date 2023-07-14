@@ -93,10 +93,10 @@ fn compile_expression<'a, A: Allocator + Clone + 'a>(
         Expression::List(expressions, position) => {
             compile_list_like(context, expressions, position, "(", ")")
         }
-        Expression::Quote(expression, _) => {
+        Expression::Quote(sign, expression, _) => {
             let builder = context.builder().clone();
 
-            builder.sequence(["'".into(), compile_expression(context, expression)])
+            builder.sequence([(*sign).into(), compile_expression(context, expression)])
         }
         Expression::String(string, _) => context.builder().sequence(["\"", *string, "\""]),
         Expression::Symbol(name, _) => (*name).into(),
@@ -367,6 +367,7 @@ mod tests {
         assert_eq!(
             format(
                 &[Expression::Quote(
+                    "'",
                     Expression::Symbol("foo", Position::new(0, 3)).into(),
                     Position::new(0, 3)
                 )],
@@ -376,6 +377,24 @@ mod tests {
                 Global,
             ),
             "'foo\n"
+        );
+    }
+
+    #[test]
+    fn format_unquote() {
+        assert_eq!(
+            format(
+                &[Expression::Quote(
+                    ",",
+                    Expression::Symbol("foo", Position::new(0, 3)).into(),
+                    Position::new(0, 3)
+                )],
+                &[],
+                &[],
+                &PositionMap::new("'foo"),
+                Global,
+            ),
+            ",foo\n"
         );
     }
 

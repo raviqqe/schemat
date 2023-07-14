@@ -6,7 +6,7 @@ use crate::{
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_until, take_while1},
-    character::complete::{char, multispace0, multispace1, none_of, space0},
+    character::complete::{char, multispace0, multispace1, none_of, one_of, space0},
     combinator::{all_consuming, cut, map, recognize, value},
     error::context,
     multi::{fold_many0, many0_count, many1_count},
@@ -16,6 +16,7 @@ use nom::{
 use std::alloc::Allocator;
 
 const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&~^.:#";
+const QUOTE_SIGNS: &str = "'`,";
 
 pub type IResult<'a, T, A> = nom::IResult<Input<'a, A>, T, NomError<'a, A>>;
 
@@ -70,9 +71,9 @@ fn expression<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'
         context(
             "quote",
             map(
-                positioned(preceded(sign('\''), expression)),
-                move |(expression, position)| {
-                    Expression::Quote(Box::new_in(expression, allocator.clone()), position)
+                positioned(tuple((token(recognize(one_of(QUOTE_SIGNS))), expression))),
+                move |((sign, expression), position)| {
+                    Expression::Quote(&sign, Box::new_in(expression, allocator.clone()), position)
                 },
             ),
         ),
@@ -275,6 +276,30 @@ mod tests {
                     Expression::Symbol("3", Position::new(5, 6))
                 ],
                 Position::new(0, 7)
+            )
+        );
+    }
+
+    #[test]
+    fn parse_quote() {
+        assert_eq!(
+            expression(Input::new_extra("'foo", Global)).unwrap().1,
+            Expression::Quote(
+                "'",
+                Expression::Symbol("foo", Position::new(1, 4)).into(),
+                Position::new(0, 4)
+            )
+        );
+    }
+
+    #[test]
+    fn parse_unquote() {
+        assert_eq!(
+            expression(Input::new_extra(",foo", Global)).unwrap().1,
+            Expression::Quote(
+                ",",
+                Expression::Symbol("foo", Position::new(1, 4)).into(),
+                Position::new(0, 4)
             )
         );
     }
