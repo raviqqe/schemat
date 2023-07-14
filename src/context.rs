@@ -1,9 +1,9 @@
 use crate::{ast::Comment, position::Position, position_map::PositionMap};
 use mfmt::Builder;
-use std::alloc::Allocator;
+use std::{alloc::Allocator, collections::VecDeque};
 
 pub struct Context<'a, A: Allocator + Clone> {
-    comments: Vec<&'a Comment<'a>>,
+    comments: VecDeque<&'a Comment<'a>>,
     position_map: &'a PositionMap,
     builder: Builder<A>,
 }
@@ -34,13 +34,12 @@ impl<'a, A: Allocator + Clone> Context<'a, A> {
         line_index: usize,
     ) -> impl Iterator<Item = &'a Comment<'a>> + 'b {
         // This is O(n) and slow. Ha ha!
-        self.comments.splice(
+        self.comments.drain(
             ..self
                 .comments
                 .iter()
                 .position(|comment| self.line_index(comment.position()) >= line_index)
                 .unwrap_or(self.comments.len()),
-            [],
         )
     }
 
@@ -52,12 +51,14 @@ impl<'a, A: Allocator + Clone> Context<'a, A> {
     }
 
     pub fn peek_comments_before(&self, line_index: usize) -> impl Iterator<Item = &'a Comment> {
-        self.comments[..self
-            .comments
-            .iter()
-            .position(|comment| self.line_index(comment.position()) >= line_index)
-            .unwrap_or(self.comments.len())]
-            .iter()
+        self.comments
+            .range(
+                ..self
+                    .comments
+                    .iter()
+                    .position(|comment| self.line_index(comment.position()) >= line_index)
+                    .unwrap_or(self.comments.len()),
+            )
             .copied()
     }
 

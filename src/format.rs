@@ -74,6 +74,7 @@ fn compile_hash_directive<'a, A: Allocator + Clone + 'a>(
     context: &Context<A>,
     hash_directive: &HashDirective,
 ) -> Document<'a> {
+    // TODO Allocate `str` instead of `String` directly.
     context.builder().sequence([
         context
             .builder()
@@ -187,6 +188,7 @@ fn compile_suffix_comment<'a, A: Allocator + Clone + 'a>(
         context
             .drain_current_comment(get_line_index(context, position.start()))
             .map(|comment| {
+                // TODO Allocate `str` instead of `String` directly.
                 line_suffix(
                     builder.allocate(" ".to_owned() + COMMENT_PREFIX + comment.value().trim_end()),
                 )
