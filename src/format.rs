@@ -74,7 +74,15 @@ fn compile_hash_directive<'a, A: Allocator>(
     context: &Context<A>,
     hash_directive: &HashDirective,
 ) -> Document<'a> {
-    sequence(context.allocate([("#".to_owned() + hash_directive.value()).into(), line()]))
+    sequence(
+        context.allocate([
+            context
+                .allocate("#".to_owned() + hash_directive.value())
+                .as_str()
+                .into(),
+            line(),
+        ]),
+    )
 }
 
 fn compile_expression<'a, A: Allocator>(
