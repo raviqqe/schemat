@@ -16,7 +16,7 @@ use nom::{
 use std::alloc::Allocator;
 
 const HASH_CHARACTER: char = '#';
-const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&~^.:";
+const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&~^.:\\";
 const QUOTE_SIGNS: &str = "'`,";
 
 pub type IResult<'a, T, A> = nom::IResult<Input<'a, A>, T, NomError<'a, A>>;
