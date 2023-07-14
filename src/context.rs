@@ -33,7 +33,6 @@ impl<'a, A: Allocator + Clone> Context<'a, A> {
         &'b mut self,
         line_index: usize,
     ) -> impl Iterator<Item = &'a Comment<'a>> + 'b {
-        // This is O(n) and slow. Ha ha!
         self.comments.drain(
             ..self
                 .comments
