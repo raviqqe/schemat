@@ -66,7 +66,7 @@ fn expression<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'
 
     alt((
         context("symbol", symbol),
-        context("list", list_like('(', ')', Expression::List)),
+        context("list", list_like("(", ")", Expression::List)),
         context("string", string),
         context(
             "quote",
@@ -77,13 +77,13 @@ fn expression<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'
                 },
             ),
         ),
-        context("vector", list_like('[', ']', Expression::Vector)),
+        context("vector", list_like("[", "]", Expression::Vector)),
     ))(input)
 }
 
 fn list_like<'a, A: Allocator + Clone>(
-    left: char,
-    right: char,
+    left: &'static str,
+    right: &'static str,
     create: fn(Vec<Expression<'a, A>, A>, Position) -> Expression<'a, A>,
 ) -> impl FnMut(Input<'a, A>) -> IResult<Expression<'a, A>, A> {
     move |input| {
@@ -119,8 +119,8 @@ fn raw_string<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'
     )(input)
 }
 
-fn sign<'a, A: Allocator + Clone>(character: char) -> impl Fn(Input<'a, A>) -> IResult<(), A> {
-    move |input| value((), token(char(character)))(input)
+fn sign<'a, A: Allocator + Clone>(sign: &'static str) -> impl Fn(Input<'a, A>) -> IResult<(), A> {
+    move |input| value((), token(tag(sign)))(input)
 }
 
 fn token<'a, T, A: Allocator + Clone>(
