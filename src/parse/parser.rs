@@ -289,6 +289,23 @@ mod tests {
     }
 
     #[test]
+    fn parse_hash_map() {
+        assert_eq!(
+            expression(Input::new_extra("#{1 2 3}", Global)).unwrap().1,
+            Expression::List(
+                "#{",
+                "}",
+                vec![
+                    Expression::Symbol("1", Position::new(1, 2)),
+                    Expression::Symbol("2", Position::new(3, 4)),
+                    Expression::Symbol("3", Position::new(5, 6))
+                ],
+                Position::new(0, 7)
+            )
+        );
+    }
+
+    #[test]
     fn parse_quote() {
         assert_eq!(
             expression(Input::new_extra("'foo", Global)).unwrap().1,
