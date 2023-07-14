@@ -188,7 +188,7 @@ fn compile_suffix_comment<'a, A: Allocator + Clone + 'a>(
         context
             .drain_current_comment(get_line_index(context, position.start()))
             .map(|comment| {
-                builder.line_suffixes([" ", COMMENT_PREFIX, (comment.value().trim_end())])
+                builder.line_suffixes([" ", COMMENT_PREFIX, comment.value().trim_end()])
             }),
     )
 }
