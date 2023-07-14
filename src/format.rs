@@ -1,3 +1,6 @@
+pub mod builder;
+
+use self::builder::Builder;
 use crate::{
     ast::{Comment, Expression, HashDirective},
     context::Context,
@@ -5,7 +8,7 @@ use crate::{
     position_map::PositionMap,
 };
 use mfmt::{
-    empty, flatten, indent, line, line_suffix, r#break, sequence,
+    empty, line, line_suffix, sequence,
     utility::{count_lines, is_empty},
     Document,
 };
@@ -21,7 +24,7 @@ pub fn format<A: Allocator + Clone>(
     allocator: A,
 ) -> String {
     mfmt::format(&compile_module(
-        &mut Context::new(comments, position_map, allocator),
+        &mut Context::new(comments, position_map, Builder::new(allocator)),
         module,
         hash_directives,
     ))
@@ -36,23 +39,19 @@ fn compile_module<'a, A: Allocator + Clone + 'a>(
         if hash_directives.is_empty() {
             empty()
         } else {
-            sequence(allocate(
-                context.allocator(),
-                [sequence(allocate_vec(
-                    context.allocator(),
-                    hash_directives
-                        .iter()
-                        .map(|directive| compile_hash_directive(context, directive)),
-                ))],
-            ))
+            context.builder().sequence([context.builder().sequence(
+                hash_directives
+                    .iter()
+                    .map(|directive| compile_hash_directive(context, directive)),
+            )])
         },
         {
-            let expressions = compile_expressions(context, module);
+            let expressions = compile_expressions(context, module.len(), module);
 
             if is_empty(&expressions) {
                 empty()
             } else {
-                sequence(allocate(context.allocator(), [expressions, line()]))
+                context.builder().sequence([expressions, line()])
             }
         },
         compile_remaining_block_comment(context),
@@ -62,17 +61,14 @@ fn compile_module<'a, A: Allocator + Clone + 'a>(
         if count_lines(&document) == 0 {
             all
         } else {
-            sequence(allocate(
-                context.allocator(),
-                [
-                    if count_lines(&all) == 0 {
-                        empty()
-                    } else {
-                        sequence(allocate(context.allocator(), [all, line()]))
-                    },
-                    document,
-                ],
-            ))
+            context.builder().sequence([
+                if count_lines(&all) == 0 {
+                    empty()
+                } else {
+                    context.builder().sequence([all, line()])
+                },
+                document,
+            ])
         }
     })
 }
@@ -81,15 +77,14 @@ fn compile_hash_directive<'a, A: Allocator + Clone + 'a>(
     context: &Context<A>,
     hash_directive: &HashDirective,
 ) -> Document<'a> {
-    sequence(allocate(
-        context.allocator(),
-        [
-            allocate(context.allocator(), "#".to_owned() + hash_directive.value())
-                .as_str()
-                .into(),
-            line(),
-        ],
-    ))
+    context.builder().sequence([
+        context
+            .builder()
+            .allocate("#".to_owned() + hash_directive.value())
+            .as_str()
+            .into(),
+        line(),
+    ])
 }
 
 fn compile_expression<'a, A: Allocator + Clone + 'a>(
@@ -107,58 +102,49 @@ fn compile_expression<'a, A: Allocator + Clone + 'a>(
                 _ => None,
             };
             let comment = compile_line_comment(context, expression.position(), |_| "(".into());
+            let builder = context.builder().clone();
 
-            sequence(allocate_vec(
-                context.allocator(),
+            builder.sequence(
                 [comment]
                     .into_iter()
-                    .chain([flatten(allocate(
-                        context.allocator(),
-                        indent(allocate(
-                            context.allocator(),
-                            compile_expressions(context, first),
-                        )),
-                    ))])
+                    .chain([builder.flatten(builder.indent(compile_expressions(
+                        context,
+                        first.len(),
+                        first,
+                    )))])
                     .chain(if last.is_empty() {
                         None
                     } else {
-                        Some(r#break(allocate(
-                            context.allocator(),
-                            indent(allocate(
-                                context.allocator(),
-                                sequence(allocate_vec(
-                                    context.allocator(),
-                                    extra_line
-                                        .into_iter()
-                                        .chain([line(), compile_expressions(context, last)]),
-                                )),
-                            )),
+                        Some(builder.r#break(builder.indent(
+                            builder.sequence(
+                                extra_line.into_iter().chain([
+                                    line(),
+                                    compile_expressions(context, last.len(), last),
+                                ]),
+                            ),
                         )))
                     })
                     .chain([")".into()]),
-            ))
+            )
         }
-        Expression::String(string, _) => sequence(allocate(
-            context.allocator(),
-            ["\"".into(), (*string).into(), "\"".into()],
-        )),
+        Expression::String(string, _) => context.builder().sequence(["\"", *string, "\""]),
         Expression::Symbol(name, _) => (*name).into(),
         Expression::Quote(expression, _) => {
-            // let expression = compile_expression(context, expression);
-            sequence(allocate(
-                context.allocator(),
-                ["'".into(), compile_expression(context, expression)],
-            ))
+            let builder = context.builder().clone();
+
+            builder.sequence(["'".into(), compile_expression(context, expression)])
         }
     })
 }
 
 fn compile_expressions<'a, A: Allocator + Clone + 'a>(
     context: &mut Context<'a, A>,
+    expression_count: usize,
     expressions: impl IntoIterator<Item = &'a Expression<'a, A>>,
 ) -> Document<'a> {
-    let mut documents = Vec::new_in(context.allocator());
-    let mut last_expression = None::<&Expression<A>>;
+    let mut documents =
+        Vec::with_capacity_in(2 * expression_count, context.builder().allocator().clone());
+    let mut last_expression = None;
 
     for expression in expressions {
         if let Some(last_expression) = last_expression {
@@ -175,7 +161,7 @@ fn compile_expressions<'a, A: Allocator + Clone + 'a>(
         last_expression = Some(expression);
     }
 
-    sequence(allocate(context.allocator(), documents))
+    sequence(documents.leak())
 }
 
 fn compile_line_comment<'a, A: Allocator + Clone + 'a>(
@@ -187,39 +173,35 @@ fn compile_line_comment<'a, A: Allocator + Clone + 'a>(
     let document = document(context);
     let suffix_comment = compile_suffix_comment(context, position);
 
-    sequence(allocate(
-        context.allocator(),
-        [block_comment, document, suffix_comment],
-    ))
+    context
+        .builder()
+        .sequence([block_comment, document, suffix_comment])
 }
 
 fn compile_suffix_comment<'a, A: Allocator + Clone + 'a>(
     context: &mut Context<A>,
     position: &Position,
 ) -> Document<'a> {
-    let allocator = context.allocator();
+    let builder = context.builder().clone();
 
-    sequence(allocate_vec(
-        context.allocator(),
+    builder.sequence(
         context
             .drain_current_comment(get_line_index(context, position.start()))
             .map(|comment| {
-                line_suffix(allocate(
-                    allocator.clone(),
-                    " ".to_owned() + COMMENT_PREFIX + comment.value().trim_end(),
-                ))
+                line_suffix(
+                    builder.allocate(" ".to_owned() + COMMENT_PREFIX + comment.value().trim_end()),
+                )
             }),
-    ))
+    )
 }
 
 fn compile_block_comment<'a, A: Allocator + Clone + 'a>(
     context: &mut Context<'a, A>,
     position: &Position,
 ) -> Document<'a> {
-    let comments = allocate_vec(
-        context.allocator(),
-        context.drain_comments_before(get_line_index(context, position.start())),
-    );
+    let builder = context.builder().clone();
+    let comments = builder
+        .allocate_slice(context.drain_comments_before(get_line_index(context, position.start())));
 
     compile_all_comments(
         context,
@@ -231,10 +213,8 @@ fn compile_block_comment<'a, A: Allocator + Clone + 'a>(
 fn compile_remaining_block_comment<'a, A: Allocator + Clone + 'a>(
     context: &mut Context<'a, A>,
 ) -> Document<'a> {
-    let comments = allocate_vec(
-        context.allocator(),
-        context.drain_comments_before(usize::MAX),
-    );
+    let builder = context.builder().clone();
+    let comments = builder.allocate_slice(context.drain_comments_before(usize::MAX));
 
     compile_all_comments(context, comments, None)
 }
@@ -244,8 +224,7 @@ fn compile_all_comments<'a, A: Allocator + Clone + 'a>(
     comments: &'a [&'a Comment<'a>],
     last_line_index: Option<usize>,
 ) -> Document<'a> {
-    sequence(allocate_vec(
-        context.allocator(),
+    context.builder().sequence(
         comments
             .iter()
             .zip(
@@ -256,23 +235,18 @@ fn compile_all_comments<'a, A: Allocator + Clone + 'a>(
                     .chain([last_line_index.unwrap_or(0)]),
             )
             .map(|(comment, next_line_index)| {
-                sequence(allocate(
-                    context.allocator(),
-                    [
-                        COMMENT_PREFIX.into(),
-                        comment.value().trim_end().into(),
-                        r#break(allocate(context.allocator(), line())),
-                        if get_line_index(context, comment.position().end() - 1) + 1
-                            < next_line_index
-                        {
-                            line()
-                        } else {
-                            empty()
-                        },
-                    ],
-                ))
+                context.builder().sequence([
+                    COMMENT_PREFIX.into(),
+                    comment.value().trim_end().into(),
+                    context.builder().r#break(line()),
+                    if get_line_index(context, comment.position().end() - 1) + 1 < next_line_index {
+                        line()
+                    } else {
+                        empty()
+                    },
+                ])
             }),
-    ))
+    )
 }
 
 fn has_extra_line<A: Allocator + Clone>(
@@ -299,27 +273,6 @@ fn get_line_index<A: Allocator + Clone>(context: &Context<A>, offset: usize) -> 
         .position_map()
         .line_index(offset)
         .expect("valid offset")
-}
-
-fn allocate<'a, A: Allocator + 'a, T>(allocator: A, value: T) -> &'a T
-where
-    A: 'a,
-{
-    Box::leak(Box::new_in(value, allocator))
-}
-
-fn allocate_vec<'a, A: Allocator + 'a, T>(
-    allocator: A,
-    values: impl IntoIterator<Item = T>,
-) -> &'a [T]
-where
-    A: 'a,
-{
-    let mut vec = Vec::new_in(allocator);
-
-    vec.extend(values);
-
-    Vec::leak(vec)
 }
 
 #[cfg(test)]
