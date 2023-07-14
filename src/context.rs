@@ -24,24 +24,6 @@ impl<'a, A: Allocator + Clone> Context<'a, A> {
         self.allocator.clone()
     }
 
-    pub fn allocate<'b, T>(&self, value: T) -> &'b T
-    where
-        A: 'b,
-    {
-        Box::leak(Box::new_in(value, self.allocator.clone()))
-    }
-
-    pub fn allocate_vec<'b, T>(&self, values: impl IntoIterator<Item = T>) -> &'b [T]
-    where
-        A: 'b,
-    {
-        let mut vec = Vec::new_in(self.allocator.clone());
-
-        vec.extend(values);
-
-        Vec::leak(vec)
-    }
-
     pub fn drain_comments_before<'b>(
         &'b mut self,
         line_index: usize,
