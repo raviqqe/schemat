@@ -381,6 +381,24 @@ mod tests {
     }
 
     #[test]
+    fn format_unquote() {
+        assert_eq!(
+            format(
+                &[Expression::Quote(
+                    ",",
+                    Expression::Symbol("foo", Position::new(0, 3)).into(),
+                    Position::new(0, 3)
+                )],
+                &[],
+                &[],
+                &PositionMap::new("'foo"),
+                Global,
+            ),
+            ",foo\n"
+        );
+    }
+
+    #[test]
     fn format_string() {
         assert_eq!(
             format::<Global>(
