@@ -1,6 +1,5 @@
-use crate::{
-    ast::Comment, format::builder::Builder, position::Position, position_map::PositionMap,
-};
+use crate::{ast::Comment, position::Position, position_map::PositionMap};
+use mfmt::Builder;
 use std::alloc::Allocator;
 
 pub struct Context<'a, A: Allocator + Clone> {
