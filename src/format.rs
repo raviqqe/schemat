@@ -18,6 +18,7 @@ pub fn format<A: Allocator>(
     comments: &[Comment],
     hash_directives: &[HashDirective],
     position_map: &PositionMap,
+    allocator: A,
 ) -> String {
     mfmt::format(&compile_module(
         &mut Context::new(comments, position_map),
@@ -693,6 +694,7 @@ mod tests {
                     ],
                     &[],
                     &PositionMap::new("\na"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -713,6 +715,7 @@ mod tests {
                     &[Comment::new("bar", Position::new(0, 1))],
                     &[],
                     &PositionMap::new("\n\n"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -731,6 +734,7 @@ mod tests {
                     &[Comment::new("bar", Position::new(1, 2))],
                     &[],
                     &PositionMap::new("\n\n"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -753,6 +757,7 @@ mod tests {
                     ],
                     &[],
                     &PositionMap::new("\n\n\n"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -776,6 +781,7 @@ mod tests {
                     ],
                     &[],
                     &PositionMap::new("\n\n\n\n"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -802,6 +808,7 @@ mod tests {
                     &[],
                     &[HashDirective::new("foo", Position::new(0, 0))],
                     &PositionMap::new("\n"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -822,6 +829,7 @@ mod tests {
                         HashDirective::new("bar", Position::new(2, 2))
                     ],
                     &PositionMap::new("\n\n\n"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -840,6 +848,7 @@ mod tests {
                     &[],
                     &[HashDirective::new("foo", Position::new(0, 0))],
                     &PositionMap::new("\n"),
+                    Global,
                 ),
                 indoc!(
                     "
