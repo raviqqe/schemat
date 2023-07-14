@@ -197,19 +197,18 @@ fn compile_suffix_comment<'a, A: Allocator + Clone + 'a>(
     context: &mut Context<A>,
     position: &Position,
 ) -> Document<'a> {
-    // TODO
-    let comments = context
-        .drain_current_comment(get_line_index(context, position.start()))
-        .collect::<Vec<_>>();
+    let allocator = context.allocator();
 
     sequence(allocate_vec(
         context.allocator(),
-        comments.into_iter().map(|comment| {
-            line_suffix(allocate(
-                context.allocator(),
-                " ".to_owned() + COMMENT_PREFIX + comment.value().trim_end(),
-            ))
-        }),
+        context
+            .drain_current_comment(get_line_index(context, position.start()))
+            .map(|comment| {
+                line_suffix(allocate(
+                    allocator.clone(),
+                    " ".to_owned() + COMMENT_PREFIX + comment.value().trim_end(),
+                ))
+            }),
     ))
 }
 
@@ -217,11 +216,10 @@ fn compile_block_comment<'a, A: Allocator + Clone + 'a>(
     context: &mut Context<'a, A>,
     position: &Position,
 ) -> Document<'a> {
-    // TODO
-    let comments = context
-        .drain_comments_before(get_line_index(context, position.start()))
-        .collect::<Vec<_>>();
-    let comments = allocate_vec(context.allocator(), comments);
+    let comments = allocate_vec(
+        context.allocator(),
+        context.drain_comments_before(get_line_index(context, position.start())),
+    );
 
     compile_all_comments(
         context,
@@ -233,12 +231,12 @@ fn compile_block_comment<'a, A: Allocator + Clone + 'a>(
 fn compile_remaining_block_comment<'a, A: Allocator + Clone + 'a>(
     context: &mut Context<'a, A>,
 ) -> Document<'a> {
-    // TODO
-    let comments = context
-        .drain_comments_before(usize::MAX)
-        .collect::<Vec<_>>();
+    let comments = allocate_vec(
+        context.allocator(),
+        context.drain_comments_before(usize::MAX),
+    );
 
-    compile_all_comments(context, allocate_vec(context.allocator(), comments), None)
+    compile_all_comments(context, comments, None)
 }
 
 fn compile_all_comments<'a, A: Allocator + Clone + 'a>(
