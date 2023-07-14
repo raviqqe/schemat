@@ -65,16 +65,7 @@ fn expression<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'
 
     alt((
         context("symbol", symbol),
-        context(
-            "list",
-            map(
-                positioned(preceded(
-                    sign('('),
-                    cut(terminated(many0(expression), sign(')'))),
-                )),
-                |(expressions, position)| Expression::List(expressions, position),
-            ),
-        ),
+        context("list", list_like('(', ')', Expression::List)),
         context("string", string),
         context(
             "quote",
@@ -85,7 +76,24 @@ fn expression<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'
                 },
             ),
         ),
+        context("vector", list_like('[', ']', Expression::Vector)),
     ))(input)
+}
+
+fn list_like<'a, A: Allocator + Clone>(
+    left: char,
+    right: char,
+    create: fn(Vec<Expression<'a, A>, A>, Position) -> Expression<'a, A>,
+) -> impl FnMut(Input<'a, A>) -> IResult<Expression<'a, A>, A> {
+    move |input| {
+        map(
+            positioned(preceded(
+                sign(left),
+                cut(terminated(many0(expression), sign(right))),
+            )),
+            |(expressions, position)| create(expressions, position),
+        )(input)
+    }
 }
 
 fn string<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'_, A>, A> {
@@ -238,6 +246,36 @@ mod tests {
         assert_eq!(
             expression(Input::new_extra("#true", Global)).unwrap().1,
             Expression::Symbol("#true", Position::new(0, 5))
+        );
+    }
+
+    #[test]
+    fn parse_list() {
+        assert_eq!(
+            expression(Input::new_extra("(1 2 3)", Global)).unwrap().1,
+            Expression::List(
+                vec![
+                    Expression::Symbol("1", Position::new(1, 2)),
+                    Expression::Symbol("2", Position::new(3, 4)),
+                    Expression::Symbol("3", Position::new(5, 6))
+                ],
+                Position::new(0, 7)
+            )
+        );
+    }
+
+    #[test]
+    fn parse_vector() {
+        assert_eq!(
+            expression(Input::new_extra("[1 2 3]", Global)).unwrap().1,
+            Expression::Vector(
+                vec![
+                    Expression::Symbol("1", Position::new(1, 2)),
+                    Expression::Symbol("2", Position::new(3, 4)),
+                    Expression::Symbol("3", Position::new(5, 6))
+                ],
+                Position::new(0, 7)
+            )
         );
     }
 
