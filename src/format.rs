@@ -93,16 +93,14 @@ fn compile_expression<'a, A: Allocator + Clone + 'a>(
             let line_index = get_line_index(context, position.start());
 
             let comment = compile_line_comment(context, expression.position(), |_| "(".into());
-            let first = context
-                .builder()
-                .allocate_slice(expressions.iter().filter(|expression| {
-                    get_line_index(context, expression.position().start()) == line_index
-                }));
-            let last = context
-                .builder()
-                .allocate_slice(expressions.iter().filter(|expression| {
-                    get_line_index(context, expression.position().start()) == line_index
-                }));
+            let index = expressions
+                .iter()
+                .position(|expression| {
+                    get_line_index(context, expression.position().start()) != line_index
+                })
+                .unwrap_or(expressions.len());
+            let first = &expressions[..index];
+            let last = &expressions[index..];
 
             let extra_line = match (first.last(), last.first()) {
                 (Some(first), Some(last)) if has_extra_line(context, first, last) => Some(line()),
@@ -116,17 +114,19 @@ fn compile_expression<'a, A: Allocator + Clone + 'a>(
                     .chain([builder.flatten(builder.indent(compile_expressions(
                         context,
                         first.len(),
-                        first.iter().copied(),
+                        first,
                     )))])
                     .chain(if last.is_empty() {
                         None
                     } else {
-                        Some(builder.r#break(builder.indent(builder.sequence(
-                            extra_line.into_iter().chain([
-                                line(),
-                                compile_expressions(context, last.len(), last.iter().copied()),
-                            ]),
-                        ))))
+                        Some(builder.r#break(builder.indent(
+                            builder.sequence(
+                                extra_line.into_iter().chain([
+                                    line(),
+                                    compile_expressions(context, last.len(), last),
+                                ]),
+                            ),
+                        )))
                     })
                     .chain([")".into()]),
             )
