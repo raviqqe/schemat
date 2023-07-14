@@ -9,9 +9,12 @@ Scheme formatter written in Rust
 It supports:
 
 - S-expressions
+  - Parenthesis: `(` and `)`
+  - Square brackets: `[` and `]`
 - Comments
+- Quotes: `'`, `` ` ``, and `,`
 - Hash directives
-  - Shebang `#!/usr/bin/env gambit`
+  - Shebang (e.g. `#!/usr/bin/env gambit`)
   - Language shorthand in Racket (e.g. `#lang racket`)
 
 ## Install
