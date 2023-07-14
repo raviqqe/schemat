@@ -10,7 +10,7 @@ It supports:
 
 - S-expressions
 - Comments
-- Quotes (e.g. `'`, `\``, and `,`)
+- Quotes (e.g. `'`, `` ` ``, and `,`)
 - Hash directives
   - Shebang `#!/usr/bin/env gambit`
   - Language shorthand in Racket (e.g. `#lang racket`)
