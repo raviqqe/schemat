@@ -1,13 +1,13 @@
 use crate::{ast::Comment, position::Position, position_map::PositionMap};
 use std::alloc::Allocator;
 
-pub struct Context<'a, A: Allocator> {
+pub struct Context<'a, A: Allocator + Clone> {
     comments: Vec<&'a Comment<'a>>,
     position_map: &'a PositionMap,
     allocator: A,
 }
 
-impl<'a, A: Allocator> Context<'a, A> {
+impl<'a, A: Allocator + Clone> Context<'a, A> {
     pub fn new(comments: &'a [Comment<'a>], position_map: &'a PositionMap, allocator: A) -> Self {
         Self {
             comments: comments.iter().collect(),
@@ -20,18 +20,22 @@ impl<'a, A: Allocator> Context<'a, A> {
         self.position_map
     }
 
+    pub fn allocator(&self) -> A {
+        self.allocator.clone()
+    }
+
     pub fn allocate<'b, T>(&self, value: T) -> &'b T
     where
         A: 'b,
     {
-        Box::leak(Box::new_in(value, self.allocator))
+        Box::leak(Box::new_in(value, self.allocator.clone()))
     }
 
     pub fn allocate_vec<'b, T>(&self, values: impl IntoIterator<Item = T>) -> &'b [T]
     where
         A: 'b,
     {
-        let mut vec = Vec::new_in(self.allocator);
+        let mut vec = Vec::new_in(self.allocator.clone());
 
         vec.extend(values);
 

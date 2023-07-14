@@ -13,7 +13,7 @@ use std::alloc::Allocator;
 
 const COMMENT_PREFIX: &str = ";";
 
-pub fn format<A: Allocator>(
+pub fn format<A: Allocator + Clone>(
     module: &[Expression<A>],
     comments: &[Comment],
     hash_directives: &[HashDirective],
@@ -27,9 +27,9 @@ pub fn format<A: Allocator>(
     ))
 }
 
-fn compile_module<'a, A: Allocator>(
-    context: &mut Context<A>,
-    module: &[Expression<A>],
+fn compile_module<'a, A: Allocator + Clone + 'a>(
+    context: &mut Context<'a, A>,
+    module: &'a [Expression<'a, A>],
     hash_directives: &[HashDirective],
 ) -> Document<'a> {
     [
@@ -70,7 +70,7 @@ fn compile_module<'a, A: Allocator>(
     })
 }
 
-fn compile_hash_directive<'a, A: Allocator>(
+fn compile_hash_directive<'a, A: Allocator + Clone + 'a>(
     context: &Context<A>,
     hash_directive: &HashDirective,
 ) -> Document<'a> {
@@ -85,9 +85,9 @@ fn compile_hash_directive<'a, A: Allocator>(
     )
 }
 
-fn compile_expression<'a, A: Allocator>(
-    context: &mut Context<A>,
-    expression: &Expression<A>,
+fn compile_expression<'a, A: Allocator + Clone + 'a>(
+    context: &mut Context<'a, A>,
+    expression: &'a Expression<'a, A>,
 ) -> Document<'a> {
     compile_line_comment(context, expression.position(), |context| match expression {
         Expression::List(expressions, position) => {
@@ -141,11 +141,11 @@ fn compile_expression<'a, A: Allocator>(
     })
 }
 
-fn compile_expressions<'a, A: Allocator + 'a>(
+fn compile_expressions<'a, A: Allocator + Clone + 'a>(
     context: &mut Context<A>,
     expressions: impl IntoIterator<Item = &'a Expression<'a, A>>,
 ) -> Document<'a> {
-    let mut documents = vec![];
+    let mut documents = Vec::new_in(context.allocator());
     let mut last_expression = None::<&Expression<A>>;
 
     for expression in expressions {
@@ -163,46 +163,44 @@ fn compile_expressions<'a, A: Allocator + 'a>(
         last_expression = Some(expression);
     }
 
-    sequence(&documents)
+    sequence(context.allocate(documents))
 }
 
-fn compile_line_comment<'a, A: Allocator>(
-    context: &mut Context<A>,
+fn compile_line_comment<'a, A: Allocator + Clone + 'a>(
+    context: &mut Context<'a, A>,
     position: &Position,
     document: impl Fn(&mut Context<A>) -> Document<'a>,
 ) -> Document<'a> {
-    sequence(context.allocate([
-        compile_block_comment(context, position),
-        document(context),
-        compile_suffix_comment(context, position),
-    ]))
+    let block_comment = compile_block_comment(context, position);
+    let document = document(context);
+    let suffix_comment = compile_suffix_comment(context, position);
+
+    sequence(context.allocate([block_comment, document, suffix_comment]))
 }
 
-fn compile_suffix_comment<'a, A: Allocator>(
+fn compile_suffix_comment<'a, A: Allocator + Clone + 'a>(
     context: &mut Context<A>,
     position: &Position,
 ) -> Document<'a> {
-    sequence(
-        context.allocate_vec(
-            context
-                .drain_current_comment(get_line_index(context, position.start()))
-                .map(|comment| {
-                    line_suffix(
-                        context
-                            .allocate(" ".to_owned() + COMMENT_PREFIX + comment.value().trim_end()),
-                    )
-                }),
-        ),
-    )
+    // TODO
+    let comments = context
+        .drain_current_comment(get_line_index(context, position.start()))
+        .collect::<Vec<_>>();
+
+    sequence(context.allocate_vec(comments.into_iter().map(|comment| {
+        line_suffix(context.allocate(" ".to_owned() + COMMENT_PREFIX + comment.value().trim_end()))
+    })))
 }
 
-fn compile_block_comment<'a, A: Allocator>(
-    context: &mut Context<A>,
+fn compile_block_comment<'a, A: Allocator + Clone + 'a>(
+    context: &mut Context<'a, A>,
     position: &Position,
 ) -> Document<'a> {
+    // TODO
     let comments = context
         .drain_comments_before(get_line_index(context, position.start()))
         .collect::<Vec<_>>();
+    let comments = context.allocate_vec(comments);
 
     compile_all_comments(
         context,
@@ -211,17 +209,20 @@ fn compile_block_comment<'a, A: Allocator>(
     )
 }
 
-fn compile_remaining_block_comment<'a, A: Allocator>(context: &mut Context<A>) -> Document<'a> {
+fn compile_remaining_block_comment<'a, A: Allocator + Clone + 'a>(
+    context: &mut Context<'a, A>,
+) -> Document<'a> {
+    // TODO
     let comments = context
         .drain_comments_before(usize::MAX)
         .collect::<Vec<_>>();
 
-    compile_all_comments(context, &comments, None)
+    compile_all_comments(context, context.allocate_vec(comments), None)
 }
 
-fn compile_all_comments<'a, A: Allocator>(
+fn compile_all_comments<'a, A: Allocator + Clone + 'a>(
     context: &Context<A>,
-    comments: &[&Comment],
+    comments: &'a [&'a Comment<'a>],
     last_line_index: Option<usize>,
 ) -> Document<'a> {
     sequence(
@@ -253,7 +254,7 @@ fn compile_all_comments<'a, A: Allocator>(
     )
 }
 
-fn has_extra_line<A: Allocator>(
+fn has_extra_line<A: Allocator + Clone>(
     context: &Context<A>,
     last_expression: &Expression<A>,
     expression: &Expression<A>,
@@ -272,7 +273,7 @@ fn has_extra_line<A: Allocator>(
         > 1
 }
 
-fn get_line_index<A: Allocator>(context: &Context<A>, offset: usize) -> usize {
+fn get_line_index<A: Allocator + Clone>(context: &Context<A>, offset: usize) -> usize {
     context
         .position_map()
         .line_index(offset)
