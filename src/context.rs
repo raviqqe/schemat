@@ -1,20 +1,41 @@
 use crate::{ast::Comment, position::Position, position_map::PositionMap};
+use std::alloc::Allocator;
 
-pub struct Context<'a> {
+pub struct Context<'a, A: Allocator> {
     comments: Vec<&'a Comment<'a>>,
     position_map: &'a PositionMap,
+    allocator: A,
 }
 
-impl<'a> Context<'a> {
-    pub fn new(comments: &'a [Comment<'a>], position_map: &'a PositionMap) -> Self {
+impl<'a, A: Allocator> Context<'a, A> {
+    pub fn new(comments: &'a [Comment<'a>], position_map: &'a PositionMap, allocator: A) -> Self {
         Self {
             comments: comments.iter().collect(),
             position_map,
+            allocator,
         }
     }
 
     pub fn position_map(&self) -> &'a PositionMap {
         self.position_map
+    }
+
+    pub fn allocate<'b, T>(&self, value: T) -> &'b T
+    where
+        A: 'b,
+    {
+        Box::leak(Box::new_in(value, self.allocator))
+    }
+
+    pub fn allocate_vec<'b, T>(&self, values: impl IntoIterator<Item = T>) -> &'b [T]
+    where
+        A: 'b,
+    {
+        let mut vec = Vec::new_in(self.allocator);
+
+        vec.extend(values);
+
+        Vec::leak(vec)
     }
 
     pub fn drain_comments_before<'b>(
