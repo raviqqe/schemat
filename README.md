@@ -9,8 +9,8 @@ Scheme formatter written in Rust
 It supports:
 
 - S-expressions
-  - Parenthesis (i.e. `(` and `)`)
-  - Square brackets (i.e. `[` and `]`)
+  - Parenthesis: `(` and `)`
+  - Square brackets: `[` and `]`
 - Comments
 - Quotes (e.g. `'`, `` ` ``, and `,`)
 - Hash directives
