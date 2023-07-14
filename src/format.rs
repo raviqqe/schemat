@@ -253,6 +253,7 @@ mod tests {
                 &[],
                 &[],
                 &PositionMap::new("(foo bar)"),
+                Global,
             ),
             "(foo bar)\n"
         );
@@ -272,6 +273,7 @@ mod tests {
                 &[],
                 &[],
                 &PositionMap::new("(foo\nbar)"),
+                Global,
             ),
             indoc!(
                 "
@@ -298,6 +300,7 @@ mod tests {
                 &[],
                 &[],
                 &PositionMap::new("a\nb"),
+                Global,
             ),
             indoc!(
                 "
@@ -320,6 +323,7 @@ mod tests {
                 &[],
                 &[],
                 &PositionMap::new("'foo"),
+                Global,
             ),
             "'foo\n"
         );
@@ -333,6 +337,7 @@ mod tests {
                 &[],
                 &[],
                 &PositionMap::new("\"foo\""),
+                Global,
             ),
             "\"foo\"\n"
         );
@@ -346,6 +351,7 @@ mod tests {
                 &[],
                 &[],
                 &PositionMap::new("foo"),
+                Global,
             ),
             "foo\n"
         );
@@ -371,6 +377,7 @@ mod tests {
                     &[],
                     &[],
                     &PositionMap::new("\n\n\na"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -395,6 +402,7 @@ mod tests {
                     &[],
                     &[],
                     &PositionMap::new("\na"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -419,6 +427,7 @@ mod tests {
                     &[],
                     &[],
                     &PositionMap::new("\n\na"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -450,6 +459,7 @@ mod tests {
                     &[],
                     &[],
                     &PositionMap::new("\n\n\na"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -473,6 +483,7 @@ mod tests {
                     &[],
                     &[],
                     &PositionMap::new("\n\n"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -498,6 +509,7 @@ mod tests {
                     &[],
                     &[],
                     &PositionMap::new("\na"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -519,6 +531,7 @@ mod tests {
                     &[],
                     &[],
                     &PositionMap::new("\n\na"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -543,6 +556,7 @@ mod tests {
                     &[Comment::new("bar", Position::new(0, 1))],
                     &[],
                     &PositionMap::new("\na"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -561,6 +575,7 @@ mod tests {
                     &[Comment::new("bar", Position::new(0, 1))],
                     &[],
                     &PositionMap::new("\n\na"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -583,6 +598,7 @@ mod tests {
                     ],
                     &[],
                     &PositionMap::new("\n\n\na"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -606,6 +622,7 @@ mod tests {
                     ],
                     &[],
                     &PositionMap::new("\n\n\n\na"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -630,6 +647,7 @@ mod tests {
                     &[Comment::new("bar", Position::new(1, 2))],
                     &[],
                     &PositionMap::new("\n\n\n"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -655,6 +673,7 @@ mod tests {
                     &[Comment::new("bar", Position::new(1, 2))],
                     &[],
                     &PositionMap::new("\n\n\n"),
+                    Global,
                 ),
                 indoc!(
                     "
@@ -674,6 +693,7 @@ mod tests {
                     &[Comment::new("bar", Position::new(0, 1))],
                     &[],
                     &PositionMap::new("\na"),
+                    Global,
                 ),
                 indoc!(
                     "
