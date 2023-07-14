@@ -92,7 +92,6 @@ fn compile_expression<'a, A: Allocator + Clone + 'a>(
         Expression::List(expressions, position) => {
             let line_index = get_line_index(context, position.start());
 
-            let comment = compile_line_comment(context, expression.position(), |_| "(".into());
             let index = expressions
                 .iter()
                 .position(|expression| {
@@ -102,33 +101,44 @@ fn compile_expression<'a, A: Allocator + Clone + 'a>(
             let first = &expressions[..index];
             let last = &expressions[index..];
 
-            let extra_line = match (first.last(), last.first()) {
-                (Some(first), Some(last)) if has_extra_line(context, first, last) => Some(line()),
-                _ => None,
-            };
             let builder = context.builder().clone();
 
             builder.sequence(
-                [comment]
-                    .into_iter()
-                    .chain([builder.flatten(builder.indent(compile_expressions(
-                        context,
-                        first.len(),
-                        first,
-                    )))])
-                    .chain(if last.is_empty() {
-                        None
-                    } else {
-                        Some(builder.r#break(builder.indent(
-                            builder.sequence(
-                                extra_line.into_iter().chain([
-                                    line(),
-                                    compile_expressions(context, last.len(), last),
-                                ]),
+                [compile_line_comment(context, expression.position(), |_| {
+                    "(".into()
+                })]
+                .into_iter()
+                .chain([builder.flatten(builder.indent(compile_expressions(
+                    context,
+                    first.len(),
+                    first,
+                )))])
+                .chain(if last.is_empty() {
+                    None
+                } else {
+                    Some(
+                        builder.r#break(
+                            builder.indent(
+                                builder.sequence(
+                                    match (first.last(), last.first()) {
+                                        (Some(first), Some(last))
+                                            if has_extra_line(context, first, last) =>
+                                        {
+                                            Some(line())
+                                        }
+                                        _ => None,
+                                    }
+                                    .into_iter()
+                                    .chain([
+                                        line(),
+                                        compile_expressions(context, last.len(), last),
+                                    ]),
+                                ),
                             ),
-                        )))
-                    })
-                    .chain([")".into()]),
+                        ),
+                    )
+                })
+                .chain([")".into()]),
             )
         }
         Expression::String(string, _) => context.builder().sequence(["\"", *string, "\""]),
