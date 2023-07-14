@@ -7,6 +7,7 @@ pub enum Expression<'a, A: Allocator> {
     Quote(Box<Expression<'a, A>, A>, Position),
     String(&'a str, Position),
     Symbol(&'a str, Position),
+    Vector(Vec<Expression<'a, A>, A>, Position),
 }
 
 impl<'a, A: Allocator> Expression<'a, A> {
@@ -16,6 +17,7 @@ impl<'a, A: Allocator> Expression<'a, A> {
             Self::Quote(_, position) => position,
             Self::String(_, position) => position,
             Self::Symbol(_, position) => position,
+            Self::Vector(_, position) => position,
         }
     }
 }
@@ -34,6 +36,9 @@ impl<'a, A: Allocator> PartialEq for Expression<'a, A> {
                 one == other && position == other_position
             }
             (Self::Symbol(one, position), Self::Symbol(other, other_position)) => {
+                one == other && position == other_position
+            }
+            (Self::Vector(one, position), Self::Vector(other, other_position)) => {
                 one == other && position == other_position
             }
             _ => false,
