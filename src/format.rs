@@ -91,6 +91,7 @@ fn compile_expression<'a, A: Allocator + Clone + 'a>(
     compile_line_comment(context, expression.position(), |context| match expression {
         Expression::List(expressions, position) => {
             let line_index = get_line_index(context, position.start());
+            // TODO
             let (first, last) = expressions.iter().partition::<Vec<_>, _>(|expression| {
                 get_line_index(context, expression.position().start()) == line_index
             });
