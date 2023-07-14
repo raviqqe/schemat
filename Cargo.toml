@@ -10,7 +10,7 @@ keywords = ["format", "scheme"]
 
 [dependencies]
 bumpalo = { version = "3.13.0", features = ["allocator_api"] }
-mfmt = "0.1.1"
+mfmt = { git = "https://github.com/raviqqe/mfmt", branc = "chore/box" }
 nom = "7.1.3"
 nom_locate = "4.1.0"
 
