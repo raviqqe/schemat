@@ -2,6 +2,7 @@
   "words": [
     "bumpalo",
     "clippy",
+    "deque",
     "indoc",
     "itertools",
     "lcov",
