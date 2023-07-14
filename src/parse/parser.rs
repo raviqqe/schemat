@@ -281,6 +281,18 @@ mod tests {
     }
 
     #[test]
+    fn parse_quote() {
+        assert_eq!(
+            expression(Input::new_extra("'foo", Global)).unwrap().1,
+            Expression::Quote(
+                "'",
+                Expression::Symbol("foo", Position::new(1, 4)).into(),
+                Position::new(0, 4)
+            )
+        );
+    }
+
+    #[test]
     fn parse_shebang() {
         assert_eq!(
             hash_directive(Input::new_extra("#!/bin/sh\n", Global))
