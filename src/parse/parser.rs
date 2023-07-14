@@ -5,8 +5,8 @@ use crate::{
 };
 use nom::{
     branch::alt,
-    bytes::complete::{tag, take_until, take_while1},
-    character::complete::{char, multispace0, multispace1, none_of, one_of, space0},
+    bytes::complete::{tag, take_until, take_while, take_while1},
+    character::complete::{char, multispace0, multispace1, none_of, one_of, satisfy, space0},
     combinator::{all_consuming, cut, map, recognize, value},
     error::context,
     multi::{fold_many0, many0_count, many1_count},
@@ -15,7 +15,8 @@ use nom::{
 };
 use std::alloc::Allocator;
 
-const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&~^.:#";
+const HASH_CHARACTER: char = '#';
+const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&~^.:";
 const QUOTE_SIGNS: &str = "'`,";
 
 pub type IResult<'a, T, A> = nom::IResult<Input<'a, A>, T, NomError<'a, A>>;
@@ -54,11 +55,26 @@ pub fn hash_directives<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Has
 
 fn symbol<'a, A: Allocator + Clone>(input: Input<'a, A>) -> IResult<Expression<'a, A>, A> {
     map(
-        token(positioned(take_while1::<_, Input<'a, A>, _>(|character| {
-            character.is_alphanumeric() || SYMBOL_SIGNS.contains(character)
-        }))),
+        token(positioned(alt((
+            recognize(tuple((
+                satisfy::<_, Input<'a, A>, _>(is_head_symbol_character),
+                take_while::<_, Input<'a, A>, _>(is_tail_symbol_character),
+            ))),
+            recognize(tuple((
+                char(HASH_CHARACTER),
+                take_while1::<_, Input<'a, A>, _>(is_tail_symbol_character),
+            ))),
+        )))),
         |(input, position)| Expression::Symbol(&input, position),
     )(input)
+}
+
+fn is_head_symbol_character(character: char) -> bool {
+    character.is_alphanumeric() || SYMBOL_SIGNS.contains(character)
+}
+
+fn is_tail_symbol_character(character: char) -> bool {
+    is_head_symbol_character(character) || character == HASH_CHARACTER
 }
 
 fn expression<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'_, A>, A> {
@@ -255,6 +271,30 @@ mod tests {
     }
 
     #[test]
+    fn parse_symbol() {
+        assert_eq!(
+            expression(Input::new_extra("x", Global)).unwrap().1,
+            Expression::Symbol("x", Position::new(0, 1))
+        );
+        assert_eq!(
+            expression(Input::new_extra("foo", Global)).unwrap().1,
+            Expression::Symbol("foo", Position::new(0, 3))
+        );
+        assert_eq!(
+            expression(Input::new_extra("1", Global)).unwrap().1,
+            Expression::Symbol("1", Position::new(0, 1))
+        );
+        assert_eq!(
+            expression(Input::new_extra("42", Global)).unwrap().1,
+            Expression::Symbol("42", Position::new(0, 2))
+        );
+        assert_eq!(
+            expression(Input::new_extra("3.14", Global)).unwrap().1,
+            Expression::Symbol("3.14", Position::new(0, 4))
+        );
+    }
+
+    #[test]
     fn parse_invalid_symbol() {
         assert!(expression(Input::new_extra("#", Global)).is_err());
     }
@@ -301,11 +341,11 @@ mod tests {
                 "#{",
                 "}",
                 vec![
-                    Expression::Symbol("1", Position::new(1, 2)),
-                    Expression::Symbol("2", Position::new(3, 4)),
-                    Expression::Symbol("3", Position::new(5, 6))
+                    Expression::Symbol("1", Position::new(2, 3)),
+                    Expression::Symbol("2", Position::new(4, 5)),
+                    Expression::Symbol("3", Position::new(6, 7))
                 ],
-                Position::new(0, 7)
+                Position::new(0, 8)
             )
         );
     }
