@@ -33,8 +33,10 @@ pub fn comments<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Comment, A
 
     all_consuming(fold_many0(
         alt((
-            map(none_of("\";"), |_| None),
+            map(none_of("\";#"), |_| None),
             map(raw_string, |_| None),
+            map(hash_semicolon, |_| None),
+            map(tag("#"), |_| None),
             map(comment, Some),
         )),
         move || Vec::new_in(allocator.clone()),
@@ -91,7 +93,7 @@ fn expression<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'
                         tag("'"),
                         tag("`"),
                         tag(","),
-                        tag("#;"),
+                        hash_semicolon,
                         tag("#"),
                     )))),
                     expression,
@@ -104,6 +106,10 @@ fn expression<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'
         context("vector", list_like("[", "]")),
         context("map", list_like("{", "}")),
     ))(input)
+}
+
+fn hash_semicolon<'a, A: Allocator + Clone>(input: Input<'a, A>) -> IResult<Input<'a, A>, A> {
+    tag("#;")(input)
 }
 
 fn list_like<'a, A: Allocator + Clone>(
@@ -505,6 +511,26 @@ mod tests {
                     Comment::new("foo", Position::new(0, 4)),
                     Comment::new("bar", Position::new(6, 10))
                 ]
+            );
+        }
+
+        #[test]
+        fn parse_comments_skipping_hash_semicolon() {
+            assert_eq!(
+                comments(Input::new_extra("#;foo\n;bar\n", Global))
+                    .unwrap()
+                    .1,
+                vec![Comment::new("bar", Position::new(6, 10))]
+            );
+        }
+
+        #[test]
+        fn parse_comments_skipping_hash_character() {
+            assert_eq!(
+                comments(Input::new_extra("#foo\n;bar\n", Global))
+                    .unwrap()
+                    .1,
+                vec![Comment::new("bar", Position::new(5, 9))]
             );
         }
     }
