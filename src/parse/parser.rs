@@ -6,7 +6,7 @@ use crate::{
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_until, take_while, take_while1},
-    character::complete::{char, multispace0, multispace1, none_of, one_of, satisfy, space0},
+    character::complete::{char, multispace0, multispace1, none_of, satisfy, space0},
     combinator::{all_consuming, cut, map, recognize, value},
     error::context,
     multi::{fold_many0, many0_count, many1_count},
@@ -17,7 +17,6 @@ use std::alloc::Allocator;
 
 const HASH_CHARACTER: char = '#';
 const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&|~^.:\\";
-const QUOTE_SIGNS: &str = "'`,#";
 
 pub type IResult<'a, T, A> = nom::IResult<Input<'a, A>, T, NomError<'a, A>>;
 
@@ -87,7 +86,16 @@ fn expression<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'
         context(
             "quote",
             map(
-                positioned(tuple((token(recognize(one_of(QUOTE_SIGNS))), expression))),
+                positioned(tuple((
+                    token(recognize(alt((
+                        tag("'"),
+                        tag("`"),
+                        tag(","),
+                        tag("#;"),
+                        tag("#"),
+                    )))),
+                    expression,
+                ))),
                 move |((sign, expression), position)| {
                     Expression::Quote(&sign, Box::new_in(expression, allocator.clone()), position)
                 },
@@ -387,6 +395,18 @@ mod tests {
                 "#",
                 Expression::List("(", ")", vec![], Position::new(1, 3)).into(),
                 Position::new(0, 3)
+            )
+        );
+    }
+
+    #[test]
+    fn parse_hash_semicolon_quote() {
+        assert_eq!(
+            expression(Input::new_extra("#;()", Global)).unwrap().1,
+            Expression::Quote(
+                "#;",
+                Expression::List("(", ")", vec![], Position::new(2, 4)).into(),
+                Position::new(0, 4)
             )
         );
     }
