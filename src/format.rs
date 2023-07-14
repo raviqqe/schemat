@@ -91,15 +91,23 @@ fn compile_expression<'a, A: Allocator + Clone + 'a>(
     compile_line_comment(context, expression.position(), |context| match expression {
         Expression::List(expressions, position) => {
             let line_index = get_line_index(context, position.start());
-            // TODO
-            let (first, last) = expressions.iter().partition::<Vec<_>, _>(|expression| {
-                get_line_index(context, expression.position().start()) == line_index
-            });
+
+            let comment = compile_line_comment(context, expression.position(), |_| "(".into());
+            let first = context
+                .builder()
+                .allocate_slice(expressions.iter().filter(|expression| {
+                    get_line_index(context, expression.position().start()) == line_index
+                }));
+            let last = context
+                .builder()
+                .allocate_slice(expressions.iter().filter(|expression| {
+                    get_line_index(context, expression.position().start()) == line_index
+                }));
+
             let extra_line = match (first.last(), last.first()) {
                 (Some(first), Some(last)) if has_extra_line(context, first, last) => Some(line()),
                 _ => None,
             };
-            let comment = compile_line_comment(context, expression.position(), |_| "(".into());
             let builder = context.builder().clone();
 
             builder.sequence(
@@ -108,19 +116,17 @@ fn compile_expression<'a, A: Allocator + Clone + 'a>(
                     .chain([builder.flatten(builder.indent(compile_expressions(
                         context,
                         first.len(),
-                        first,
+                        first.iter().copied(),
                     )))])
                     .chain(if last.is_empty() {
                         None
                     } else {
-                        Some(builder.r#break(builder.indent(
-                            builder.sequence(
-                                extra_line.into_iter().chain([
-                                    line(),
-                                    compile_expressions(context, last.len(), last),
-                                ]),
-                            ),
-                        )))
+                        Some(builder.r#break(builder.indent(builder.sequence(
+                            extra_line.into_iter().chain([
+                                line(),
+                                compile_expressions(context, last.len(), last.iter().copied()),
+                            ]),
+                        ))))
                     })
                     .chain([")".into()]),
             )
