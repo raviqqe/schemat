@@ -113,30 +113,18 @@ fn compile_expression<'a, A: Allocator + Clone + 'a>(
                     first.len(),
                     first,
                 )))])
+                .chain(match (first.last(), last.first()) {
+                    (Some(first), Some(last)) if has_extra_line(context, first, last) => {
+                        Some(line())
+                    }
+                    _ => None,
+                })
                 .chain(if last.is_empty() {
                     None
                 } else {
-                    Some(
-                        builder.r#break(
-                            builder.indent(
-                                builder.sequence(
-                                    match (first.last(), last.first()) {
-                                        (Some(first), Some(last))
-                                            if has_extra_line(context, first, last) =>
-                                        {
-                                            Some(line())
-                                        }
-                                        _ => None,
-                                    }
-                                    .into_iter()
-                                    .chain([
-                                        line(),
-                                        compile_expressions(context, last.len(), last),
-                                    ]),
-                                ),
-                            ),
-                        ),
-                    )
+                    Some(builder.r#break(builder.indent(
+                        builder.sequence([line(), compile_expressions(context, last.len(), last)]),
+                    )))
                 })
                 .chain([")".into()]),
             )
