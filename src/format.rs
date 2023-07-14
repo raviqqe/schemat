@@ -47,7 +47,7 @@ fn compile_module<'a, A: Allocator + Clone + 'a>(
             ))
         },
         {
-            let expressions = compile_expressions(context, module);
+            let expressions = compile_expressions(context, module.len(), module);
 
             if is_empty(&expressions) {
                 empty()
@@ -116,7 +116,7 @@ fn compile_expression<'a, A: Allocator + Clone + 'a>(
                         context.allocator(),
                         indent(allocate(
                             context.allocator(),
-                            compile_expressions(context, first),
+                            compile_expressions(context, first.len(), first),
                         )),
                     ))])
                     .chain(if last.is_empty() {
@@ -128,9 +128,10 @@ fn compile_expression<'a, A: Allocator + Clone + 'a>(
                                 context.allocator(),
                                 sequence(allocate_vec(
                                     context.allocator(),
-                                    extra_line
-                                        .into_iter()
-                                        .chain([line(), compile_expressions(context, last)]),
+                                    extra_line.into_iter().chain([
+                                        line(),
+                                        compile_expressions(context, last.len(), last),
+                                    ]),
                                 )),
                             )),
                         )))
@@ -155,9 +156,10 @@ fn compile_expression<'a, A: Allocator + Clone + 'a>(
 
 fn compile_expressions<'a, A: Allocator + Clone + 'a>(
     context: &mut Context<'a, A>,
+    expression_count: usize,
     expressions: impl IntoIterator<Item = &'a Expression<'a, A>>,
 ) -> Document<'a> {
-    let mut documents = Vec::new_in(context.allocator());
+    let mut documents = Vec::with_capacity_in(2 * expression_count, context.allocator());
     let mut last_expression = None;
 
     for expression in expressions {
@@ -175,7 +177,7 @@ fn compile_expressions<'a, A: Allocator + Clone + 'a>(
         last_expression = Some(expression);
     }
 
-    sequence(allocate(context.allocator(), documents))
+    sequence(documents.leak())
 }
 
 fn compile_line_comment<'a, A: Allocator + Clone + 'a>(
