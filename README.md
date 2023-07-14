@@ -12,9 +12,9 @@ It supports:
   - Parenthesis: `(` and `)`
   - Square brackets: `[` and `]`
 - Comments
-- Quotes (e.g. `'`, `` ` ``, and `,`)
+- Quotes: `'`, `` ` ``, and `,`
 - Hash directives
-  - Shebang `#!/usr/bin/env gambit`
+  - Shebang (e.g. `#!/usr/bin/env gambit`)
   - Language shorthand in Racket (e.g. `#lang racket`)
 
 ## Install
