@@ -108,7 +108,7 @@ fn expression<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'
     ))(input)
 }
 
-fn hash_semicolon<'a, A: Allocator + Clone>(input: Input<'a, A>) -> IResult<Input<'a, A>, A> {
+fn hash_semicolon<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Input<'_, A>, A> {
     tag("#;")(input)
 }
 
