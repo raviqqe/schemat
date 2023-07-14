@@ -17,7 +17,7 @@ use std::alloc::Allocator;
 
 const HASH_CHARACTER: char = '#';
 const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&~^.:\\";
-const QUOTE_SIGNS: &str = "'`,";
+const QUOTE_SIGNS: &str = "'`,#";
 
 pub type IResult<'a, T, A> = nom::IResult<Input<'a, A>, T, NomError<'a, A>>;
 
@@ -94,7 +94,7 @@ fn expression<A: Allocator + Clone>(input: Input<'_, A>) -> IResult<Expression<'
             ),
         ),
         context("vector", list_like("[", "]")),
-        context("hash map", list_like("#{", "}")),
+        context("map", list_like("{", "}")),
     ))(input)
 }
 
@@ -334,17 +334,22 @@ mod tests {
     }
 
     #[test]
-    fn parse_hash_map() {
+    fn parse_map() {
         assert_eq!(
             expression(Input::new_extra("#{1 2 3}", Global)).unwrap().1,
-            Expression::List(
-                "#{",
-                "}",
-                vec![
-                    Expression::Symbol("1", Position::new(2, 3)),
-                    Expression::Symbol("2", Position::new(4, 5)),
-                    Expression::Symbol("3", Position::new(6, 7))
-                ],
+            Expression::Quote(
+                "#",
+                Expression::List(
+                    "{",
+                    "}",
+                    vec![
+                        Expression::Symbol("1", Position::new(2, 3)),
+                        Expression::Symbol("2", Position::new(4, 5)),
+                        Expression::Symbol("3", Position::new(6, 7))
+                    ],
+                    Position::new(1, 8)
+                )
+                .into(),
                 Position::new(0, 8)
             )
         );
@@ -370,6 +375,18 @@ mod tests {
                 ",",
                 Expression::Symbol("foo", Position::new(1, 4)).into(),
                 Position::new(0, 4)
+            )
+        );
+    }
+
+    #[test]
+    fn parse_hash_quote() {
+        assert_eq!(
+            expression(Input::new_extra("#()", Global)).unwrap().1,
+            Expression::Quote(
+                "#",
+                Expression::List("(", ")", vec![], Position::new(1, 3)).into(),
+                Position::new(0, 3)
             )
         );
     }
