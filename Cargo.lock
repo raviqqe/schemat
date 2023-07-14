@@ -34,8 +34,9 @@ checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
 
 [[package]]
 name = "mfmt"
-version = "0.1.4"
-source = "git+https://github.com/raviqqe/mfmt?branch=chore/allocator#8a0322d6794e9bdad207303bcd0951f607ef37c9"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9362491ebfacb2fb4b772c8b03c57c72cc2d0cddbfa57e48ad63b4307f5385c2"
 
 [[package]]
 name = "minimal-lexical"
