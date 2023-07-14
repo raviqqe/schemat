@@ -1,18 +1,24 @@
-use crate::{ast::Comment, position::Position, position_map::PositionMap};
+use crate::{
+    ast::Comment, format::builder::Builder, position::Position, position_map::PositionMap,
+};
 use std::alloc::Allocator;
 
 pub struct Context<'a, A: Allocator + Clone> {
     comments: Vec<&'a Comment<'a>>,
     position_map: &'a PositionMap,
-    allocator: A,
+    builder: Builder<A>,
 }
 
 impl<'a, A: Allocator + Clone> Context<'a, A> {
-    pub fn new(comments: &'a [Comment<'a>], position_map: &'a PositionMap, allocator: A) -> Self {
+    pub fn new(
+        comments: &'a [Comment<'a>],
+        position_map: &'a PositionMap,
+        builder: Builder<A>,
+    ) -> Self {
         Self {
             comments: comments.iter().collect(),
             position_map,
-            allocator,
+            builder,
         }
     }
 
@@ -20,8 +26,8 @@ impl<'a, A: Allocator + Clone> Context<'a, A> {
         self.position_map
     }
 
-    pub fn allocator(&self) -> A {
-        self.allocator.clone()
+    pub fn builder(&self) -> &Builder<A> {
+        &self.builder
     }
 
     pub fn drain_comments_before<'b>(
