@@ -218,6 +218,16 @@ fn comment<A: Allocator + Clone>(input: Input<A>) -> IResult<Comment, A> {
     )(input)
 }
 
+fn block_comment<A: Allocator + Clone>(input: Input<A>) -> IResult<Comment, A> {
+    map(
+        terminated(
+            positioned_meta(preceded(char(';'), take_until("\n"))),
+            newline,
+        ),
+        |(input, position)| Comment::new(&input, position),
+    )(input)
+}
+
 fn hash_directive<A: Allocator + Clone>(input: Input<A>) -> IResult<HashDirective, A> {
     map(
         terminated(
