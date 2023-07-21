@@ -62,15 +62,20 @@ fn symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
                 take_while(is_tail_symbol_character),
             ))),
             recognize(tuple((
-                tag("#\\"),
-                cut(tuple((
-                    satisfy(|character| !character.is_whitespace()),
-                    take_while(is_tail_symbol_character),
-                ))),
-            ))),
-            recognize(tuple((
                 char(HASH_CHARACTER),
-                take_while1(is_tail_symbol_character),
+                alt((
+                    value(
+                        (),
+                        tuple((
+                            char('\\'),
+                            cut(tuple((
+                                satisfy(|character| !character.is_whitespace()),
+                                take_while(is_tail_symbol_character),
+                            ))),
+                        )),
+                    ),
+                    value((), take_while1(is_tail_symbol_character)),
+                )),
             ))),
         )))),
         |(input, position)| Expression::Symbol(&input, position),
