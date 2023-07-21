@@ -14,7 +14,7 @@ It supports:
 - Comments
 - Quotes: `'`, `` ` ``, and `,`
 - Hash directives
-  - Shebang (e.g. `#!/usr/bin/env gambit`)
+  - Shebang (e.g. `#!/usr/bin/env gsi`)
   - Language shorthand in Racket (e.g. `#lang racket`)
 
 ## Install
