@@ -63,7 +63,19 @@ fn symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
             ))),
             recognize(tuple((
                 char(HASH_CHARACTER),
-                take_while1(is_tail_symbol_character),
+                alt((
+                    value(
+                        (),
+                        tuple((
+                            char('\\'),
+                            cut(tuple((
+                                satisfy(|character| !character.is_whitespace()),
+                                take_while(is_tail_symbol_character),
+                            ))),
+                        )),
+                    ),
+                    value((), take_while1(is_tail_symbol_character)),
+                )),
             ))),
         )))),
         |(input, position)| Expression::Symbol(&input, position),
@@ -326,6 +338,23 @@ mod tests {
                 Position::new(0, 7)
             )
         );
+    }
+
+    #[test]
+    fn parse_character() {
+        assert_eq!(
+            expression(Input::new_extra("#\\a", Global)).unwrap().1,
+            Expression::Symbol("#\\a", Position::new(0, 3))
+        );
+        assert_eq!(
+            expression(Input::new_extra("#\\(", Global)).unwrap().1,
+            Expression::Symbol("#\\(", Position::new(0, 3))
+        );
+        assert_eq!(
+            expression(Input::new_extra("#\\;", Global)).unwrap().1,
+            Expression::Symbol("#\\;", Position::new(0, 3))
+        );
+        assert!(expression(Input::new_extra("#\\ ", Global)).is_err());
     }
 
     #[test]
