@@ -563,7 +563,10 @@ mod tests {
 
         #[test]
         fn parse_comment_character() {
-            assert!(comment(Input::new_extra("#\\;foo\n", Global)).is_err());
+            assert_eq!(
+                comments(Input::new_extra("#\\;foo\n", Global)).unwrap().1,
+                vec![]
+            );
         }
     }
 }
