@@ -35,8 +35,8 @@ pub fn comments<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Comment, A
         alt((
             map(none_of("\";#"), |_| None),
             map(raw_string, |_| None),
+            map(raw_symbol, |_| None),
             map(hash_semicolon, |_| None),
-            map(tag("#"), |_| None),
             map(comment, Some),
         )),
         move || Vec::new_in(allocator.clone()),
@@ -55,8 +55,12 @@ pub fn hash_directives<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Has
 }
 
 fn symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
+    token(raw_symbol)(input)
+}
+
+fn raw_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
     map(
-        token(positioned(alt((
+        positioned(alt((
             recognize(tuple((
                 satisfy(is_head_symbol_character),
                 take_while(is_tail_symbol_character),
@@ -77,7 +81,7 @@ fn symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
                     value((), take_while1(is_tail_symbol_character)),
                 )),
             ))),
-        )))),
+        ))),
         |(input, position)| Expression::Symbol(&input, position),
     )(input)
 }
