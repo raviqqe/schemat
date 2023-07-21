@@ -560,5 +560,10 @@ mod tests {
                 vec![Comment::new("bar", Position::new(5, 9))]
             );
         }
+
+        #[test]
+        fn parse_comment_character() {
+            assert!(comment(Input::new_extra("#\\;foo\n", Global)).is_err());
+        }
     }
 }
