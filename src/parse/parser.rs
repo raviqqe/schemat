@@ -63,8 +63,10 @@ fn symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
             ))),
             recognize(tuple((
                 tag("#\\"),
-                satisfy(|character| !character.is_whitespace()),
-                take_while(is_tail_symbol_character),
+                cut(tuple((
+                    satisfy(|character| !character.is_whitespace()),
+                    take_while(is_tail_symbol_character),
+                ))),
             ))),
             recognize(tuple((
                 char(HASH_CHARACTER),
