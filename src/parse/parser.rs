@@ -329,6 +329,18 @@ mod tests {
     }
 
     #[test]
+    fn parse_character() {
+        assert_eq!(
+            expression(Input::new_extra("#\\a", Global)).unwrap().1,
+            Expression::Symbol("#\\a", Position::new(0, 2))
+        );
+        assert_eq!(
+            expression(Input::new_extra("#\\(", Global)).unwrap().1,
+            Expression::Symbol("#\\(", Position::new(0, 2))
+        );
+    }
+
+    #[test]
     fn parse_vector() {
         assert_eq!(
             expression(Input::new_extra("[1 2 3]", Global)).unwrap().1,
