@@ -861,11 +861,11 @@ mod tests {
                         ")",
                         vec![
                             Expression::Symbol("f", Position::new(0, 1)),
-                            Expression::Symbol("f", Position::new(2, 3))
+                            Expression::Symbol("x", Position::new(2, 3))
                         ],
                         Position::new(0, 1)
                     )],
-                    &[Comment::new("foo", Position::new(0, 1))],
+                    &[Comment::new("foo", Position::new(1, 2))],
                     &[],
                     &PositionMap::new("\n\n\n"),
                     Global,
