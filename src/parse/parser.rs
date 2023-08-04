@@ -104,16 +104,16 @@ fn expression<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A
         context(
             "quote",
             map(
-                positioned(tuple((
-                    token(recognize(alt((
+                token(positioned(tuple((
+                    recognize(alt((
                         tag("'"),
                         tag("`"),
                         tag(","),
                         hash_semicolon,
                         tag("#"),
-                    )))),
+                    ))),
                     expression,
-                ))),
+                )))),
                 move |((sign, expression), position)| {
                     Expression::Quote(&sign, Box::new_in(expression, allocator.clone()), position)
                 },
@@ -134,10 +134,10 @@ fn list_like<'a, A: Allocator + Clone>(
 ) -> impl FnMut(Input<'a, A>) -> IResult<Expression<'a, A>, A> {
     move |input| {
         map(
-            positioned(tuple((
+            token(positioned(tuple((
                 sign(left),
                 cut(tuple((many0(expression), sign(right)))),
-            ))),
+            )))),
             |((left, (expressions, right)), position)| {
                 Expression::List(&left, &right, expressions, position)
             },
@@ -183,7 +183,7 @@ fn positioned<'a, T, A: Allocator + Clone>(
     move |input| {
         map(
             tuple((
-                token(nom_locate::position),
+                nom_locate::position,
                 |input| parser.parse(input),
                 nom_locate::position,
             )),
@@ -345,6 +345,14 @@ mod tests {
     }
 
     #[test]
+    fn parse_list_with_correct_position() {
+        assert_eq!(
+            expression(Input::new_extra(" ()", Global)).unwrap().1,
+            Expression::List("(", ")", vec![], Position::new(1, 3))
+        );
+    }
+
+    #[test]
     fn parse_character() {
         assert_eq!(
             expression(Input::new_extra("#\\a", Global)).unwrap().1,
@@ -408,6 +416,18 @@ mod tests {
                 "'",
                 Expression::Symbol("foo", Position::new(1, 4)).into(),
                 Position::new(0, 4)
+            )
+        );
+    }
+
+    #[test]
+    fn parse_quote_with_correct_position() {
+        assert_eq!(
+            expression(Input::new_extra(" 'foo", Global)).unwrap().1,
+            Expression::Quote(
+                "'",
+                Expression::Symbol("foo", Position::new(2, 5)).into(),
+                Position::new(1, 5)
             )
         );
     }
@@ -579,7 +599,7 @@ mod tests {
                 comments(Input::new_extra("(foo\n;bar\nbaz)", Global))
                     .unwrap()
                     .1,
-                vec![Comment::new("bar", Position::new(0, 4)),]
+                vec![Comment::new("bar", Position::new(5, 9))]
             );
         }
     }
