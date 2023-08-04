@@ -873,7 +873,7 @@ mod tests {
                 indoc!(
                     "
                     (f
-                      ; foo
+                      ;foo
                       x)
                     "
                 )
