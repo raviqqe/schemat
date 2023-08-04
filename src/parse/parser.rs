@@ -596,10 +596,10 @@ mod tests {
         #[test]
         fn parse_comment_in_list() {
             assert_eq!(
-                comments(Input::new_extra("(foo\n;bar\nbaz)", Global))
+                comments(Input::new_extra("(f\n;foo\nx)", Global))
                     .unwrap()
                     .1,
-                vec![Comment::new("bar", Position::new(5, 9))]
+                vec![Comment::new("foo", Position::new(5, 9))]
             );
         }
     }
