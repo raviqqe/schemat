@@ -599,7 +599,7 @@ mod tests {
                 comments(Input::new_extra("(f\n;foo\nx)", Global))
                     .unwrap()
                     .1,
-                vec![Comment::new("foo", Position::new(5, 9))]
+                vec![Comment::new("foo", Position::new(3, 7))]
             );
         }
     }
