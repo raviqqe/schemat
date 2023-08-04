@@ -853,6 +853,34 @@ mod tests {
         }
 
         #[test]
+        fn format_line_comment_for_last_argument_in_different_line() {
+            assert_eq!(
+                format(
+                    &[Expression::List(
+                        "(",
+                        ")",
+                        vec![
+                            Expression::Symbol("f", Position::new(0, 1)),
+                            Expression::Symbol("x", Position::new(2, 3))
+                        ],
+                        Position::new(0, 1)
+                    )],
+                    &[Comment::new("foo", Position::new(1, 2))],
+                    &[],
+                    &PositionMap::new("\n\n\n"),
+                    Global,
+                ),
+                indoc!(
+                    "
+                    (f
+                      ;foo
+                      x)
+                    "
+                )
+            );
+        }
+
+        #[test]
         fn format_remaining_block_comment() {
             assert_eq!(
                 format::<Global>(
