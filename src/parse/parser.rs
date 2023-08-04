@@ -572,5 +572,15 @@ mod tests {
                 vec![]
             );
         }
+
+        #[test]
+        fn parse_comment_in_list() {
+            assert_eq!(
+                comments(Input::new_extra("(foo\n;bar\nbaz)", Global))
+                    .unwrap()
+                    .1,
+                vec![Comment::new("bar", Position::new(0, 4)),]
+            );
+        }
     }
 }
