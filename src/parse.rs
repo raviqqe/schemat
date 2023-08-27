@@ -116,4 +116,16 @@ mod tests {
             )])
         );
     }
+
+    #[test]
+    fn parse_vector() {
+        assert_eq!(
+            parse("#()", Global),
+            Ok(vec![Expression::Quote(
+                "#",
+                Expression::List("(", ")", vec![], Position::new(1, 3)).into(),
+                Position::new(0, 3)
+            )])
+        );
+    }
 }
