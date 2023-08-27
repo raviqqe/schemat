@@ -384,7 +384,8 @@ mod tests {
                         Expression::Symbol("3", Position::new(5, 6))
                     ],
                     Position::new(0, 7)
-                ),
+                )
+                .into(),
                 Position::new(0, 7)
             )
         );
