@@ -36,7 +36,7 @@ pub fn comments<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Comment, A
             map(none_of("\";#"), |_| None),
             map(raw_string, |_| None),
             map(raw_symbol, |_| None),
-            map(hash_semicolon, |_| None),
+            map(quote, |_| None),
             map(comment, Some),
         )),
         move || Vec::new_in(allocator.clone()),
@@ -104,16 +104,7 @@ fn expression<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A
         context(
             "quote",
             map(
-                token(positioned(tuple((
-                    recognize(alt((
-                        tag("'"),
-                        tag("`"),
-                        tag(","),
-                        hash_semicolon,
-                        tag("#"),
-                    ))),
-                    expression,
-                )))),
+                token(positioned(tuple((quote, expression)))),
                 move |((sign, expression), position)| {
                     Expression::Quote(&sign, Box::new_in(expression, allocator.clone()), position)
                 },
@@ -122,6 +113,10 @@ fn expression<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A
         context("vector", list_like("[", "]")),
         context("map", list_like("{", "}")),
     ))(input)
+}
+
+fn quote<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
+    alt((tag("'"), tag("`"), tag(","), hash_semicolon, tag("#")))(input)
 }
 
 fn hash_semicolon<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
