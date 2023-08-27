@@ -128,4 +128,16 @@ mod tests {
             )])
         );
     }
+
+    #[test]
+    fn parse_vector_with_newline() {
+        assert_eq!(
+            parse("#()\n", Global),
+            Ok(vec![Expression::Quote(
+                "#",
+                Expression::List("(", ")", vec![], Position::new(1, 3)).into(),
+                Position::new(0, 3)
+            )])
+        );
+    }
 }
