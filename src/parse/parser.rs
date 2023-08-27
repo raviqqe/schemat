@@ -619,5 +619,10 @@ mod tests {
                 vec![Comment::new("foo", Position::new(3, 7))]
             );
         }
+
+        #[test]
+        fn parse_comment_with_vector() {
+            assert_eq!(comments(Input::new_extra("#()", Global)).unwrap().1, vec![]);
+        }
     }
 }
