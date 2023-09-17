@@ -10,7 +10,8 @@ It supports:
 
 - S-expressions
   - Parenthesis: `(` and `)`
-  - Square brackets: `[` and `]`
+  - Brackets: `[` and `]`
+  - Braces: `{` and `}`
 - Comments
 - Quotes: `'`, `` ` ``, and `,`
 - Hash directives
