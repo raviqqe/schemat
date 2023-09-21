@@ -116,7 +116,14 @@ fn expression<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A
 }
 
 fn quote<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
-    alt((tag("'"), tag("`"), tag(","), hash_semicolon, tag("#")))(input)
+    alt((
+        tag("'"),
+        tag("`"),
+        tag(",@"),
+        tag(","),
+        hash_semicolon,
+        tag("#"),
+    ))(input)
 }
 
 fn hash_semicolon<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
@@ -480,6 +487,18 @@ mod tests {
             Expression::Quote(
                 "#;",
                 Expression::List("(", ")", vec![], Position::new(2, 4)).into(),
+                Position::new(0, 4)
+            )
+        );
+    }
+
+    #[test]
+    fn parse_quasi_quote() {
+        assert_eq!(
+            expression(Input::new_extra("`foo", Global)).unwrap().1,
+            Expression::Quote(
+                "`",
+                Expression::Symbol("foo", Position::new(1, 4)).into(),
                 Position::new(0, 4)
             )
         );
