@@ -49,7 +49,7 @@ impl<'a, A: Allocator + Clone> Context<'a, A> {
         self.drain_comments_before(line_index + 1)
     }
 
-    pub fn peek_comments_before(&self, line_index: usize) -> impl Iterator<Item = &'a Comment> {
+    pub fn peek_comments_before(&self, line_index: usize) -> impl Iterator<Item = &'_ Comment> {
         self.comments
             .range(
                 ..self
