@@ -6,10 +6,7 @@ use crate::{
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_until, take_while, take_while1},
-    character::{
-        complete::{char, multispace0, multispace1, none_of, satisfy, space0},
-        is_hex_digit,
-    },
+    character::complete::{char, multispace0, multispace1, none_of, satisfy, space0},
     combinator::{all_consuming, cut, map, recognize, value},
     error::context,
     multi::{fold_many0, many0_count, many1_count},
@@ -173,8 +170,8 @@ fn raw_string<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A
     )(input)
 }
 
-fn hexadecimal_digit<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
-    satisfy(is_hex_digit)(input)
+fn hexadecimal_digit<A: Allocator + Clone>(input: Input<A>) -> IResult<char, A> {
+    satisfy(|character| character.is_digit(16))(input)
 }
 
 fn sign<A: Allocator + Clone>(sign: &'static str) -> impl Fn(Input<A>) -> IResult<Input<A>, A> {
@@ -581,6 +578,15 @@ mod tests {
                     .unwrap()
                     .1,
                 Expression::String("\\\\\\n\\r\\t", Position::new(0, 10))
+            );
+        }
+
+        // https://webassembly.github.io/spec/core/text/values.html#strings
+        #[test]
+        fn parse_hexadecimal_bytes() {
+            assert_eq!(
+                string(Input::new_extra("\"\\00\\FF\"", Global)).unwrap().1,
+                Expression::String("\\00\\FF", Position::new(0, 8))
             );
         }
     }
