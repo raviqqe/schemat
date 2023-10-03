@@ -6,7 +6,7 @@ use crate::{
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_until, take_while, take_while1},
-    character::complete::{char, multispace0, multispace1, none_of, satisfy, space0},
+    character::complete::{char, is_hex_digit, multispace0, multispace1, none_of, satisfy, space0},
     combinator::{all_consuming, cut, map, recognize, value},
     error::context,
     multi::{fold_many0, many0_count, many1_count},
@@ -162,11 +162,16 @@ fn raw_string<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A
                 tag("\\n"),
                 tag("\\r"),
                 tag("\\t"),
+                recognize(tuple((char('\\'), hexadecimal_digit, hexadecimal_digit))),
             )))),
             char('"'),
         )),
         |(input, position)| Expression::String(*input, position),
     )(input)
+}
+
+fn hexadecimal_digit<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
+    satisfy(is_hex_digit)(input)
 }
 
 fn sign<A: Allocator + Clone>(sign: &'static str) -> impl Fn(Input<A>) -> IResult<Input<A>, A> {
