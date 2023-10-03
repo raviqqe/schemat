@@ -171,7 +171,7 @@ fn raw_string<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A
 }
 
 fn hexadecimal_digit<A: Allocator + Clone>(input: Input<A>) -> IResult<char, A> {
-    satisfy(|character| character.is_digit(16))(input)
+    satisfy(|character| character.is_ascii_hexdigit())(input)
 }
 
 fn sign<A: Allocator + Clone>(sign: &'static str) -> impl Fn(Input<A>) -> IResult<Input<A>, A> {
