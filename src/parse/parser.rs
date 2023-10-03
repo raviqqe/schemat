@@ -6,7 +6,10 @@ use crate::{
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_until, take_while, take_while1},
-    character::complete::{char, is_hex_digit, multispace0, multispace1, none_of, satisfy, space0},
+    character::{
+        complete::{char, multispace0, multispace1, none_of, satisfy, space0},
+        is_hex_digit,
+    },
     combinator::{all_consuming, cut, map, recognize, value},
     error::context,
     multi::{fold_many0, many0_count, many1_count},
