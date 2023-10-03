@@ -4,6 +4,7 @@
     "bumpalo",
     "clippy",
     "deque",
+    "hexdigit",
     "indoc",
     "itertools",
     "lcov",
