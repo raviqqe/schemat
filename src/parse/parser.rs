@@ -98,7 +98,6 @@ fn expression<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A
     let allocator = input.extra.clone();
 
     alt((
-        context("symbol", symbol),
         context("list", list_like("(", ")")),
         context("string", string),
         context(
@@ -110,6 +109,7 @@ fn expression<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A
                 },
             ),
         ),
+        context("symbol", symbol),
         context("vector", list_like("[", "]")),
         context("map", list_like("{", "}")),
     ))(input)
