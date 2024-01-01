@@ -410,14 +410,14 @@ mod tests {
                     "(",
                     ")",
                     vec![
-                        Expression::Symbol("1", Position::new(2, 3)),
-                        Expression::Symbol("2", Position::new(4, 5)),
-                        Expression::Symbol("3", Position::new(6, 7))
+                        Expression::Symbol("1", Position::new(4, 5)),
+                        Expression::Symbol("2", Position::new(6, 7)),
+                        Expression::Symbol("3", Position::new(8, 9))
                     ],
-                    Position::new(1, 8)
+                    Position::new(3, 10)
                 )
                 .into(),
-                Position::new(0, 8)
+                Position::new(0, 10)
             )
         );
     }
