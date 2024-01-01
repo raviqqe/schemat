@@ -399,6 +399,30 @@ mod tests {
     }
 
     #[test]
+    fn parse_byte_vector() {
+        assert_eq!(
+            expression(Input::new_extra("#u8(1 2 3)", Global))
+                .unwrap()
+                .1,
+            Expression::Quote(
+                "#u8",
+                Expression::List(
+                    "(",
+                    ")",
+                    vec![
+                        Expression::Symbol("1", Position::new(2, 3)),
+                        Expression::Symbol("2", Position::new(4, 5)),
+                        Expression::Symbol("3", Position::new(6, 7))
+                    ],
+                    Position::new(1, 8)
+                )
+                .into(),
+                Position::new(0, 8)
+            )
+        );
+    }
+
+    #[test]
     fn parse_bracket_vector() {
         assert_eq!(
             expression(Input::new_extra("[1 2 3]", Global)).unwrap().1,
