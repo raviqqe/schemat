@@ -7,7 +7,7 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, take_until, take_while, take_while1},
     character::complete::{char, multispace0, multispace1, none_of, satisfy, space0},
-    combinator::{all_consuming, cut, map, opt, recognize, value},
+    combinator::{all_consuming, cut, map, not, opt, peek, recognize, value},
     error::context,
     multi::{fold_many0, many0_count, many1_count},
     sequence::{delimited, preceded, terminated, tuple},
@@ -103,8 +103,12 @@ fn expression<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A
         context(
             "quote",
             map(
-                token(positioned(tuple((quote, expression)))),
-                move |((sign, expression), position)| {
+                token(positioned(tuple((
+                    quote,
+                    peek(not(multispace1)),
+                    expression,
+                )))),
+                move |((sign, _, expression), position)| {
                     Expression::Quote(&sign, Box::new_in(expression, allocator.clone()), position)
                 },
             ),
