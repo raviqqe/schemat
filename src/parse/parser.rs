@@ -558,7 +558,7 @@ mod tests {
         }
 
         #[test]
-        fn parse_symbols_and_quoted_list() {
+        fn parse_symbol_and_quoted_list() {
             assert_eq!(
                 tuple((expression, expression))(Input::new_extra("#u8 ()", Global))
                     .unwrap()
@@ -566,6 +566,18 @@ mod tests {
                 (
                     Expression::Symbol("#u8", Position::new(0, 3)),
                     Expression::List("(", ")", vec![], Position::new(4, 6))
+                )
+            );
+        }
+
+        #[test]
+        fn parse_quote_with_space() {
+            assert_eq!(
+                expression(Input::new_extra("' foo", Global)).unwrap().1,
+                Expression::Quote(
+                    "'",
+                    Expression::Symbol("foo", Position::new(2, 5)).into(),
+                    Position::new(0, 5)
                 )
             );
         }
