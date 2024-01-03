@@ -103,12 +103,8 @@ fn expression<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A
         context(
             "quote",
             map(
-                token(positioned(tuple((
-                    quote,
-                    peek(not(multispace1)),
-                    expression,
-                )))),
-                move |((sign, _, expression), position)| {
+                token(positioned(tuple((quote, expression)))),
+                move |((sign, expression), position)| {
                     Expression::Quote(&sign, Box::new_in(expression, allocator.clone()), position)
                 },
             ),
@@ -126,7 +122,7 @@ fn quote<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
         tag(",@"),
         tag(","),
         hash_semicolon,
-        recognize(tuple((tag("#"), opt(raw_symbol)))),
+        recognize(tuple((tag("#"), opt(raw_symbol), peek(not(multispace1))))),
     ))(input)
 }
 
