@@ -552,6 +552,19 @@ mod tests {
                 )
             );
         }
+
+        #[test]
+        fn parse_symbols_and_quoted_list() {
+            assert_eq!(
+                tuple((expression, expression))(Input::new_extra("#u8 ()", Global))
+                    .unwrap()
+                    .1,
+                (
+                    Expression::Symbol("#u8", Position::new(0, 3)),
+                    Expression::List("(", ")", vec![], Position::new(4, 6))
+                )
+            );
+        }
     }
 
     mod hash_directive {
