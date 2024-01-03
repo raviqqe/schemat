@@ -16,7 +16,7 @@ use nom::{
 use std::alloc::Allocator;
 
 const HASH_CHARACTER: char = '#';
-const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&|~^.:\\";
+const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&|~^.:";
 
 pub type IResult<'a, T, A> = nom::IResult<Input<'a, A>, T, NomError<'a, A>>;
 
@@ -142,7 +142,7 @@ fn list_like<'a, A: Allocator + Clone>(
         map(
             token(positioned(tuple((
                 sign(left),
-                tuple((many0(expression), sign(right))),
+                cut(tuple((many0(expression), sign(right)))),
             )))),
             |((left, (expressions, right)), position)| {
                 Expression::List(&left, &right, expressions, position)
