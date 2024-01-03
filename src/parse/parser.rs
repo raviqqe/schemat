@@ -7,7 +7,7 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, take_until, take_while, take_while1},
     character::complete::{char, multispace0, multispace1, none_of, satisfy, space0},
-    combinator::{all_consuming, cut, map, recognize, value},
+    combinator::{all_consuming, cut, map, not, opt, peek, recognize, value},
     error::context,
     multi::{fold_many0, many0_count, many1_count},
     sequence::{delimited, preceded, terminated, tuple},
@@ -16,7 +16,7 @@ use nom::{
 use std::alloc::Allocator;
 
 const HASH_CHARACTER: char = '#';
-const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&|~^.:\\";
+const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&|~^.:";
 
 pub type IResult<'a, T, A> = nom::IResult<Input<'a, A>, T, NomError<'a, A>>;
 
@@ -98,18 +98,22 @@ fn expression<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A
     let allocator = input.extra.clone();
 
     alt((
-        context("symbol", symbol),
         context("list", list_like("(", ")")),
         context("string", string),
         context(
             "quote",
             map(
-                token(positioned(tuple((quote, expression)))),
-                move |((sign, expression), position)| {
+                token(positioned(tuple((
+                    quote,
+                    peek(not(multispace1)),
+                    expression,
+                )))),
+                move |((sign, _, expression), position)| {
                     Expression::Quote(&sign, Box::new_in(expression, allocator.clone()), position)
                 },
             ),
         ),
+        context("symbol", symbol),
         context("vector", list_like("[", "]")),
         context("map", list_like("{", "}")),
     ))(input)
@@ -122,7 +126,7 @@ fn quote<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
         tag(",@"),
         tag(","),
         hash_semicolon,
-        tag("#"),
+        recognize(tuple((tag("#"), opt(raw_symbol)))),
     ))(input)
 }
 
@@ -399,6 +403,30 @@ mod tests {
     }
 
     #[test]
+    fn parse_byte_vector() {
+        assert_eq!(
+            expression(Input::new_extra("#u8(1 2 3)", Global))
+                .unwrap()
+                .1,
+            Expression::Quote(
+                "#u8",
+                Expression::List(
+                    "(",
+                    ")",
+                    vec![
+                        Expression::Symbol("1", Position::new(4, 5)),
+                        Expression::Symbol("2", Position::new(6, 7)),
+                        Expression::Symbol("3", Position::new(8, 9))
+                    ],
+                    Position::new(3, 10)
+                )
+                .into(),
+                Position::new(0, 10)
+            )
+        );
+    }
+
+    #[test]
     fn parse_bracket_vector() {
         assert_eq!(
             expression(Input::new_extra("[1 2 3]", Global)).unwrap().1,
@@ -521,6 +549,19 @@ mod tests {
                     ",@",
                     Expression::Symbol("foo", Position::new(2, 5)).into(),
                     Position::new(0, 5)
+                )
+            );
+        }
+
+        #[test]
+        fn parse_symbols_and_quoted_list() {
+            assert_eq!(
+                tuple((expression, expression))(Input::new_extra("#u8 ()", Global))
+                    .unwrap()
+                    .1,
+                (
+                    Expression::Symbol("#u8", Position::new(0, 3)),
+                    Expression::List("(", ")", vec![], Position::new(4, 6))
                 )
             );
         }
