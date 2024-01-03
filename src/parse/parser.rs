@@ -142,7 +142,7 @@ fn list_like<'a, A: Allocator + Clone>(
         map(
             token(positioned(tuple((
                 sign(left),
-                cut(tuple((many0(expression), sign(right)))),
+                tuple((many0(expression), sign(right))),
             )))),
             |((left, (expressions, right)), position)| {
                 Expression::List(&left, &right, expressions, position)
