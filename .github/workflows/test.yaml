@@ -9,19 +9,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2
+      - uses: raviqqe/cargo-cache@v1
       - run: cargo build
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2
+      - uses: raviqqe/cargo-cache@v1
       - run: cargo test
   coverage:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2
+      - uses: raviqqe/cargo-cache@v1
       - run: tools/coverage.sh
       - uses: codecov/codecov-action@v3
         with:
