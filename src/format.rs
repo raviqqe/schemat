@@ -634,7 +634,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\na"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     foo
@@ -656,7 +657,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\n\na"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     foo
@@ -681,7 +683,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\na"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     ;bar
@@ -700,7 +703,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\n\na"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     ;bar
@@ -723,7 +727,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\n\n\na"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     ;bar
@@ -747,7 +752,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\n\n\n\na"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     ;bar
@@ -772,7 +778,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\n\n\n"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     foo
@@ -800,7 +807,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\n\n\n"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     (foo
@@ -820,7 +828,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\na"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     foo ;bar
@@ -841,7 +850,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\na"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     foo ;bar ;baz
@@ -864,7 +874,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\n\n"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     ( ;bar
@@ -891,7 +902,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\n\n\n"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     (f
@@ -911,7 +923,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\n\n"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     foo
@@ -934,7 +947,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\n\n\n"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     foo
@@ -958,7 +972,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\n\n\n\n"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     foo
@@ -985,7 +1000,8 @@ mod tests {
                     &[HashDirective::new("foo", Position::new(0, 0))],
                     &PositionMap::new("\n"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     #foo
@@ -1026,7 +1042,8 @@ mod tests {
                     &[HashDirective::new("foo", Position::new(0, 0))],
                     &PositionMap::new("\n"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     #foo
