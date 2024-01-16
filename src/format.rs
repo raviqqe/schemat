@@ -4,10 +4,11 @@ use crate::{
     position::Position,
     position_map::PositionMap,
 };
+use core::fmt;
 use mfmt::{
     empty, line, sequence,
     utility::{count_lines, is_empty},
-    Builder, Document,
+    Builder, Document, FormatOptions,
 };
 use std::alloc::Allocator;
 
@@ -19,12 +20,20 @@ pub fn format<A: Allocator + Clone>(
     hash_directives: &[HashDirective],
     position_map: &PositionMap,
     allocator: A,
-) -> String {
-    mfmt::format(&compile_module(
-        &mut Context::new(comments, position_map, Builder::new(allocator)),
-        module,
-        hash_directives,
-    ))
+) -> Result<String, fmt::Error> {
+    let mut string = Default::default();
+
+    mfmt::format(
+        &compile_module(
+            &mut Context::new(comments, position_map, Builder::new(allocator)),
+            module,
+            hash_directives,
+        ),
+        &mut string,
+        FormatOptions::new(2),
+    )?;
+
+    Ok(string)
 }
 
 fn compile_module<'a, A: Allocator + Clone + 'a>(
@@ -295,7 +304,8 @@ mod tests {
                 &[],
                 &PositionMap::new("(foo bar)"),
                 Global,
-            ),
+            )
+            .unwrap(),
             "(foo bar)\n"
         );
     }
@@ -317,7 +327,8 @@ mod tests {
                 &[],
                 &PositionMap::new("(foo\nbar)"),
                 Global,
-            ),
+            )
+            .unwrap(),
             indoc!(
                 "
                 (foo
@@ -346,7 +357,8 @@ mod tests {
                 &[],
                 &PositionMap::new("a\nb"),
                 Global,
-            ),
+            )
+            .unwrap(),
             indoc!(
                 "
                 (foo bar
@@ -370,7 +382,8 @@ mod tests {
                 &[],
                 &PositionMap::new("'foo"),
                 Global,
-            ),
+            )
+            .unwrap(),
             "'foo\n"
         );
     }
@@ -388,7 +401,8 @@ mod tests {
                 &[],
                 &PositionMap::new("'foo"),
                 Global,
-            ),
+            )
+            .unwrap(),
             ",foo\n"
         );
     }
@@ -396,13 +410,14 @@ mod tests {
     #[test]
     fn format_string() {
         assert_eq!(
-            format::<Global>(
+            format(
                 &[Expression::String("foo", Position::new(0, 3))],
                 &[],
                 &[],
                 &PositionMap::new("\"foo\""),
                 Global,
-            ),
+            )
+            .unwrap(),
             "\"foo\"\n"
         );
     }
@@ -410,13 +425,14 @@ mod tests {
     #[test]
     fn format_symbol() {
         assert_eq!(
-            format::<Global>(
+            format(
                 &[Expression::Symbol("foo", Position::new(0, 3))],
                 &[],
                 &[],
                 &PositionMap::new("foo"),
                 Global,
-            ),
+            )
+            .unwrap(),
             "foo\n"
         );
     }
@@ -438,7 +454,8 @@ mod tests {
                 &[],
                 &PositionMap::new("[foo bar]"),
                 Global,
-            ),
+            )
+            .unwrap(),
             "[foo bar]\n"
         );
     }
@@ -469,7 +486,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\n\n\na"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     ((foo
@@ -496,7 +514,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\na"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     (foo
@@ -523,7 +542,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\n\na"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     (foo
@@ -559,7 +579,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\n\n\na"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     ((foo
@@ -585,7 +606,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\n\n"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     (
@@ -603,7 +625,7 @@ mod tests {
         #[test]
         fn keep_no_blank_line() {
             assert_eq!(
-                format::<Global>(
+                format(
                     &[
                         Expression::Symbol("foo", Position::new(0, 1)),
                         Expression::Symbol("bar", Position::new(1, 2))
@@ -612,7 +634,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\na"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     foo
@@ -625,7 +648,7 @@ mod tests {
         #[test]
         fn keep_blank_line() {
             assert_eq!(
-                format::<Global>(
+                format(
                     &[
                         Expression::Symbol("foo", Position::new(0, 1)),
                         Expression::Symbol("bar", Position::new(2, 3))
@@ -634,7 +657,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\n\na"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     foo
@@ -653,13 +677,14 @@ mod tests {
         #[test]
         fn format_block_comment() {
             assert_eq!(
-                format::<Global>(
+                format(
                     &[Expression::Symbol("foo", Position::new(1, 2))],
                     &[Comment::new("bar", Position::new(0, 1))],
                     &[],
                     &PositionMap::new("\na"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     ;bar
@@ -672,13 +697,14 @@ mod tests {
         #[test]
         fn format_block_comment_with_extra_line() {
             assert_eq!(
-                format::<Global>(
+                format(
                     &[Expression::Symbol("foo", Position::new(2, 3))],
                     &[Comment::new("bar", Position::new(0, 1))],
                     &[],
                     &PositionMap::new("\n\na"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     ;bar
@@ -692,7 +718,7 @@ mod tests {
         #[test]
         fn format_block_comments() {
             assert_eq!(
-                format::<Global>(
+                format(
                     &[Expression::Symbol("foo", Position::new(3, 4))],
                     &[
                         Comment::new("bar", Position::new(0, 1)),
@@ -701,7 +727,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\n\n\na"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     ;bar
@@ -716,7 +743,7 @@ mod tests {
         #[test]
         fn format_block_comments_with_extra_line() {
             assert_eq!(
-                format::<Global>(
+                format(
                     &[Expression::Symbol("foo", Position::new(4, 5))],
                     &[
                         Comment::new("bar", Position::new(0, 1)),
@@ -725,7 +752,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\n\n\n\na"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     ;bar
@@ -741,7 +769,7 @@ mod tests {
         #[test]
         fn format_block_comment_after_expression() {
             assert_eq!(
-                format::<Global>(
+                format(
                     &[
                         Expression::Symbol("foo", Position::new(0, 1)),
                         Expression::Symbol("baz", Position::new(2, 3))
@@ -750,7 +778,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\n\n\n"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     foo
@@ -778,7 +807,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\n\n\n"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     (foo
@@ -792,13 +822,14 @@ mod tests {
         #[test]
         fn format_line_comment() {
             assert_eq!(
-                format::<Global>(
+                format(
                     &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[Comment::new("bar", Position::new(0, 1))],
                     &[],
                     &PositionMap::new("\na"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     foo ;bar
@@ -810,7 +841,7 @@ mod tests {
         #[test]
         fn format_line_comments() {
             assert_eq!(
-                format::<Global>(
+                format(
                     &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[
                         Comment::new("bar", Position::new(0, 1)),
@@ -819,7 +850,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\na"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     foo ;bar ;baz
@@ -842,7 +874,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\n\n"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     ( ;bar
@@ -869,7 +902,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\n\n\n"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     (f
@@ -883,13 +917,14 @@ mod tests {
         #[test]
         fn format_remaining_block_comment() {
             assert_eq!(
-                format::<Global>(
+                format(
                     &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[Comment::new("bar", Position::new(1, 2))],
                     &[],
                     &PositionMap::new("\n\n"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     foo
@@ -903,7 +938,7 @@ mod tests {
         #[test]
         fn format_remaining_block_comments() {
             assert_eq!(
-                format::<Global>(
+                format(
                     &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[
                         Comment::new("bar", Position::new(1, 2)),
@@ -912,7 +947,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\n\n\n"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     foo
@@ -927,7 +963,7 @@ mod tests {
         #[test]
         fn format_remaining_block_comments_with_extra_line() {
             assert_eq!(
-                format::<Global>(
+                format(
                     &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[
                         Comment::new("bar", Position::new(1, 2)),
@@ -936,7 +972,8 @@ mod tests {
                     &[],
                     &PositionMap::new("\n\n\n\n"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     foo
@@ -957,13 +994,14 @@ mod tests {
         #[test]
         fn format_hash_directive() {
             assert_eq!(
-                format::<Global>(
+                format(
                     &[],
                     &[],
                     &[HashDirective::new("foo", Position::new(0, 0))],
                     &PositionMap::new("\n"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     #foo
@@ -975,7 +1013,7 @@ mod tests {
         #[test]
         fn format_hash_directives() {
             assert_eq!(
-                format::<Global>(
+                format(
                     &[],
                     &[],
                     &[
@@ -984,7 +1022,8 @@ mod tests {
                     ],
                     &PositionMap::new("\n\n\n"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     #foo
@@ -997,13 +1036,14 @@ mod tests {
         #[test]
         fn format_hash_directive_with_expression() {
             assert_eq!(
-                format::<Global>(
+                format(
                     &[Expression::Symbol("bar", Position::new(0, 0))],
                     &[],
                     &[HashDirective::new("foo", Position::new(0, 0))],
                     &PositionMap::new("\n"),
                     Global,
-                ),
+                )
+                .unwrap(),
                 indoc!(
                     "
                     #foo
