@@ -5,11 +5,7 @@ use crate::{
     position_map::PositionMap,
 };
 use core::fmt;
-use mfmt::{
-    empty, line, sequence,
-    utility::{count_lines, is_empty},
-    Builder, Document, FormatOptions,
-};
+use mfmt::{empty, line, sequence, utility::is_empty, Builder, Document, FormatOptions};
 use std::alloc::Allocator;
 
 const COMMENT_PREFIX: &str = ";";
@@ -64,11 +60,11 @@ fn compile_module<'a, A: Allocator + Clone + 'a>(
     ]
     .into_iter()
     .fold(empty(), |all, document| {
-        if count_lines(&document) == 0 {
+        if is_empty(&document) {
             all
         } else {
             context.builder().sequence([
-                if count_lines(&all) == 0 {
+                if is_empty(&all) {
                     empty()
                 } else {
                     context.builder().sequence([all, line()])
