@@ -64,7 +64,7 @@ fn compile_module<'a, A: Allocator + Clone + 'a>(
     ]
     .into_iter()
     .fold(empty(), |all, document| {
-        if count_lines(&document) == 0 {
+        if is_empty(&document) {
             all
         } else {
             context.builder().sequence([
