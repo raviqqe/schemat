@@ -121,10 +121,10 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
 
     let builder = context.builder().clone();
 
-    builder.sequence(
-        [compile_line_comment(context, position, |_| left.into())]
-            .into_iter()
-            .chain([builder.offside(
+    builder.sequence([
+        compile_line_comment(context, position, |_| left.into()),
+        builder.indent(
+            builder.offside(
                 builder.sequence(
                     [builder.flatten(compile_expressions(context, first))]
                         .into_iter()
@@ -144,9 +144,10 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
                 ),
                 // TODO Check if an expression is data or not.
                 true,
-            )])
-            .chain([right.into()]),
-    )
+            ),
+        ),
+        right.into(),
+    ])
 }
 
 fn compile_expressions<'a, A: Allocator + Clone + 'a>(
@@ -337,7 +338,7 @@ mod tests {
             indoc!(
                 "
                 (foo
-                 bar)
+                  bar)
                 "
             )
         );
@@ -367,8 +368,8 @@ mod tests {
             indoc!(
                 "
                 (foo bar
-                 baz
-                 qux)
+                  baz
+                  qux)
                 "
             )
         );
@@ -496,7 +497,7 @@ mod tests {
                 indoc!(
                     "
                     ((foo
-                      bar))
+                        bar))
                     "
                 )
             );
@@ -524,7 +525,7 @@ mod tests {
                 indoc!(
                     "
                     (foo
-                     bar)
+                      bar)
                     "
                 )
             );
@@ -553,7 +554,7 @@ mod tests {
                     "
                     (foo
 
-                     bar)
+                      bar)
                     "
                 )
             );
@@ -589,9 +590,9 @@ mod tests {
                 indoc!(
                     "
                     ((foo
-                      bar)
+                        bar)
 
-                     baz)
+                      baz)
                     "
                 )
             );
@@ -616,7 +617,7 @@ mod tests {
                 indoc!(
                     "
                     (
-                     foo)
+                      foo)
                     "
                 )
             );
@@ -817,8 +818,8 @@ mod tests {
                 indoc!(
                     "
                     (foo
-                     ;bar
-                     baz)
+                      ;bar
+                      baz)
                     "
                 )
             );
@@ -884,7 +885,7 @@ mod tests {
                 indoc!(
                     "
                     ( ;bar
-                     foo)
+                      foo)
                     "
                 )
             );
@@ -912,8 +913,8 @@ mod tests {
                 indoc!(
                     "
                     (f
-                     ;foo
-                     x)
+                      ;foo
+                      x)
                     "
                 )
             );
