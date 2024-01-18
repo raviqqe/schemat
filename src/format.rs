@@ -1250,6 +1250,45 @@ mod tests {
                     )
                 );
             }
+
+            #[test]
+            fn format_nested_unquote() {
+                assert_eq!(
+                    format(
+                        &[Expression::Quote(
+                            ",",
+                            Expression::List(
+                                "(",
+                                ")",
+                                vec![Expression::List(
+                                    "(",
+                                    ")",
+                                    vec![
+                                        Expression::Symbol("foo", Position::new(0, 1)),
+                                        Expression::Symbol("bar", Position::new(7, 8))
+                                    ],
+                                    Position::new(0, 1)
+                                )
+                                .into(),],
+                                Position::new(0, 1)
+                            )
+                            .into(),
+                            Position::new(0, 1)
+                        )],
+                        &[],
+                        &[],
+                        &PositionMap::new(",((foo\nbar))"),
+                        Global,
+                    )
+                    .unwrap(),
+                    indoc!(
+                        "
+                        ,((foo
+                            bar))
+                        "
+                    )
+                );
+            }
         }
     }
 }
