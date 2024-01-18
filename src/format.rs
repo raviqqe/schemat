@@ -126,7 +126,7 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
             .into_iter()
             .chain([builder.offside(
                 builder.sequence(
-                    [builder.flatten(builder.indent(compile_expressions(context, first)))]
+                    [builder.flatten(compile_expressions(context, first))]
                         .into_iter()
                         .chain(match (first.last(), last.first()) {
                             (Some(first), Some(last)) if has_extra_line(context, first, last) => {
@@ -137,9 +137,9 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
                         .chain(if last.is_empty() {
                             None
                         } else {
-                            Some(builder.r#break(builder.indent(
+                            Some(builder.r#break(
                                 builder.sequence([line(), compile_expressions(context, last)]),
-                            )))
+                            ))
                         }),
                 ),
             )])
