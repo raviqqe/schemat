@@ -648,11 +648,9 @@ mod tests {
                                 Expression::Symbol("bar", Position::new(6, 7))
                             ],
                             Position::new(0, 1)
-                        )
-                        .into(),],
+                        ),],
                         Position::new(0, 1)
-                    )
-                    .into()],
+                    )],
                     &[],
                     &[],
                     &PositionMap::new("((foo\nbar))"),
@@ -685,12 +683,10 @@ mod tests {
                                     Expression::Symbol("baz", Position::new(10, 11))
                                 ],
                                 Position::new(0, 1)
-                            )
-                            .into(),
+                            ),
                         ],
                         Position::new(0, 1)
-                    )
-                    .into()],
+                    )],
                     &[],
                     &[],
                     &PositionMap::new("((foo bar\nbaz))"),
@@ -1264,8 +1260,7 @@ mod tests {
                                         Expression::Symbol("bar", Position::new(0, 1))
                                     ],
                                     Position::new(0, 1)
-                                )
-                                .into(),],
+                                ),],
                                 Position::new(0, 1)
                             )
                             .into(),
@@ -1302,8 +1297,7 @@ mod tests {
                                         Expression::Symbol("bar", Position::new(7, 8))
                                     ],
                                     Position::new(0, 1)
-                                )
-                                .into(),],
+                                ),],
                                 Position::new(0, 1)
                             )
                             .into(),
@@ -1341,8 +1335,7 @@ mod tests {
                                         Expression::Symbol("bar", Position::new(7, 8))
                                     ],
                                     Position::new(0, 1)
-                                )
-                                .into(),],
+                                ),],
                                 Position::new(0, 1)
                             )
                             .into(),
