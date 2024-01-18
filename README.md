@@ -4,7 +4,7 @@
 [![Crate](https://img.shields.io/crates/v/schemat.svg?style=flat-square)](https://crates.io/crates/schemat)
 [![License](https://img.shields.io/github/license/raviqqe/schemat.svg?style=flat-square)](https://github.com/raviqqe/schemat/blob/main/UNLICENSE)
 
-Scheme/S-expression formatter written in Rust
+Scheme/Lisp/S-expression formatter written in Rust.
 
 It supports:
 
@@ -12,7 +12,7 @@ It supports:
   - Parenthesis: `(` and `)`
   - Brackets: `[` and `]`
   - Braces: `{` and `}`
-- Comments
+- Comments: Lines starting with `;`
 - Quotes: `'`, `` ` ``, and `,`
 - Hash directives
   - Shebang (e.g. `#!/usr/bin/env gsi`)
