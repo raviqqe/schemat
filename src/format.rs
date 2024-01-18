@@ -152,8 +152,7 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
                             )
                         }),
                 ),
-                // TODO Check if an expression is data or not.
-                true,
+                !data,
             ),
         ),
         right.into(),
@@ -1169,6 +1168,88 @@ mod tests {
                     "
                 )
             );
+        }
+
+        mod nested {
+            use super::*;
+            use pretty_assertions::assert_eq;
+
+            #[test]
+            fn format_nested_lists() {
+                assert_eq!(
+                    format(
+                        &[Expression::Quote(
+                            "'",
+                            Expression::List(
+                                "(",
+                                ")",
+                                vec![Expression::List(
+                                    "(",
+                                    ")",
+                                    vec![
+                                        Expression::Symbol("foo", Position::new(0, 1)),
+                                        Expression::Symbol("bar", Position::new(0, 1))
+                                    ],
+                                    Position::new(0, 1)
+                                )
+                                .into(),],
+                                Position::new(0, 1)
+                            )
+                            .into(),
+                            Position::new(0, 1)
+                        )],
+                        &[],
+                        &[],
+                        &PositionMap::new("'((foo bar))"),
+                        Global,
+                    )
+                    .unwrap(),
+                    indoc!(
+                        "
+                    '((foo bar))
+                    "
+                    )
+                );
+            }
+
+            #[test]
+            fn format_broken_nested_lists() {
+                assert_eq!(
+                    format(
+                        &[Expression::Quote(
+                            "'",
+                            Expression::List(
+                                "(",
+                                ")",
+                                vec![Expression::List(
+                                    "(",
+                                    ")",
+                                    vec![
+                                        Expression::Symbol("foo", Position::new(0, 1)),
+                                        Expression::Symbol("bar", Position::new(7, 8))
+                                    ],
+                                    Position::new(0, 1)
+                                )
+                                .into(),],
+                                Position::new(0, 1)
+                            )
+                            .into(),
+                            Position::new(0, 1)
+                        )],
+                        &[],
+                        &[],
+                        &PositionMap::new("'((foo\nbar))"),
+                        Global,
+                    )
+                    .unwrap(),
+                    indoc!(
+                        "
+                    '((foo
+                       bar))
+                    "
+                    )
+                );
+            }
         }
     }
 }
