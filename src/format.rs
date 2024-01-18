@@ -124,18 +124,27 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
     builder.sequence(
         [compile_line_comment(context, position, |_| left.into())]
             .into_iter()
-            .chain([builder.flatten(builder.indent(compile_expressions(context, first)))])
-            .chain(match (first.last(), last.first()) {
-                (Some(first), Some(last)) if has_extra_line(context, first, last) => Some(line()),
-                _ => None,
-            })
-            .chain(if last.is_empty() {
-                None
-            } else {
-                Some(builder.r#break(
-                    builder.indent(builder.sequence([line(), compile_expressions(context, last)])),
-                ))
-            })
+            .chain(
+                [builder.sequence([
+                    builder.flatten(builder.indent(compile_expressions(context, first)))
+                ])]
+                .into_iter()
+                .chain(match (first.last(), last.first()) {
+                    (Some(first), Some(last)) if has_extra_line(context, first, last) => {
+                        Some(line())
+                    }
+                    _ => None,
+                })
+                .chain(if last.is_empty() {
+                    None
+                } else {
+                    Some(
+                        builder.r#break(builder.indent(
+                            builder.sequence([line(), compile_expressions(context, last)]),
+                        )),
+                    )
+                }),
+            )
             .chain([right.into()]),
     )
 }
