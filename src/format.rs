@@ -335,7 +335,7 @@ mod tests {
             indoc!(
                 "
                 (foo
-                  bar)
+                 bar)
                 "
             )
         );
@@ -365,8 +365,8 @@ mod tests {
             indoc!(
                 "
                 (foo bar
-                  baz
-                  qux)
+                 baz
+                 qux)
                 "
             )
         );
@@ -494,7 +494,7 @@ mod tests {
                 indoc!(
                     "
                     ((foo
-                        bar))
+                      bar))
                     "
                 )
             );
@@ -522,7 +522,7 @@ mod tests {
                 indoc!(
                     "
                     (foo
-                      bar)
+                     bar)
                     "
                 )
             );
@@ -551,7 +551,7 @@ mod tests {
                     "
                     (foo
 
-                      bar)
+                     bar)
                     "
                 )
             );
@@ -614,7 +614,7 @@ mod tests {
                 indoc!(
                     "
                     (
-                      foo)
+                     foo)
                     "
                 )
             );
@@ -815,8 +815,8 @@ mod tests {
                 indoc!(
                     "
                     (foo
-                      ;bar
-                      baz)
+                     ;bar
+                     baz)
                     "
                 )
             );
@@ -882,7 +882,7 @@ mod tests {
                 indoc!(
                     "
                     ( ;bar
-                      foo)
+                     foo)
                     "
                 )
             );
@@ -910,8 +910,8 @@ mod tests {
                 indoc!(
                     "
                     (f
-                      ;foo
-                      x)
+                     ;foo
+                     x)
                     "
                 )
             );
