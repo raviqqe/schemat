@@ -587,9 +587,9 @@ mod tests {
                 indoc!(
                     "
                     ((foo
-                        bar)
+                      bar)
 
-                      baz)
+                     baz)
                     "
                 )
             );
