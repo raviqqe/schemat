@@ -48,7 +48,7 @@ fn compile_module<'a, A: Allocator + Clone + 'a>(
             )])
         },
         {
-            let expressions = compile_expressions(context, module);
+            let expressions = compile_expressions(context, module, false);
 
             if is_empty(&expressions) {
                 empty()
@@ -88,15 +88,19 @@ fn compile_hash_directive<'a, A: Allocator + Clone + 'a>(
 fn compile_expression<'a, A: Allocator + Clone + 'a>(
     context: &mut Context<'a, A>,
     expression: &'a Expression<'a, A>,
+    data: bool,
 ) -> Document<'a> {
     compile_line_comment(context, expression.position(), |context| match expression {
         Expression::List(left, right, expressions, position) => {
-            compile_list(context, expressions, position, left, right)
+            compile_list(context, expressions, position, left, right, data)
         }
         Expression::Quote(sign, expression, _) => {
             let builder = context.builder().clone();
 
-            builder.sequence([(*sign).into(), compile_expression(context, expression)])
+            builder.sequence([
+                (*sign).into(),
+                compile_expression(context, expression, *sign != ","),
+            ])
         }
         Expression::String(string, _) => context.builder().sequence(["\"", *string, "\""]),
         Expression::Symbol(name, _) => (*name).into(),
@@ -109,6 +113,7 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
     position: &Position,
     left: &'a str,
     right: &'a str,
+    data: bool,
 ) -> Document<'a> {
     let line_index = get_line_index(context, position.start());
 
@@ -121,28 +126,43 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
 
     let builder = context.builder().clone();
 
-    builder.sequence(
-        [compile_line_comment(context, position, |_| left.into())]
-            .into_iter()
-            .chain([builder.flatten(builder.indent(compile_expressions(context, first)))])
-            .chain(match (first.last(), last.first()) {
-                (Some(first), Some(last)) if has_extra_line(context, first, last) => Some(line()),
-                _ => None,
-            })
-            .chain(if last.is_empty() {
-                None
-            } else {
-                Some(builder.r#break(
-                    builder.indent(builder.sequence([line(), compile_expressions(context, last)])),
-                ))
-            })
-            .chain([right.into()]),
-    )
+    builder.sequence([
+        compile_line_comment(context, position, |_| left.into()),
+        builder.indent(
+            builder.offside(
+                builder.sequence(
+                    [builder.flatten(compile_expressions(context, first, data))]
+                        .into_iter()
+                        .chain(match (first.last(), last.first()) {
+                            (Some(first), Some(last)) if has_extra_line(context, first, last) => {
+                                Some(line())
+                            }
+                            _ => None,
+                        })
+                        .chain(if last.is_empty() {
+                            None
+                        } else {
+                            Some(
+                                builder.r#break(
+                                    builder.sequence([
+                                        line(),
+                                        compile_expressions(context, last, data),
+                                    ]),
+                                ),
+                            )
+                        }),
+                ),
+                !data,
+            ),
+        ),
+        right.into(),
+    ])
 }
 
 fn compile_expressions<'a, A: Allocator + Clone + 'a>(
     context: &mut Context<'a, A>,
     expressions: &'a [Expression<'a, A>],
+    data: bool,
 ) -> Document<'a> {
     let mut documents =
         Vec::with_capacity_in(2 * expressions.len(), context.builder().allocator().clone());
@@ -158,7 +178,7 @@ fn compile_expressions<'a, A: Allocator + Clone + 'a>(
             });
         }
 
-        documents.push(compile_expression(context, expression));
+        documents.push(compile_expression(context, expression, data));
 
         last_expression = Some(expression);
     }
@@ -612,6 +632,79 @@ mod tests {
                 )
             );
         }
+
+        #[test]
+        fn format_broken_nested_lists() {
+            assert_eq!(
+                format(
+                    &[Expression::List(
+                        "(",
+                        ")",
+                        vec![Expression::List(
+                            "(",
+                            ")",
+                            vec![
+                                Expression::Symbol("foo", Position::new(0, 1)),
+                                Expression::Symbol("bar", Position::new(6, 7))
+                            ],
+                            Position::new(0, 1)
+                        )
+                        .into(),],
+                        Position::new(0, 1)
+                    )
+                    .into()],
+                    &[],
+                    &[],
+                    &PositionMap::new("((foo\nbar))"),
+                    Global,
+                )
+                .unwrap(),
+                indoc!(
+                    "
+                    ((foo
+                        bar))
+                    "
+                )
+            );
+        }
+
+        #[test]
+        fn format_broken_nested_lists_with_offside() {
+            assert_eq!(
+                format(
+                    &[Expression::List(
+                        "(",
+                        ")",
+                        vec![
+                            Expression::Symbol("foo", Position::new(0, 1)),
+                            Expression::List(
+                                "(",
+                                ")",
+                                vec![
+                                    Expression::Symbol("bar", Position::new(0, 1)),
+                                    Expression::Symbol("baz", Position::new(10, 11))
+                                ],
+                                Position::new(0, 1)
+                            )
+                            .into(),
+                        ],
+                        Position::new(0, 1)
+                    )
+                    .into()],
+                    &[],
+                    &[],
+                    &PositionMap::new("((foo bar\nbaz))"),
+                    Global,
+                )
+                .unwrap(),
+                indoc!(
+                    "
+                    (foo (bar
+                          baz))
+                    "
+                )
+            );
+        }
     }
 
     mod module {
@@ -1048,6 +1141,227 @@ mod tests {
                     "
                 )
             );
+        }
+    }
+
+    mod data {
+        use super::*;
+        use pretty_assertions::assert_eq;
+
+        #[test]
+        fn format_list() {
+            assert_eq!(
+                format(
+                    &[Expression::Quote(
+                        "'",
+                        Expression::List(
+                            "(",
+                            ")",
+                            vec![
+                                Expression::Symbol("foo", Position::new(0, 1)),
+                                Expression::Symbol("bar", Position::new(0, 1))
+                            ],
+                            Position::new(0, 1)
+                        )
+                        .into(),
+                        Position::new(0, 1)
+                    )],
+                    &[],
+                    &[],
+                    &PositionMap::new("(foo bar)"),
+                    Global,
+                )
+                .unwrap(),
+                "'(foo bar)\n"
+            );
+        }
+
+        #[test]
+        fn format_broken_list() {
+            assert_eq!(
+                format(
+                    &[Expression::Quote(
+                        "'",
+                        Expression::List(
+                            "(",
+                            ")",
+                            vec![
+                                Expression::Symbol("foo", Position::new(0, 1)),
+                                Expression::Symbol("bar", Position::new(6, 7))
+                            ],
+                            Position::new(0, 1)
+                        )
+                        .into(),
+                        Position::new(0, 1)
+                    )],
+                    &[],
+                    &[],
+                    &PositionMap::new("'(foo\nbar)"),
+                    Global,
+                )
+                .unwrap(),
+                indoc!(
+                    "
+                    '(foo
+                      bar)
+                    "
+                )
+            );
+        }
+
+        #[test]
+        fn format_broken_list_with_empty_line() {
+            assert_eq!(
+                format(
+                    &[Expression::Quote(
+                        "'",
+                        Expression::List(
+                            "(",
+                            ")",
+                            vec![
+                                Expression::Symbol("foo", Position::new(3, 4)),
+                                Expression::Symbol("bar", Position::new(3, 4))
+                            ],
+                            Position::new(0, 1)
+                        )
+                        .into(),
+                        Position::new(0, 1)
+                    )],
+                    &[],
+                    &[],
+                    &PositionMap::new("'(\nfoo\nbar)"),
+                    Global,
+                )
+                .unwrap(),
+                indoc!(
+                    "
+                    '(
+                      foo
+                      bar)
+                    "
+                )
+            );
+        }
+
+        mod nested {
+            use super::*;
+            use pretty_assertions::assert_eq;
+
+            #[test]
+            fn format_nested_lists() {
+                assert_eq!(
+                    format(
+                        &[Expression::Quote(
+                            "'",
+                            Expression::List(
+                                "(",
+                                ")",
+                                vec![Expression::List(
+                                    "(",
+                                    ")",
+                                    vec![
+                                        Expression::Symbol("foo", Position::new(0, 1)),
+                                        Expression::Symbol("bar", Position::new(0, 1))
+                                    ],
+                                    Position::new(0, 1)
+                                )
+                                .into(),],
+                                Position::new(0, 1)
+                            )
+                            .into(),
+                            Position::new(0, 1)
+                        )],
+                        &[],
+                        &[],
+                        &PositionMap::new("'((foo bar))"),
+                        Global,
+                    )
+                    .unwrap(),
+                    indoc!(
+                        "
+                    '((foo bar))
+                    "
+                    )
+                );
+            }
+
+            #[test]
+            fn format_broken_nested_lists() {
+                assert_eq!(
+                    format(
+                        &[Expression::Quote(
+                            "'",
+                            Expression::List(
+                                "(",
+                                ")",
+                                vec![Expression::List(
+                                    "(",
+                                    ")",
+                                    vec![
+                                        Expression::Symbol("foo", Position::new(0, 1)),
+                                        Expression::Symbol("bar", Position::new(7, 8))
+                                    ],
+                                    Position::new(0, 1)
+                                )
+                                .into(),],
+                                Position::new(0, 1)
+                            )
+                            .into(),
+                            Position::new(0, 1)
+                        )],
+                        &[],
+                        &[],
+                        &PositionMap::new("'((foo\nbar))"),
+                        Global,
+                    )
+                    .unwrap(),
+                    indoc!(
+                        "
+                    '((foo
+                       bar))
+                    "
+                    )
+                );
+            }
+
+            #[test]
+            fn format_nested_unquote() {
+                assert_eq!(
+                    format(
+                        &[Expression::Quote(
+                            ",",
+                            Expression::List(
+                                "(",
+                                ")",
+                                vec![Expression::List(
+                                    "(",
+                                    ")",
+                                    vec![
+                                        Expression::Symbol("foo", Position::new(0, 1)),
+                                        Expression::Symbol("bar", Position::new(7, 8))
+                                    ],
+                                    Position::new(0, 1)
+                                )
+                                .into(),],
+                                Position::new(0, 1)
+                            )
+                            .into(),
+                            Position::new(0, 1)
+                        )],
+                        &[],
+                        &[],
+                        &PositionMap::new(",((foo\nbar))"),
+                        Global,
+                    )
+                    .unwrap(),
+                    indoc!(
+                        "
+                        ,((foo
+                            bar))
+                        "
+                    )
+                );
+            }
         }
     }
 }
