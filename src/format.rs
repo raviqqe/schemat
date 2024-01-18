@@ -632,6 +632,41 @@ mod tests {
                 )
             );
         }
+
+        #[test]
+        fn format_broken_nested_lists() {
+            assert_eq!(
+                format(
+                    &[Expression::List(
+                        "(",
+                        ")",
+                        vec![Expression::List(
+                            "(",
+                            ")",
+                            vec![
+                                Expression::Symbol("foo", Position::new(0, 1)),
+                                Expression::Symbol("bar", Position::new(6, 7))
+                            ],
+                            Position::new(0, 1)
+                        )
+                        .into(),],
+                        Position::new(0, 1)
+                    )
+                    .into()],
+                    &[],
+                    &[],
+                    &PositionMap::new("((foo\nbar))"),
+                    Global,
+                )
+                .unwrap(),
+                indoc!(
+                    "
+                    ((foo
+                        bar))
+                    "
+                )
+            );
+        }
     }
 
     mod module {
