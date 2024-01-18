@@ -667,6 +667,44 @@ mod tests {
                 )
             );
         }
+
+        #[test]
+        fn format_broken_nested_lists_with_offside() {
+            assert_eq!(
+                format(
+                    &[Expression::List(
+                        "(",
+                        ")",
+                        vec![
+                            Expression::Symbol("foo", Position::new(0, 1)),
+                            Expression::List(
+                                "(",
+                                ")",
+                                vec![
+                                    Expression::Symbol("bar", Position::new(0, 1)),
+                                    Expression::Symbol("baz", Position::new(10, 11))
+                                ],
+                                Position::new(0, 1)
+                            )
+                            .into(),
+                        ],
+                        Position::new(0, 1)
+                    )
+                    .into()],
+                    &[],
+                    &[],
+                    &PositionMap::new("((foo bar\nbaz))"),
+                    Global,
+                )
+                .unwrap(),
+                indoc!(
+                    "
+                    (foo (bar
+                          baz))
+                    "
+                )
+            );
+        }
     }
 
     mod module {
