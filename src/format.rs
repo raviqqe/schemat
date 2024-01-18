@@ -142,6 +142,8 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
                             ))
                         }),
                 ),
+                // TODO Check if an expression is data or not.
+                true,
             )])
             .chain([right.into()]),
     )
