@@ -23,7 +23,7 @@ use std::{
 #[derive(clap::Parser)]
 #[command(about, version)]
 struct Arguments {
-    #[arg()]
+    #[arg(short, long)]
     check: bool,
 }
 
