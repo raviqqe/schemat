@@ -22,10 +22,13 @@ use std::{
 
 #[derive(clap::Parser)]
 #[command(about, version)]
-struct Arguments {}
+struct Arguments {
+    #[arg()]
+    check: bool,
+}
 
 #[tokio::main]
-fn main() {
+async fn main() {
     if let Err(error) = run(Arguments::parse()) {
         eprintln!("{}", error);
         exit(1)
