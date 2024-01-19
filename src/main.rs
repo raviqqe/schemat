@@ -15,10 +15,16 @@ use crate::{
 use bumpalo::Bump;
 use clap::Parser;
 use futures::future::try_join_all;
-use std::{error::Error, path::Path, process::exit};
+use glob::{GlobError, PatternError};
+use log::error;
+use std::{
+    error::Error,
+    path::{Path, PathBuf},
+    process::ExitCode,
+};
 use tokio::{
     fs::{read_to_string, write},
-    io::{stderr, stdin, stdout, AsyncReadExt, AsyncWriteExt},
+    io::{stdin, stdout, AsyncReadExt, AsyncWriteExt},
 };
 
 #[derive(clap::Parser)]
@@ -33,39 +39,56 @@ struct Arguments {
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> ExitCode {
     if let Err(error) = run(Arguments::parse()).await {
-        eprintln!("{}", error);
-        exit(1)
+        error!("{}", error);
+        ExitCode::FAILURE
+    } else {
+        ExitCode::SUCCESS
     }
 }
 
 async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
     if arguments.paths.is_empty() {
-        return format_stdin().await;
+        format_stdin().await
+    } else if arguments.check {
+        let mut ok = true;
+
+        for (path, path_ok) in try_join_all(read_paths(arguments)?.map(|path| async {
+            let path = path?;
+            let ok = check_path(&path).await?;
+            Ok::<_, Box<dyn Error>>((path, ok))
+        }))
+        .await?
+        {
+            error!("file not formatted: {}", path.display());
+
+            ok &= path_ok;
+        }
+
+        if ok {
+            Ok(())
+        } else {
+            Err("some files are not formatted".into())
+        }
+    } else {
+        try_join_all(read_paths(arguments)?.map(|path| async { format_path(&path?).await }))
+            .await?;
+
+        Ok(())
     }
+}
 
-    try_join_all(
-        arguments
-            .paths
-            .into_iter()
-            .map(|path| glob::glob(&path))
-            .collect::<Result<Vec<_>, _>>()?
-            .into_iter()
-            .flatten()
-            .map(|path| async {
-                let path = path?;
-
-                if arguments.check {
-                    check_path(&path).await
-                } else {
-                    format_path(&path).await
-                }
-            }),
-    )
-    .await?;
-
-    Ok(())
+fn read_paths(
+    arguments: Arguments,
+) -> Result<impl Iterator<Item = Result<PathBuf, GlobError>>, PatternError> {
+    Ok(arguments
+        .paths
+        .into_iter()
+        .map(|path| glob::glob(&path))
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter()
+        .flatten())
 }
 
 async fn format_stdin() -> Result<(), Box<dyn Error>> {
@@ -91,16 +114,10 @@ async fn format_stdin() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-async fn check_path(path: &Path) -> Result<(), Box<dyn Error>> {
+async fn check_path(path: &Path) -> Result<bool, Box<dyn Error>> {
     let source = read_to_string(path).await?;
 
-    if source != format_string(&source)? {
-        stderr()
-            .write_all(format!("file not well formatted: {}\n", path.display()).as_bytes())
-            .await?;
-    }
-
-    Ok(())
+    Ok(source == format_string(&source)?)
 }
 
 async fn format_path(path: &Path) -> Result<(), Box<dyn Error>> {
