@@ -21,12 +21,7 @@ use std::{
 
 #[derive(clap::Parser)]
 #[command(about, version)]
-struct Arguments {
-    #[arg(required(true))]
-    file: PathBuf,
-    #[arg(short = 's', long, default_value_t = 1 << 20)]
-    heap_size: usize,
-}
+struct Arguments {}
 
 fn main() {
     if let Err(error) = run(Arguments::parse()) {
