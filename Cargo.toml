@@ -1,6 +1,6 @@
 [package]
 name = "schemat"
-description = "Code formatter for Scheme, Lisp, and any S-expressions"
+description = "A code formatter for Scheme, Lisp, and any S-expressions"
 version = "0.2.1"
 edition = "2021"
 license = "Unlicense"
