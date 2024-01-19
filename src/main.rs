@@ -18,7 +18,7 @@ use futures::future::try_join_all;
 use std::{error::Error, path::Path, process::exit};
 use tokio::{
     fs::{read_to_string, write},
-    io::{stdin, stdout, AsyncReadExt, AsyncWriteExt},
+    io::{stderr, stdin, stdout, AsyncReadExt, AsyncWriteExt},
 };
 
 #[derive(clap::Parser)]
@@ -94,7 +94,11 @@ async fn format_stdin() -> Result<(), Box<dyn Error>> {
 async fn check_path(path: &Path) -> Result<(), Box<dyn Error>> {
     let source = read_to_string(path).await?;
 
-    format_string(&source)?;
+    if source != format_string(&source)? {
+        stderr()
+            .write(format!("file not well formatted: {}", path.display()).as_bytes())
+            .await?;
+    }
 
     Ok(())
 }
