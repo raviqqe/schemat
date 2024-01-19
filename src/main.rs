@@ -13,6 +13,7 @@ use crate::{
     position_map::PositionMap,
 };
 use bumpalo::Bump;
+use clap::Parser;
 use std::{
     error::Error,
     io::{read_to_string, stdin},
