@@ -15,16 +15,16 @@ use crate::{
 use bumpalo::Bump;
 use clap::Parser;
 use futures::future::try_join_all;
-use std::{collections::BTreeSet, error::Error, path::PathBuf, process::exit};
+use std::{error::Error, path::Path, process::exit};
 use tokio::{
+    fs::{read_to_string, write},
     io::{stdin, stdout, AsyncReadExt, AsyncWriteExt},
-    task::spawn_blocking,
 };
 
 #[derive(clap::Parser)]
 #[command(about, version)]
 struct Arguments {
-    /// Paths of files or directories to format or check the format of.
+    /// Glob patterns of files to format or check the format of.
     #[arg()]
     paths: Vec<String>,
     /// Check if files are formatted correctly.
@@ -45,24 +45,27 @@ async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
         return format_stdin().await;
     }
 
-    let paths = try_join_all(
+    try_join_all(
         arguments
             .paths
             .into_iter()
-            .map(|path| spawn_blocking(move || glob::glob(&path))),
-    )
-    .await?
-    .into_iter()
-    .collect::<Result<Vec<_>, _>>()?
-    .into_iter()
-    .flatten()
-    .collect::<Result<BTreeSet<_>, _>>()?;
+            .map(|path| glob::glob(&path))
+            .collect::<Result<Vec<_>, _>>()?
+            .into_iter()
+            .flatten()
+            .map(|path| async {
+                let path = path?;
 
-    if arguments.check {
-        check(&paths)
-    } else {
-        format_paths(&paths)
-    }
+                if arguments.check {
+                    check_path(&path).await
+                } else {
+                    format_path(&path).await
+                }
+            }),
+    )
+    .await?;
+
+    Ok(())
 }
 
 async fn format_stdin() -> Result<(), Box<dyn Error>> {
@@ -88,10 +91,32 @@ async fn format_stdin() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn check(_paths: &BTreeSet<PathBuf>) -> Result<(), Box<dyn Error>> {
-    todo!()
+async fn check_path(path: &Path) -> Result<(), Box<dyn Error>> {
+    let source = read_to_string(path).await?;
+
+    format_string(&source)?;
+
+    Ok(())
 }
 
-fn format_paths(_paths: &BTreeSet<PathBuf>) -> Result<(), Box<dyn Error>> {
-    todo!()
+async fn format_path(path: &Path) -> Result<(), Box<dyn Error>> {
+    write(path, format_string(&read_to_string(path).await?)?).await?;
+
+    Ok(())
+}
+
+fn format_string(source: &str) -> Result<String, Box<dyn Error>> {
+    let position_map = PositionMap::new(&source);
+    let convert_error = |error: ParseError| error.to_string(&source, &position_map);
+    let allocator = Bump::new();
+
+    let source = format(
+        &parse(&source, &allocator).map_err(convert_error)?,
+        &parse_comments(&source, &allocator).map_err(convert_error)?,
+        &parse_hash_directives(&source, &allocator).map_err(convert_error)?,
+        &position_map,
+        &allocator,
+    )?;
+
+    Ok(source)
 }
