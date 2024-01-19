@@ -48,7 +48,9 @@ async fn main() -> ExitCode {
 }
 
 async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
-    if arguments.paths.is_empty() {
+    if arguments.paths.is_empty() && arguments.check {
+        Err("cannot check stdin".into())
+    } else if arguments.paths.is_empty() {
         format_stdin().await
     } else if arguments.check {
         let mut success = true;
