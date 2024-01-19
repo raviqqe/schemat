@@ -62,7 +62,9 @@ async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
         }))
         .await?
         {
-            eprintln!("file not formatted: {}", path.display());
+            if !path_success {
+                eprintln!("file not formatted: {}", path.display());
+            }
 
             success &= path_success;
         }

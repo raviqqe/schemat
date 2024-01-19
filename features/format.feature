@@ -28,7 +28,7 @@ Feature: Format
     """
       foo
     """
-    Given a file named "bar.scm" with:
+    And a file named "bar.scm" with:
     """
       bar
     """
@@ -47,7 +47,7 @@ Feature: Format
     """
       foo
     """
-    Given a file named "bar.scm" with:
+    And a file named "bar.scm" with:
     """
       bar
     """
