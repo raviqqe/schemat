@@ -15,14 +15,11 @@ use crate::{
 use bumpalo::Bump;
 use clap::Parser;
 use futures::future::try_join_all;
-use std::{
-    collections::BTreeSet,
-    error::Error,
-    io::{read_to_string, stdin},
-    path::PathBuf,
-    process::exit,
+use std::{collections::BTreeSet, error::Error, path::PathBuf, process::exit};
+use tokio::{
+    io::{stdin, stdout, AsyncReadExt, AsyncWriteExt},
+    task::spawn_blocking,
 };
-use tokio::task::spawn_blocking;
 
 #[derive(clap::Parser)]
 #[command(about, version)]
@@ -45,7 +42,7 @@ async fn main() {
 
 async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
     if arguments.paths.is_empty() {
-        return format_stdin();
+        return format_stdin().await;
     }
 
     let paths = try_join_all(
@@ -68,30 +65,33 @@ async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
     }
 }
 
-fn format_stdin() -> Result<(), Box<dyn Error>> {
-    let source = read_to_string(stdin())?;
+async fn format_stdin() -> Result<(), Box<dyn Error>> {
+    let mut source = Default::default();
+    stdin().read_to_string(&mut source).await?;
     let position_map = PositionMap::new(&source);
     let convert_error = |error: ParseError| error.to_string(&source, &position_map);
     let allocator = Bump::new();
 
-    print!(
-        "{}",
-        format(
-            &parse(&source, &allocator).map_err(convert_error)?,
-            &parse_comments(&source, &allocator).map_err(convert_error)?,
-            &parse_hash_directives(&source, &allocator).map_err(convert_error)?,
-            &position_map,
-            &allocator,
-        )?
-    );
+    stdout()
+        .write_all(
+            format(
+                &parse(&source, &allocator).map_err(convert_error)?,
+                &parse_comments(&source, &allocator).map_err(convert_error)?,
+                &parse_hash_directives(&source, &allocator).map_err(convert_error)?,
+                &position_map,
+                &allocator,
+            )?
+            .as_bytes(),
+        )
+        .await?;
 
     Ok(())
 }
 
-fn check(paths: &BTreeSet<PathBuf>) -> Result<(), Box<dyn Error>> {
+fn check(_paths: &BTreeSet<PathBuf>) -> Result<(), Box<dyn Error>> {
     todo!()
 }
 
-fn format_paths(paths: &BTreeSet<PathBuf>) -> Result<(), Box<dyn Error>> {
+fn format_paths(_paths: &BTreeSet<PathBuf>) -> Result<(), Box<dyn Error>> {
     todo!()
 }
