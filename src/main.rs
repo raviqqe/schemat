@@ -19,8 +19,17 @@ use std::{
     process::exit,
 };
 
+#[derive(clap::Parser)]
+#[command(about, version)]
+struct Arguments {
+    #[arg(required(true))]
+    file: PathBuf,
+    #[arg(short = 's', long, default_value_t = 1 << 20)]
+    heap_size: usize,
+}
+
 fn main() {
-    if let Err(error) = run() {
+    if let Err(error) = run(Arguments::parse()) {
         eprintln!("{}", error);
         exit(1)
     }
