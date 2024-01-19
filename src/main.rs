@@ -16,7 +16,6 @@ use bumpalo::Bump;
 use clap::Parser;
 use futures::future::try_join_all;
 use glob::{GlobError, PatternError};
-use log::error;
 use std::{
     error::Error,
     path::{Path, PathBuf},
@@ -24,7 +23,7 @@ use std::{
 };
 use tokio::{
     fs::{read_to_string, write},
-    io::{stdin, stdout, AsyncReadExt, AsyncWriteExt},
+    io::{stderr, stdin, stdout, AsyncReadExt, AsyncWriteExt},
 };
 
 #[derive(clap::Parser)]
@@ -41,7 +40,7 @@ struct Arguments {
 #[tokio::main]
 async fn main() -> ExitCode {
     if let Err(error) = run(Arguments::parse()).await {
-        error!("{}", error);
+        eprintln!("{}", error);
         ExitCode::FAILURE
     } else {
         ExitCode::SUCCESS
@@ -61,7 +60,9 @@ async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
         }))
         .await?
         {
-            error!("file not formatted: {}", path.display());
+            stderr()
+                .write_all(format!("file not formatted: {}\n", path.display()).as_bytes())
+                .await?;
 
             ok &= path_ok;
         }
