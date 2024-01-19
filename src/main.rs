@@ -13,20 +13,25 @@ use crate::{
     position_map::PositionMap,
 };
 use bumpalo::Bump;
+use clap::Parser;
 use std::{
     error::Error,
     io::{read_to_string, stdin},
     process::exit,
 };
 
+#[derive(clap::Parser)]
+#[command(about, version)]
+struct Arguments {}
+
 fn main() {
-    if let Err(error) = run() {
+    if let Err(error) = run(Arguments::parse()) {
         eprintln!("{}", error);
         exit(1)
     }
 }
 
-fn run() -> Result<(), Box<dyn Error>> {
+fn run(_arguments: Arguments) -> Result<(), Box<dyn Error>> {
     let source = read_to_string(stdin())?;
     let position_map = PositionMap::new(&source);
     let convert_error = |error: ParseError| error.to_string(&source, &position_map);
