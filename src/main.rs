@@ -96,7 +96,7 @@ async fn check_path(path: &Path) -> Result<(), Box<dyn Error>> {
 
     if source != format_string(&source)? {
         stderr()
-            .write_all(format!("file not well formatted: {}", path.display()).as_bytes())
+            .write_all(format!("file not well formatted: {}\n", path.display()).as_bytes())
             .await?;
     }
 
