@@ -31,7 +31,7 @@ fn main() {
     }
 }
 
-fn run() -> Result<(), Box<dyn Error>> {
+fn run(_arguments: Arguments) -> Result<(), Box<dyn Error>> {
     let source = read_to_string(stdin())?;
     let position_map = PositionMap::new(&source);
     let convert_error = |error: ParseError| error.to_string(&source, &position_map);
