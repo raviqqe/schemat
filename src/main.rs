@@ -96,7 +96,7 @@ async fn check_path(path: &Path) -> Result<(), Box<dyn Error>> {
 
     if source != format_string(&source)? {
         stderr()
-            .write(format!("file not well formatted: {}", path.display()).as_bytes())
+            .write_all(format!("file not well formatted: {}", path.display()).as_bytes())
             .await?;
     }
 
@@ -110,14 +110,14 @@ async fn format_path(path: &Path) -> Result<(), Box<dyn Error>> {
 }
 
 fn format_string(source: &str) -> Result<String, Box<dyn Error>> {
-    let position_map = PositionMap::new(&source);
-    let convert_error = |error: ParseError| error.to_string(&source, &position_map);
+    let position_map = PositionMap::new(source);
+    let convert_error = |error: ParseError| error.to_string(source, &position_map);
     let allocator = Bump::new();
 
     let source = format(
-        &parse(&source, &allocator).map_err(convert_error)?,
-        &parse_comments(&source, &allocator).map_err(convert_error)?,
-        &parse_hash_directives(&source, &allocator).map_err(convert_error)?,
+        &parse(source, &allocator).map_err(convert_error)?,
+        &parse_comments(source, &allocator).map_err(convert_error)?,
+        &parse_hash_directives(source, &allocator).map_err(convert_error)?,
         &position_map,
         &allocator,
     )?;
