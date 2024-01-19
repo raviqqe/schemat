@@ -4,7 +4,7 @@
 [![Crate](https://img.shields.io/crates/v/schemat.svg?style=flat-square)](https://crates.io/crates/schemat)
 [![License](https://img.shields.io/github/license/raviqqe/schemat.svg?style=flat-square)](https://github.com/raviqqe/schemat/blob/main/UNLICENSE)
 
-Scheme/Lisp/S-expression formatter written in Rust.
+A code formatter for Scheme, Lisp, and any S-expressions.
 
 It supports:
 
