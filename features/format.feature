@@ -41,3 +41,22 @@ Feature: Format
     """
     bar
     """
+
+  Scenario: Format files with a glob
+    Given a file named "foo.scm" with:
+    """
+      foo
+    """
+    Given a file named "bar.scm" with:
+    """
+      bar
+    """
+    When I successfully run `schemat *.scm`
+    Then a file named "foo.scm" should contain exactly:
+    """
+    foo
+    """
+    And a file named "bar.scm" should contain exactly:
+    """
+    bar
+    """
