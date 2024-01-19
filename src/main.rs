@@ -17,12 +17,17 @@ use clap::Parser;
 use std::{
     error::Error,
     io::{read_to_string, stdin},
+    path::PathBuf,
     process::exit,
 };
 
 #[derive(clap::Parser)]
 #[command(about, version)]
 struct Arguments {
+    /// Paths of files or directories to format or check the format of.
+    #[arg()]
+    paths: Vec<PathBuf>,
+    /// Check if files are formatted correctly.
     #[arg(short, long)]
     check: bool,
 }
