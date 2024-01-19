@@ -32,7 +32,7 @@ Feature: Format
     """
       bar
     """
-    When I successfully run `schemat foo.scm`
+    When I successfully run `schemat foo.scm bar.scm`
     Then a file named "foo.scm" should contain exactly:
     """
     foo
