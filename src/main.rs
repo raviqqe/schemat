@@ -23,7 +23,7 @@ use std::{
 };
 use tokio::{
     fs::{read_to_string, write},
-    io::{stderr, stdin, stdout, AsyncReadExt, AsyncWriteExt},
+    io::{stdin, stdout, AsyncReadExt, AsyncWriteExt},
 };
 
 #[derive(clap::Parser)]
@@ -60,9 +60,7 @@ async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
         }))
         .await?
         {
-            stderr()
-                .write_all(format!("file not formatted: {}\n", path.display()).as_bytes())
-                .await?;
+            eprintln!("file not formatted: {}", path.display());
 
             ok &= path_ok;
         }
