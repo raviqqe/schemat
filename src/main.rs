@@ -24,6 +24,7 @@ use std::{
 #[command(about, version)]
 struct Arguments {}
 
+#[tokio::main]
 fn main() {
     if let Err(error) = run(Arguments::parse()) {
         eprintln!("{}", error);
