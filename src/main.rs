@@ -35,7 +35,7 @@ struct Arguments {
     /// Check if files are formatted correctly.
     #[arg(short, long)]
     check: bool,
-    /// Be verbose..
+    /// Be verbose.
     #[arg(short, long)]
     verbose: bool,
 }
