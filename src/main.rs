@@ -57,7 +57,8 @@ async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
     } else if arguments.paths.is_empty() {
         format_stdin().await
     } else if arguments.check {
-        let mut success = true;
+        let mut count = 0;
+        let mut error_count = 0;
 
         for (path, path_success) in try_join_all(read_paths(arguments.paths)?.map(|path| async {
             let path = path?;
@@ -66,19 +67,20 @@ async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
         }))
         .await?
         {
+            count += 1;
+
             if !path_success {
                 eprintln!("{}\t{}", "FAIL".red(), path.display());
+                error_count += 1;
             } else if arguments.verbose {
                 eprintln!("{}\t{}", "OK".green(), path.display());
             }
-
-            success &= path_success;
         }
 
-        if success {
+        if error_count == 0 {
             Ok(())
         } else {
-            Err("some files are not formatted".into())
+            Err(format!("{} / {} file(s) failed", error_count, count).into())
         }
     } else {
         try_join_all(read_paths(arguments.paths)?.map(|path| async { format_path(&path?).await }))
