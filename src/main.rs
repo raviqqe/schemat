@@ -14,6 +14,7 @@ use crate::{
 };
 use bumpalo::Bump;
 use clap::Parser;
+use colored::Colorize;
 use futures::future::try_join_all;
 use glob::{GlobError, PatternError};
 use std::{
@@ -35,6 +36,9 @@ struct Arguments {
     /// Check if files are formatted correctly.
     #[arg(short, long)]
     check: bool,
+    /// Be verbose.
+    #[arg(short, long)]
+    verbose: bool,
 }
 
 #[tokio::main]
@@ -53,40 +57,52 @@ async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
     } else if arguments.paths.is_empty() {
         format_stdin().await
     } else if arguments.check {
-        let mut success = true;
+        let mut count = 0;
+        let mut error_count = 0;
 
-        for (path, path_success) in try_join_all(read_paths(arguments)?.map(|path| async {
+        for (path, path_success) in try_join_all(read_paths(arguments.paths)?.map(|path| async {
             let path = path?;
             let success = check_path(&path).await?;
             Ok::<_, Box<dyn Error>>((path, success))
         }))
         .await?
         {
-            if !path_success {
-                eprintln!("file not formatted: {}", path.display());
-            }
+            count += 1;
 
-            success &= path_success;
+            if !path_success {
+                eprintln!("{}\t{}", "FAIL".red(), path.display());
+                error_count += 1;
+            } else if arguments.verbose {
+                eprintln!("{}\t{}", "OK".green(), path.display());
+            }
         }
 
-        if success {
+        if error_count == 0 {
             Ok(())
         } else {
-            Err("some files are not formatted".into())
+            Err(format!("{} / {} file(s) failed", error_count, count).into())
         }
     } else {
-        try_join_all(read_paths(arguments)?.map(|path| async { format_path(&path?).await }))
-            .await?;
+        for path in try_join_all(read_paths(arguments.paths)?.map(|path| async {
+            let path = path?;
+            format_path(&path).await?;
+            Ok::<_, Box<dyn Error>>(path)
+        }))
+        .await?
+        {
+            if arguments.verbose {
+                eprintln!("formatted {}", path.display());
+            }
+        }
 
         Ok(())
     }
 }
 
 fn read_paths(
-    arguments: Arguments,
+    paths: Vec<String>,
 ) -> Result<impl Iterator<Item = Result<PathBuf, GlobError>>, PatternError> {
-    Ok(arguments
-        .paths
+    Ok(paths
         .into_iter()
         .map(|path| glob::glob(&path))
         .collect::<Result<Vec<_>, _>>()?
