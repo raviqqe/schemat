@@ -70,7 +70,7 @@ Feature: Format
     """
       bar
     """
-    When I successfully run `schemat foo.scm bar.scm`
+    When I successfully run `schemat --verbose foo.scm bar.scm`
     Then a file named "foo.scm" should contain exactly:
     """
     foo
