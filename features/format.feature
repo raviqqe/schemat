@@ -60,3 +60,28 @@ Feature: Format
     """
     bar
     """
+
+  Scenario: Format files with a verbose option
+    Given a file named "foo.scm" with:
+    """
+      foo
+    """
+    And a file named "bar.scm" with:
+    """
+      bar
+    """
+    When I successfully run `schemat foo.scm bar.scm`
+    Then a file named "foo.scm" should contain exactly:
+    """
+    foo
+    """
+    And a file named "bar.scm" should contain exactly:
+    """
+    bar
+    """
+    Then a file named "foo.scm" should contain exactly:
+    """
+    foo
+    """
+    And the stderr should contain "foo.scm"
+    And the stderr should contain "bar.scm"

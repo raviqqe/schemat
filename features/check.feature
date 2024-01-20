@@ -63,6 +63,21 @@ Feature: Check
     And the stderr should not contain "foo.scm"
     And the stderr should contain "bar.scm"
 
+  Scenario: Check files not formatted with a verbose option
+    Given a file named "foo.scm" with:
+    """
+    foo
+
+    """
+    And a file named "bar.scm" with:
+    """
+      bar
+    """
+    When I run `schemat --check --verbose foo.scm bar.scm`
+    Then the exit status should not be 0
+    And the stderr should contain "foo.scm"
+    And the stderr should contain "bar.scm"
+
   Scenario: Fail to check stdin
     Given a file named "foo.scm" with:
     """
