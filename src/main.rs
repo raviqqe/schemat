@@ -58,7 +58,7 @@ async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
     } else if arguments.check {
         let mut success = true;
 
-        for (path, path_success) in try_join_all(read_paths(arguments)?.map(|path| async {
+        for (path, path_success) in try_join_all(read_paths(arguments.paths)?.map(|path| async {
             let path = path?;
             let success = check_path(&path).await?;
             Ok::<_, Box<dyn Error>>((path, success))
@@ -78,7 +78,7 @@ async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
             Err("some files are not formatted".into())
         }
     } else {
-        try_join_all(read_paths(arguments)?.map(|path| async { format_path(&path?).await }))
+        try_join_all(read_paths(arguments.paths)?.map(|path| async { format_path(&path?).await }))
             .await?;
 
         Ok(())
@@ -86,10 +86,9 @@ async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
 }
 
 fn read_paths(
-    arguments: Arguments,
+    paths: Vec<String>,
 ) -> Result<impl Iterator<Item = Result<PathBuf, GlobError>>, PatternError> {
-    Ok(arguments
-        .paths
+    Ok(paths
         .into_iter()
         .map(|path| glob::glob(&path))
         .collect::<Result<Vec<_>, _>>()?
