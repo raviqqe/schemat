@@ -14,6 +14,7 @@ use crate::{
 };
 use bumpalo::Bump;
 use clap::Parser;
+use colored::Colorize;
 use futures::future::try_join_all;
 use glob::{GlobError, PatternError};
 use std::{
@@ -66,7 +67,9 @@ async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
         .await?
         {
             if !path_success {
-                eprintln!("file not formatted: {}", path.display());
+                eprintln!("{}\t{}", "FAIL".red(), path.display());
+            } else if arguments.verbose {
+                eprintln!("{}\t{}", "OK".green(), path.display());
             }
 
             success &= path_success;
