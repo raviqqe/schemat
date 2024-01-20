@@ -83,8 +83,17 @@ async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
             Err(format!("{} / {} file(s) failed", error_count, count).into())
         }
     } else {
-        try_join_all(read_paths(arguments.paths)?.map(|path| async { format_path(&path?).await }))
-            .await?;
+        for path in try_join_all(read_paths(arguments.paths)?.map(|path| async {
+            let path = path?;
+            format_path(&path).await?;
+            Ok::<_, Box<dyn Error>>(path)
+        }))
+        .await?
+        {
+            if arguments.verbose {
+                eprintln!("formatted {}", path.display());
+            }
+        }
 
         Ok(())
     }
