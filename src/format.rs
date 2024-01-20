@@ -18,13 +18,18 @@ pub fn format<A: Allocator + Clone>(
     allocator: A,
 ) -> Result<String, fmt::Error> {
     let mut string = Default::default();
+    let document = compile_module(
+        &mut Context::new(comments, position_map, Builder::new(allocator)),
+        module,
+        hash_directives,
+    );
 
     mfmt::format(
-        &compile_module(
-            &mut Context::new(comments, position_map, Builder::new(allocator)),
-            module,
-            hash_directives,
-        ),
+        &if is_empty(&document) {
+            line()
+        } else {
+            document
+        },
         &mut string,
         FormatOptions::new(2),
     )?;
@@ -302,6 +307,14 @@ mod tests {
     use indoc::indoc;
     use pretty_assertions::assert_eq;
     use std::alloc::Global;
+
+    #[test]
+    fn format_empty() {
+        assert_eq!(
+            format(&[], &[], &[], &PositionMap::new("\n"), Global).unwrap(),
+            "\n"
+        );
+    }
 
     #[test]
     fn format_list() {
