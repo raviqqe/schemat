@@ -225,9 +225,8 @@ fn compile_block_comment<'a, A: Allocator + Clone + 'a>(
     position: &Position,
 ) -> Document<'a> {
     let builder = context.builder().clone();
-    let comments = builder.allocate_slice(
-        context.drain_line_comments_before(get_line_index(context, position.start())),
-    );
+    let comments =
+        builder.allocate_slice(context.drain_comments(get_line_index(context, position.start())));
 
     compile_all_comments(
         context,
@@ -240,14 +239,14 @@ fn compile_remaining_block_comment<'a, A: Allocator + Clone + 'a>(
     context: &mut Context<'a, A>,
 ) -> Document<'a> {
     let builder = context.builder().clone();
-    let comments = builder.allocate_slice(context.drain_line_comments_before(usize::MAX));
+    let comments = builder.allocate_slice(context.drain_comments(usize::MAX));
 
     compile_all_comments(context, comments, None)
 }
 
 fn compile_all_comments<'a, A: Allocator + Clone + 'a>(
     context: &Context<A>,
-    comments: &'a [&'a LineComment<'a>],
+    comments: &'a [&'a Comment<'a>],
     last_line_index: Option<usize>,
 ) -> Document<'a> {
     context.builder().sequence(
@@ -283,7 +282,7 @@ fn has_extra_line<A: Allocator + Clone>(
     let line_index = get_line_index(context, expression.position().start());
 
     context
-        .peek_line_comments_before(line_index)
+        .peek_comments(line_index)
         .next()
         .map(|comment| get_line_index(context, comment.position().start()))
         .unwrap_or(line_index)

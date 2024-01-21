@@ -2,11 +2,28 @@ mod block;
 mod line;
 
 pub use self::{block::BlockComment, line::LineComment};
+use crate::position::Position;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum Comment<'a> {
     Block(BlockComment<'a>),
     Line(LineComment<'a>),
+}
+
+impl<'a> Comment<'a> {
+    pub fn value(&self) -> &str {
+        match self {
+            Self::Block(comment) => comment.value(),
+            Self::Line(comment) => comment.value(),
+        }
+    }
+
+    pub fn position(&self) -> &Position {
+        match self {
+            Self::Block(comment) => comment.position(),
+            Self::Line(comment) => comment.position(),
+        }
+    }
 }
 
 impl<'a> From<BlockComment<'a>> for Comment<'a> {
