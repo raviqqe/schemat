@@ -225,7 +225,7 @@ fn blank<A: Allocator + Clone>(input: Input<A>) -> IResult<(), A> {
 }
 
 fn comment<A: Allocator + Clone>(input: Input<A>) -> IResult<Comment, A> {
-    alt((line_comment,))(input)
+    alt((line_comment, block_comment))(input)
 }
 
 fn line_comment<A: Allocator + Clone>(input: Input<A>) -> IResult<Comment, A> {
@@ -798,6 +798,37 @@ mod tests {
         #[test]
         fn parse_comment_with_vector() {
             assert_eq!(comments(Input::new_extra("#()", Global)).unwrap().1, vec![]);
+        }
+
+        mod block {
+            use super::*;
+            use pretty_assertions::assert_eq;
+
+            #[test]
+            fn parse_empty_block_comment() {
+                assert_eq!(
+                    comments(Input::new_extra("#||#", Global)).unwrap().1,
+                    vec![]
+                );
+            }
+
+            #[test]
+            fn parse_one_line() {
+                assert_eq!(
+                    comments(Input::new_extra("#|foo|#", Global)).unwrap().1,
+                    vec![]
+                );
+            }
+
+            #[test]
+            fn parse_multi_line() {
+                assert_eq!(
+                    comments(Input::new_extra("#|\nfoo\nbar\nbaz\n|#", Global))
+                        .unwrap()
+                        .1,
+                    vec![]
+                );
+            }
         }
     }
 }
