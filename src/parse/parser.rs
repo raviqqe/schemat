@@ -240,7 +240,11 @@ fn line_comment<A: Allocator + Clone>(input: Input<A>) -> IResult<Comment, A> {
 
 fn block_comment<A: Allocator + Clone>(input: Input<A>) -> IResult<Comment, A> {
     map(
-        positioned_meta(recognize(delimited(tag("#|"), take_until("|"), tag("|#")))),
+        positioned_meta(recognize(delimited(
+            tag("#|"),
+            many0(tuple((not(tag("|#")), anychar))),
+            tag("|#"),
+        ))),
         |(input, position)| Comment::new(&input, position),
     )(input)
 }
