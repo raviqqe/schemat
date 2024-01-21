@@ -110,7 +110,8 @@ fn quote<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
         tag(",@"),
         tag(","),
         hash_semicolon,
-        recognize(tuple((tag("#"), opt(raw_symbol), peek(not(multispace1))))),
+        // recognize(tuple((tag("#"), raw_symbol, peek(not(multispace1))))),
+        tag("#"),
     ))(input)
 }
 
@@ -273,11 +274,19 @@ mod tests {
     fn parse_false() {
         assert_eq!(
             expression(Input::new_extra("#f", Global)).unwrap().1,
-            Expression::Symbol("#f", Position::new(0, 2))
+            Expression::Quote(
+                "#",
+                Expression::Symbol("f", Position::new(1, 2)).into(),
+                Position::new(0, 2)
+            )
         );
         assert_eq!(
             expression(Input::new_extra("#false", Global)).unwrap().1,
-            Expression::Symbol("#false", Position::new(0, 6))
+            Expression::Quote(
+                "#",
+                Expression::Symbol("false", Position::new(1, 6)).into(),
+                Position::new(0, 6)
+            )
         );
     }
 
@@ -285,11 +294,19 @@ mod tests {
     fn parse_true() {
         assert_eq!(
             expression(Input::new_extra("#t", Global)).unwrap().1,
-            Expression::Symbol("#t", Position::new(0, 2))
+            Expression::Quote(
+                "#",
+                Expression::Symbol("t", Position::new(1, 2)).into(),
+                Position::new(0, 2)
+            )
         );
         assert_eq!(
             expression(Input::new_extra("#true", Global)).unwrap().1,
-            Expression::Symbol("#true", Position::new(0, 5))
+            Expression::Quote(
+                "#",
+                Expression::Symbol("true", Position::new(1, 5)).into(),
+                Position::new(0, 5)
+            )
         );
     }
 
@@ -358,28 +375,52 @@ mod tests {
     #[test]
     fn parse_character() {
         assert_eq!(
-            symbol(Input::new_extra("#\\a", Global)).unwrap().1,
-            Expression::Symbol("#\\a", Position::new(0, 3))
+            expression(Input::new_extra("#\\a", Global)).unwrap().1,
+            Expression::Quote(
+                "#",
+                Expression::Symbol("\\a", Position::new(1, 3)).into(),
+                Position::new(0, 3)
+            )
         );
         assert_eq!(
-            symbol(Input::new_extra("#\\(", Global)).unwrap().1,
-            Expression::Symbol("#\\(", Position::new(0, 3))
+            expression(Input::new_extra("#\\(", Global)).unwrap().1,
+            Expression::Quote(
+                "#",
+                Expression::Symbol("\\(", Position::new(1, 3)).into(),
+                Position::new(0, 3)
+            )
         );
         assert_eq!(
-            symbol(Input::new_extra("#\\;", Global)).unwrap().1,
-            Expression::Symbol("#\\;", Position::new(0, 3))
+            expression(Input::new_extra("#\\;", Global)).unwrap().1,
+            Expression::Quote(
+                "#",
+                Expression::Symbol("\\;", Position::new(1, 3)).into(),
+                Position::new(0, 3)
+            )
         );
         assert_eq!(
-            symbol(Input::new_extra("#\\ ", Global)).unwrap().1,
-            Expression::Symbol("#\\ ", Position::new(0, 3))
+            expression(Input::new_extra("#\\ ", Global)).unwrap().1,
+            Expression::Quote(
+                "#",
+                Expression::Symbol("\\ ", Position::new(1, 3)).into(),
+                Position::new(0, 3)
+            )
         );
         assert_eq!(
-            symbol(Input::new_extra("#\\space", Global)).unwrap().1,
-            Expression::Symbol("#\\space", Position::new(0, 7))
+            expression(Input::new_extra("#\\space", Global)).unwrap().1,
+            Expression::Quote(
+                "#",
+                Expression::Symbol("\\space", Position::new(1, 7)).into(),
+                Position::new(0, 7)
+            )
         );
         assert_eq!(
-            symbol(Input::new_extra("#\\\n", Global)).unwrap().1,
-            Expression::Symbol("#\\\n", Position::new(0, 3))
+            expression(Input::new_extra("#\\\n", Global)).unwrap().1,
+            Expression::Quote(
+                "#",
+                Expression::Symbol("\\\n", Position::new(1, 3)).into(),
+                Position::new(0, 3)
+            )
         );
     }
 
