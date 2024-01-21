@@ -33,7 +33,7 @@ pub fn comments<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Comment, A
 
     all_consuming(fold_many0(
         alt((
-            map(none_of("\";#"), |_| None),
+            map(none_of("\";#\\"), |_| None),
             map(raw_string, |_| None),
             map(raw_symbol, |_| None),
             map(quote, |_| None),
