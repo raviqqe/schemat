@@ -826,7 +826,7 @@ mod tests {
                     comments(Input::new_extra("#|\nfoo\nbar\nbaz\n|#", Global))
                         .unwrap()
                         .1,
-                    vec![]
+                    vec![Comment::new("#|foo|#", Position::new(0, 17))]
                 );
             }
         }
