@@ -1,8 +1,4 @@
-use crate::{
-    ast::{Comment, LineComment},
-    position::Position,
-    position_map::PositionMap,
-};
+use crate::{ast::Comment, position::Position, position_map::PositionMap};
 use mfmt::Builder;
 use std::{alloc::Allocator, collections::VecDeque};
 

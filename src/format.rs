@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Comment, Expression, HashDirective, LineComment},
+    ast::{Comment, Expression, HashDirective},
     context::Context,
     position::Position,
     position_map::PositionMap,
@@ -770,6 +770,7 @@ mod tests {
 
     mod comment {
         use super::*;
+        use crate::ast::LineComment;
         use pretty_assertions::assert_eq;
 
         #[test]
