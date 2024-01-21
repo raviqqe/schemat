@@ -715,8 +715,6 @@ mod tests {
     }
 
     mod comment {
-        use crate::ast::LineComment;
-
         use super::*;
         use pretty_assertions::assert_eq;
 
@@ -806,8 +804,6 @@ mod tests {
         }
 
         mod block {
-            use crate::ast::BlockComment;
-
             use super::*;
             use pretty_assertions::assert_eq;
 
