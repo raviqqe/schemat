@@ -808,7 +808,7 @@ mod tests {
             use pretty_assertions::assert_eq;
 
             #[test]
-            fn parse_empty_block_comment() {
+            fn parse_empty() {
                 assert_eq!(
                     block_comment(Input::new_extra("#||#", Global)).unwrap().1,
                     BlockComment::new("#||#", Position::new(0, 4))
