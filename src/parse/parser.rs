@@ -73,8 +73,8 @@ fn raw_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A
                         tuple((
                             char('\\'),
                             cut(alt((
-                                recognize(take_while(is_tail_symbol_character)),
-                                recognize(anychar),
+                                value((), take_while(is_tail_symbol_character)),
+                                value((), anychar),
                             ))),
                         )),
                     ),
