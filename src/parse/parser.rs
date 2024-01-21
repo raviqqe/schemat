@@ -240,11 +240,7 @@ fn line_comment<A: Allocator + Clone>(input: Input<A>) -> IResult<Comment, A> {
 
 fn block_comment<A: Allocator + Clone>(input: Input<A>) -> IResult<Comment, A> {
     map(
-        positioned_meta(delimited(
-            tag("#|"),
-            recognize(many0(not(tag("|#")))),
-            tag("|#"),
-        )),
+        positioned_meta(recognize(delimited(tag("#|"), take_until("|"), tag("|#")))),
         |(input, position)| Comment::new(&input, position),
     )(input)
 }
@@ -807,26 +803,28 @@ mod tests {
             #[test]
             fn parse_empty_block_comment() {
                 assert_eq!(
-                    comments(Input::new_extra("#||#", Global)).unwrap().1,
-                    vec![Comment::new("#||#", Position::new(0, 4))]
+                    block_comment(Input::new_extra("#||#", Global)).unwrap().1,
+                    Comment::new("#||#", Position::new(0, 4))
                 );
             }
 
             #[test]
             fn parse_one_line() {
                 assert_eq!(
-                    comments(Input::new_extra("#|foo|#", Global)).unwrap().1,
-                    vec![Comment::new("#|foo|#", Position::new(0, 7))]
+                    block_comment(Input::new_extra("#|foo|#", Global))
+                        .unwrap()
+                        .1,
+                    Comment::new("#|foo|#", Position::new(0, 7))
                 );
             }
 
             #[test]
             fn parse_multi_line() {
                 assert_eq!(
-                    comments(Input::new_extra("#|\nfoo\nbar\nbaz\n|#", Global))
+                    block_comment(Input::new_extra("#|\nfoo\nbar\nbaz\n|#", Global))
                         .unwrap()
                         .1,
-                    vec![Comment::new("#|foo|#", Position::new(0, 17))]
+                    Comment::new("#|\nfoo\nbar\nbaz\n|#", Position::new(0, 17))
                 );
             }
         }
