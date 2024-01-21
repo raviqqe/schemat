@@ -770,8 +770,6 @@ mod tests {
     }
 
     mod comment {
-        use crate::ast::LineComment;
-
         use super::*;
         use pretty_assertions::assert_eq;
 
