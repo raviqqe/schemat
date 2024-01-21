@@ -8,6 +8,8 @@ use core::fmt;
 use mfmt::{empty, line, sequence, utility::is_empty, Builder, Document, FormatOptions};
 use std::alloc::Allocator;
 
+const COMMENT_PREFIX: &str = ";";
+
 pub fn format<A: Allocator + Clone>(
     module: &[Expression<A>],
     comments: &[Comment],
@@ -212,7 +214,9 @@ fn compile_suffix_comment<'a, A: Allocator + Clone + 'a>(
     builder.sequence(
         context
             .drain_current_line_comment(get_line_index(context, position.start()))
-            .map(|comment| builder.line_suffixes([" ", comment.value().trim_end()])),
+            .map(|comment| {
+                builder.line_suffixes([" ", COMMENT_PREFIX, comment.value().trim_end()])
+            }),
     )
 }
 
@@ -258,6 +262,7 @@ fn compile_all_comments<'a, A: Allocator + Clone + 'a>(
             )
             .map(|(comment, next_line_index)| {
                 context.builder().sequence([
+                    COMMENT_PREFIX.into(),
                     comment.value().trim_end().into(),
                     context.builder().r#break(line()),
                     if get_line_index(context, comment.position().end() - 1) + 1 < next_line_index {
@@ -773,7 +778,7 @@ mod tests {
             assert_eq!(
                 format(
                     &[Expression::Symbol("foo", Position::new(1, 2))],
-                    &[LineComment::new(";bar", Position::new(0, 1)).into()],
+                    &[LineComment::new("bar", Position::new(0, 1)).into()],
                     &[],
                     &PositionMap::new("\na"),
                     Global,
@@ -793,7 +798,7 @@ mod tests {
             assert_eq!(
                 format(
                     &[Expression::Symbol("foo", Position::new(2, 3))],
-                    &[LineComment::new(";bar", Position::new(0, 1)).into()],
+                    &[LineComment::new("bar", Position::new(0, 1)).into()],
                     &[],
                     &PositionMap::new("\n\na"),
                     Global,
@@ -815,8 +820,8 @@ mod tests {
                 format(
                     &[Expression::Symbol("foo", Position::new(3, 4))],
                     &[
-                        LineComment::new(";bar", Position::new(0, 1)).into(),
-                        LineComment::new(";baz", Position::new(1, 2)).into()
+                        LineComment::new("bar", Position::new(0, 1)).into(),
+                        LineComment::new("baz", Position::new(1, 2)).into()
                     ],
                     &[],
                     &PositionMap::new("\n\n\na"),
@@ -840,8 +845,8 @@ mod tests {
                 format(
                     &[Expression::Symbol("foo", Position::new(4, 5))],
                     &[
-                        LineComment::new(";bar", Position::new(0, 1)).into(),
-                        LineComment::new(";baz", Position::new(2, 3)).into()
+                        LineComment::new("bar", Position::new(0, 1)).into(),
+                        LineComment::new("baz", Position::new(2, 3)).into()
                     ],
                     &[],
                     &PositionMap::new("\n\n\n\na"),
@@ -868,7 +873,7 @@ mod tests {
                         Expression::Symbol("foo", Position::new(0, 1)),
                         Expression::Symbol("baz", Position::new(2, 3))
                     ],
-                    &[LineComment::new(";bar", Position::new(1, 2)).into()],
+                    &[LineComment::new("bar", Position::new(1, 2)).into()],
                     &[],
                     &PositionMap::new("\n\n\n"),
                     Global,
@@ -897,7 +902,7 @@ mod tests {
                         ],
                         Position::new(0, 1)
                     )],
-                    &[LineComment::new(";bar", Position::new(1, 2)).into()],
+                    &[LineComment::new("bar", Position::new(1, 2)).into()],
                     &[],
                     &PositionMap::new("\n\n\n"),
                     Global,
@@ -918,7 +923,7 @@ mod tests {
             assert_eq!(
                 format(
                     &[Expression::Symbol("foo", Position::new(0, 1))],
-                    &[LineComment::new(";bar", Position::new(0, 1)).into()],
+                    &[LineComment::new("bar", Position::new(0, 1)).into()],
                     &[],
                     &PositionMap::new("\na"),
                     Global,
@@ -938,8 +943,8 @@ mod tests {
                 format(
                     &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[
-                        LineComment::new(";bar", Position::new(0, 1)).into(),
-                        LineComment::new(";baz", Position::new(0, 1)).into()
+                        LineComment::new("bar", Position::new(0, 1)).into(),
+                        LineComment::new("baz", Position::new(0, 1)).into()
                     ],
                     &[],
                     &PositionMap::new("\na"),
@@ -964,7 +969,7 @@ mod tests {
                         vec![Expression::Symbol("foo", Position::new(1, 2))],
                         Position::new(0, 1)
                     )],
-                    &[LineComment::new(";bar", Position::new(0, 1)).into()],
+                    &[LineComment::new("bar", Position::new(0, 1)).into()],
                     &[],
                     &PositionMap::new("\n\n"),
                     Global,
@@ -992,7 +997,7 @@ mod tests {
                         ],
                         Position::new(0, 1)
                     )],
-                    &[LineComment::new(";foo", Position::new(1, 2)).into()],
+                    &[LineComment::new("foo", Position::new(1, 2)).into()],
                     &[],
                     &PositionMap::new("\n\n\n"),
                     Global,
@@ -1013,7 +1018,7 @@ mod tests {
             assert_eq!(
                 format(
                     &[Expression::Symbol("foo", Position::new(0, 1))],
-                    &[LineComment::new(";bar", Position::new(1, 2)).into()],
+                    &[LineComment::new("bar", Position::new(1, 2)).into()],
                     &[],
                     &PositionMap::new("\n\n"),
                     Global,
@@ -1035,8 +1040,8 @@ mod tests {
                 format(
                     &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[
-                        LineComment::new(";bar", Position::new(1, 2)).into(),
-                        LineComment::new(";baz", Position::new(2, 3)).into()
+                        LineComment::new("bar", Position::new(1, 2)).into(),
+                        LineComment::new("baz", Position::new(2, 3)).into()
                     ],
                     &[],
                     &PositionMap::new("\n\n\n"),
@@ -1060,8 +1065,8 @@ mod tests {
                 format(
                     &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[
-                        LineComment::new(";bar", Position::new(1, 2)).into(),
-                        LineComment::new(";baz", Position::new(3, 4)).into()
+                        LineComment::new("bar", Position::new(1, 2)).into(),
+                        LineComment::new("baz", Position::new(3, 4)).into()
                     ],
                     &[],
                     &PositionMap::new("\n\n\n\n"),
