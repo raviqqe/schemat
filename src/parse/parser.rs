@@ -15,7 +15,6 @@ use nom::{
 };
 use std::alloc::Allocator;
 
-const HASH_CHARACTER: char = '#';
 const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&|~^.:";
 
 pub type IResult<'a, T, A> = nom::IResult<Input<'a, A>, T, NomError<'a, A>>;
@@ -55,17 +54,13 @@ pub fn hash_directives<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Has
 }
 
 fn symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
-    token(raw_symbol)(input)
+    map(token(positioned(raw_symbol)), |(input, position)| {
+        Expression::Symbol(&input, position)
+    })(input)
 }
 
-fn raw_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
-    map(
-        positioned(alt((recognize(tuple((
-            head_symbol_character,
-            many0(tail_symbol_character),
-        ))),))),
-        |(input, position)| Expression::Symbol(&input, position),
-    )(input)
+fn raw_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
+    recognize(tuple((head_symbol_character, many0(tail_symbol_character))))(input)
 }
 
 fn head_symbol_character<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
@@ -79,7 +74,7 @@ fn head_symbol_character<A: Allocator + Clone>(input: Input<A>) -> IResult<Input
 }
 
 fn tail_symbol_character<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
-    alt((head_symbol_character, recognize(char(HASH_CHARACTER))))(input)
+    alt((head_symbol_character, recognize(char('#'))))(input)
 }
 
 fn expression<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
@@ -109,18 +104,10 @@ fn quote<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
         tag("`"),
         tag(",@"),
         tag(","),
-        hash_semicolon,
-        recognize(tuple((
-            tag("#"),
-            raw_symbol,
-            peek(not(alt((multispace1, eof)))),
-        ))),
+        tag("#;"),
         tag("#"),
+        terminated(raw_symbol, peek(not(alt((multispace1, eof))))),
     ))(input)
-}
-
-fn hash_semicolon<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
-    tag("#;")(input)
 }
 
 fn list_like<'a, A: Allocator + Clone>(
@@ -275,46 +262,6 @@ mod tests {
     use std::alloc::Global;
 
     #[test]
-    fn parse_false() {
-        assert_eq!(
-            expression(Input::new_extra("#f", Global)).unwrap().1,
-            Expression::Quote(
-                "#",
-                Expression::Symbol("f", Position::new(1, 2)).into(),
-                Position::new(0, 2)
-            )
-        );
-        assert_eq!(
-            expression(Input::new_extra("#false", Global)).unwrap().1,
-            Expression::Quote(
-                "#",
-                Expression::Symbol("false", Position::new(1, 6)).into(),
-                Position::new(0, 6)
-            )
-        );
-    }
-
-    #[test]
-    fn parse_true() {
-        assert_eq!(
-            expression(Input::new_extra("#t", Global)).unwrap().1,
-            Expression::Quote(
-                "#",
-                Expression::Symbol("t", Position::new(1, 2)).into(),
-                Position::new(0, 2)
-            )
-        );
-        assert_eq!(
-            expression(Input::new_extra("#true", Global)).unwrap().1,
-            Expression::Quote(
-                "#",
-                Expression::Symbol("true", Position::new(1, 5)).into(),
-                Position::new(0, 5)
-            )
-        );
-    }
-
-    #[test]
     fn parse_symbol() {
         assert_eq!(
             expression(Input::new_extra("x", Global)).unwrap().1,
@@ -457,20 +404,25 @@ mod tests {
                 .unwrap()
                 .1,
             Expression::Quote(
-                "#u8",
-                Expression::List(
-                    "(",
-                    ")",
-                    vec![
-                        Expression::Symbol("1", Position::new(4, 5)),
-                        Expression::Symbol("2", Position::new(6, 7)),
-                        Expression::Symbol("3", Position::new(8, 9))
-                    ],
-                    Position::new(3, 10)
+                "#",
+                Expression::Quote(
+                    "u8",
+                    Expression::List(
+                        "(",
+                        ")",
+                        vec![
+                            Expression::Symbol("1", Position::new(4, 5)),
+                            Expression::Symbol("2", Position::new(6, 7)),
+                            Expression::Symbol("3", Position::new(8, 9))
+                        ],
+                        Position::new(3, 10)
+                    )
+                    .into(),
+                    Position::new(1, 10)
                 )
                 .into(),
                 Position::new(0, 10)
-            )
+            ),
         );
     }
 
@@ -511,6 +463,75 @@ mod tests {
                 Position::new(0, 8)
             )
         );
+    }
+
+    mod boolean {
+        use super::*;
+        use pretty_assertions::assert_eq;
+
+        #[test]
+        fn parse_false() {
+            assert_eq!(
+                expression(Input::new_extra("#f", Global)).unwrap().1,
+                Expression::Quote(
+                    "#",
+                    Expression::Symbol("f", Position::new(1, 2)).into(),
+                    Position::new(0, 2)
+                )
+            );
+            assert_eq!(
+                expression(Input::new_extra("#false", Global)).unwrap().1,
+                Expression::Quote(
+                    "#",
+                    Expression::Symbol("false", Position::new(1, 6)).into(),
+                    Position::new(0, 6)
+                )
+            );
+        }
+
+        #[test]
+        fn parse_true() {
+            assert_eq!(
+                expression(Input::new_extra("#t", Global)).unwrap().1,
+                Expression::Quote(
+                    "#",
+                    Expression::Symbol("t", Position::new(1, 2)).into(),
+                    Position::new(0, 2)
+                )
+            );
+            assert_eq!(
+                expression(Input::new_extra("#true", Global)).unwrap().1,
+                Expression::Quote(
+                    "#",
+                    Expression::Symbol("true", Position::new(1, 5)).into(),
+                    Position::new(0, 5)
+                )
+            );
+        }
+
+        #[test]
+        fn parse_boolean_followed_by_comment() {
+            assert_eq!(
+                expression(Input::new_extra("#f;", Global)).unwrap().1,
+                Expression::Quote(
+                    "#",
+                    Expression::Symbol("f", Position::new(1, 2)).into(),
+                    Position::new(0, 2)
+                )
+            );
+        }
+
+        #[test]
+        fn parse_boolean_followed_by_right_parenthesis() {
+            assert_eq!(
+                expression(Input::new_extra("#f)", Global)).unwrap().1,
+                Expression::Quote(
+                    "#",
+                    Expression::Symbol("f", Position::new(1, 2)).into(),
+                    Position::new(0, 2)
+                )
+            );
+        }
     }
 
     mod quote {
