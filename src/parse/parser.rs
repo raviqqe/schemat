@@ -16,7 +16,7 @@ use nom::{
 use std::alloc::Allocator;
 
 const HASH_CHARACTER: char = '#';
-const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&|~^.:";
+const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&|~^.:\\";
 
 pub type IResult<'a, T, A> = nom::IResult<Input<'a, A>, T, NomError<'a, A>>;
 
@@ -330,6 +330,10 @@ mod tests {
         assert_eq!(
             expression(Input::new_extra("a#a", Global)).unwrap().1,
             Expression::Symbol("a#a", Position::new(0, 3))
+        );
+        assert_eq!(
+            expression(Input::new_extra("\\", Global)).unwrap().1,
+            Expression::Symbol("\\", Position::new(0, 1))
         );
     }
 
