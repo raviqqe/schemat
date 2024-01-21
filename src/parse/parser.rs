@@ -9,7 +9,7 @@ use nom::{
     character::complete::{anychar, char, multispace0, multispace1, none_of, satisfy, space0},
     combinator::{all_consuming, cut, eof, map, not, peek, recognize, value},
     error::context,
-    multi::{fold_many0, many0_count, many1_count},
+    multi::{fold_many0, many0_count, many1, many1_count},
     sequence::{delimited, preceded, terminated, tuple},
     Parser,
 };
@@ -146,7 +146,10 @@ fn raw_string<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
             recognize(tuple((char('\\'), hexadecimal_digit, hexadecimal_digit))),
             recognize(preceded(
                 tag("\\x"),
-                cut(tuple((hexadecimal_digit, hexadecimal_digit, char(';')))),
+                cut(terminated(
+                    many1(tuple((hexadecimal_digit, hexadecimal_digit))),
+                    char(';'),
+                )),
             )),
         )))),
         char('"'),
@@ -715,6 +718,10 @@ mod tests {
             assert_eq!(
                 string(Input::new_extra("\"\\x0F;\"", Global)).unwrap().1,
                 Expression::String("\\x0F;", Position::new(0, 7))
+            );
+            assert_eq!(
+                string(Input::new_extra("\"\\xABCD;\"", Global)).unwrap().1,
+                Expression::String("\\xABCD;", Position::new(0, 7))
             );
         }
 
