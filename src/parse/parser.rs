@@ -110,11 +110,11 @@ fn quote<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
         tag(",@"),
         tag(","),
         hash_semicolon,
-        recognize(tuple((
-            tag("#"),
-            raw_symbol,
-            peek(not(alt((multispace1, eof)))),
-        ))),
+        // recognize(tuple((
+        //     tag("#"),
+        //     raw_symbol,
+        //     peek(not(alt((multispace1, eof)))),
+        // ))),
         tag("#"),
     ))(input)
 }

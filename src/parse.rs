@@ -162,4 +162,23 @@ mod tests {
             )])
         );
     }
+
+    #[test]
+    fn parse_last_boolean_in_list() {
+        assert_eq!(
+            parse("(#f)", Global),
+            Ok(vec![Expression::List(
+                "(",
+                ")",
+                vec![Expression::Quote(
+                    "#",
+                    Expression::Symbol("f", Position::new(2, 3)).into(),
+                    Position::new(1, 3)
+                )
+                .into()],
+                Position::new(0, 4)
+            )
+            .into()])
+        );
+    }
 }
