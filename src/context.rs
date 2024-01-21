@@ -7,7 +7,7 @@ use mfmt::Builder;
 use std::{alloc::Allocator, collections::VecDeque};
 
 pub struct Context<'a, A: Allocator + Clone> {
-    line_comments: VecDeque<&'a LineComment<'a>>,
+    comments: VecDeque<&'a LineComment<'a>>,
     position_map: &'a PositionMap,
     builder: Builder<A>,
 }
@@ -19,7 +19,7 @@ impl<'a, A: Allocator + Clone> Context<'a, A> {
         builder: Builder<A>,
     ) -> Self {
         Self {
-            line_comments: comments
+            comments: comments
                 .iter()
                 .filter_map(|comment| {
                     if let Comment::Line(comment) = comment {
@@ -46,12 +46,12 @@ impl<'a, A: Allocator + Clone> Context<'a, A> {
         &'b mut self,
         line_index: usize,
     ) -> impl Iterator<Item = &'a LineComment<'a>> + 'b {
-        self.line_comments.drain(
+        self.comments.drain(
             ..self
-                .line_comments
+                .comments
                 .iter()
                 .position(|comment| self.line_index(comment.position()) >= line_index)
-                .unwrap_or(self.line_comments.len()),
+                .unwrap_or(self.comments.len()),
         )
     }
 
@@ -66,13 +66,13 @@ impl<'a, A: Allocator + Clone> Context<'a, A> {
         &self,
         line_index: usize,
     ) -> impl Iterator<Item = &LineComment> {
-        self.line_comments
+        self.comments
             .range(
                 ..self
-                    .line_comments
+                    .comments
                     .iter()
                     .position(|comment| self.line_index(comment.position()) >= line_index)
-                    .unwrap_or(self.line_comments.len()),
+                    .unwrap_or(self.comments.len()),
             )
             .copied()
     }
