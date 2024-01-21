@@ -114,7 +114,7 @@ async fn format_stdin() -> Result<(), Box<dyn Error>> {
     let mut source = Default::default();
     stdin().read_to_string(&mut source).await?;
     let position_map = PositionMap::new(&source);
-    let convert_error = |error: ParseError| error.to_string(&source, &position_map);
+    let convert_error = |error: ParseError| error.to_string("<stdin>", &source, &position_map);
     let allocator = Bump::new();
 
     stdout()
