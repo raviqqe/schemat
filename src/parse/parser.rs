@@ -16,7 +16,7 @@ use nom::{
 use std::alloc::Allocator;
 
 const HASH_CHARACTER: char = '#';
-const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&|~^.:\\";
+const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&|~^.:";
 
 pub type IResult<'a, T, A> = nom::IResult<Input<'a, A>, T, NomError<'a, A>>;
 
@@ -73,7 +73,7 @@ fn raw_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A
                         tuple((
                             char('\\'),
                             cut(alt((
-                                value((), take_while(is_tail_symbol_character)),
+                                // value((), take_while(is_tail_symbol_character)),
                                 value((), anychar),
                             ))),
                         )),
