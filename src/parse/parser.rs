@@ -808,7 +808,7 @@ mod tests {
             fn parse_empty_block_comment() {
                 assert_eq!(
                     comments(Input::new_extra("#||#", Global)).unwrap().1,
-                    vec![]
+                    vec![Comment::new("#||#", Position::new(0, 4))]
                 );
             }
 
@@ -816,7 +816,7 @@ mod tests {
             fn parse_one_line() {
                 assert_eq!(
                     comments(Input::new_extra("#|foo|#", Global)).unwrap().1,
-                    vec![Comment::new("#|foo|#", Position::new(0, 10))]
+                    vec![Comment::new("#|foo|#", Position::new(0, 7))]
                 );
             }
 
