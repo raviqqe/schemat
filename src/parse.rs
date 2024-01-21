@@ -137,4 +137,14 @@ mod tests {
             )])
         );
     }
+
+    #[test]
+    fn parse_symbol_starting_with_escaped_hash() {
+        assert_eq!(
+            parse("\\#foo", Global),
+            Ok(vec![
+                Expression::Symbol("\\#foo", Position::new(0, 5)).into(),
+            ])
+        );
+    }
 }
