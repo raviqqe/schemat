@@ -404,20 +404,25 @@ mod tests {
                 .unwrap()
                 .1,
             Expression::Quote(
-                "#u8",
-                Expression::List(
-                    "(",
-                    ")",
-                    vec![
-                        Expression::Symbol("1", Position::new(4, 5)),
-                        Expression::Symbol("2", Position::new(6, 7)),
-                        Expression::Symbol("3", Position::new(8, 9))
-                    ],
-                    Position::new(3, 10)
+                "#",
+                Expression::Quote(
+                    "u8",
+                    Expression::List(
+                        "(",
+                        ")",
+                        vec![
+                            Expression::Symbol("1", Position::new(4, 5)),
+                            Expression::Symbol("2", Position::new(6, 7)),
+                            Expression::Symbol("3", Position::new(8, 9))
+                        ],
+                        Position::new(3, 10)
+                    )
+                    .into(),
+                    Position::new(1, 10)
                 )
                 .into(),
                 Position::new(0, 10)
-            )
+            ),
         );
     }
 
