@@ -44,6 +44,7 @@ fn convert_result<T, A: Allocator + Clone>(
 mod tests {
     use super::*;
     use crate::position::Position;
+    use pretty_assertions::assert_eq;
     use std::alloc::Global;
 
     #[test]
