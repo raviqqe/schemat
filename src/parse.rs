@@ -64,7 +64,11 @@ mod tests {
     fn parse_shebang() {
         assert_eq!(
             parse("#!/bin/sh\n#t", Global),
-            Ok(vec![Expression::Symbol("#t", Position::new(10, 12))])
+            Ok(vec![Expression::Quote(
+                "#",
+                Expression::Symbol("t", Position::new(11, 12)).into(),
+                Position::new(10, 12)
+            )])
         );
     }
 
@@ -72,7 +76,11 @@ mod tests {
     fn parse_lang_directive() {
         assert_eq!(
             parse("#lang racket\n#t", Global),
-            Ok(vec![Expression::Symbol("#t", Position::new(13, 15))])
+            Ok(vec![Expression::Quote(
+                "#",
+                Expression::Symbol("t", Position::new(14, 15)).into(),
+                Position::new(13, 15)
+            )])
         );
     }
 
