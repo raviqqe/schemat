@@ -128,25 +128,29 @@ fn list_like<'a, A: Allocator + Clone>(
 }
 
 fn string<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
-    token(raw_string)(input)
+    map(token(positioned(raw_string)), |(input, position)| {
+        Expression::String(*input, position)
+    })(input)
 }
 
-fn raw_string<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
-    map(
-        positioned(delimited(
-            char('"'),
-            recognize(many0(alt((
-                recognize(none_of("\\\"")),
-                tag("\\\\"),
-                tag("\\\""),
-                tag("\\n"),
-                tag("\\r"),
-                tag("\\t"),
-                recognize(tuple((char('\\'), hexadecimal_digit, hexadecimal_digit))),
-            )))),
-            char('"'),
-        )),
-        |(input, position)| Expression::String(*input, position),
+fn raw_string<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
+    delimited(
+        char('"'),
+        recognize(many0(alt((
+            recognize(none_of("\\\"")),
+            tag("\\\\"),
+            tag("\\\""),
+            tag("\\n"),
+            tag("\\r"),
+            tag("\\t"),
+            recognize(tuple((
+                tag("\\x"),
+                hexadecimal_digit,
+                hexadecimal_digit,
+                char(';'),
+            ))),
+        )))),
+        char('"'),
     )(input)
 }
 
