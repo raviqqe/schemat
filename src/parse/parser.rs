@@ -73,7 +73,7 @@ fn raw_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A
                         tuple((
                             char('\\'),
                             cut(alt((
-                                value((), take_while(is_tail_symbol_character)),
+                                value((), take_while1(is_tail_symbol_character)),
                                 value((), anychar),
                             ))),
                         )),
@@ -370,23 +370,23 @@ mod tests {
     #[test]
     fn parse_character() {
         assert_eq!(
-            expression(Input::new_extra("#\\a", Global)).unwrap().1,
+            symbol(Input::new_extra("#\\a", Global)).unwrap().1,
             Expression::Symbol("#\\a", Position::new(0, 3))
         );
         assert_eq!(
-            expression(Input::new_extra("#\\(", Global)).unwrap().1,
+            symbol(Input::new_extra("#\\(", Global)).unwrap().1,
             Expression::Symbol("#\\(", Position::new(0, 3))
         );
         assert_eq!(
-            expression(Input::new_extra("#\\;", Global)).unwrap().1,
+            symbol(Input::new_extra("#\\;", Global)).unwrap().1,
             Expression::Symbol("#\\;", Position::new(0, 3))
         );
         assert_eq!(
-            expression(Input::new_extra("#\\ ", Global)).unwrap().1,
+            symbol(Input::new_extra("#\\ ", Global)).unwrap().1,
             Expression::Symbol("#\\ ", Position::new(0, 3))
         );
         assert_eq!(
-            expression(Input::new_extra("#\\space", Global)).unwrap().1,
+            symbol(Input::new_extra("#\\space", Global)).unwrap().1,
             Expression::Symbol("#\\space", Position::new(0, 7))
         );
     }
