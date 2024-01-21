@@ -604,7 +604,11 @@ mod tests {
                     .unwrap()
                     .1,
                 (
-                    Expression::Symbol("#u8", Position::new(0, 3)),
+                    Expression::Quote(
+                        "#",
+                        Expression::Symbol("u8", Position::new(1, 3)).into(),
+                        Position::new(0, 3)
+                    ),
                     Expression::List("(", ")", vec![], Position::new(4, 6))
                 )
             );
