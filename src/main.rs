@@ -136,18 +136,22 @@ async fn format_stdin() -> Result<(), Box<dyn Error>> {
 async fn check_path(path: &Path) -> Result<bool, Box<dyn Error>> {
     let source = read_to_string(path).await?;
 
-    Ok(source == format_string(&source)?)
+    Ok(source == format_string(&source, &path.display().to_string())?)
 }
 
 async fn format_path(path: &Path) -> Result<(), Box<dyn Error>> {
-    write(path, format_string(&read_to_string(path).await?)?).await?;
+    write(
+        path,
+        format_string(&read_to_string(path).await?, &path.display().to_string())?,
+    )
+    .await?;
 
     Ok(())
 }
 
-fn format_string(source: &str) -> Result<String, Box<dyn Error>> {
+fn format_string(source: &str, name: &str) -> Result<String, Box<dyn Error>> {
     let position_map = PositionMap::new(source);
-    let convert_error = |error: ParseError| error.to_string(source, &position_map);
+    let convert_error = |error: ParseError| error.to_string(name, source, &position_map);
     let allocator = Bump::new();
 
     let source = format(
