@@ -9,7 +9,7 @@ use nom::{
     character::complete::{anychar, char, multispace0, multispace1, none_of, satisfy, space0},
     combinator::{all_consuming, cut, eof, map, not, peek, recognize, value},
     error::context,
-    multi::{fold_many0, many0_count, many1_count},
+    multi::{fold_many0, many0_count, many1, many1_count},
     sequence::{delimited, preceded, terminated, tuple},
     Parser,
 };
@@ -128,26 +128,32 @@ fn list_like<'a, A: Allocator + Clone>(
 }
 
 fn string<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
-    token(raw_string)(input)
+    map(token(positioned(raw_string)), |(input, position)| {
+        Expression::String(*input, position)
+    })(input)
 }
 
-fn raw_string<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
-    map(
-        positioned(delimited(
-            char('"'),
-            recognize(many0(alt((
-                recognize(none_of("\\\"")),
-                tag("\\\\"),
-                tag("\\\""),
-                tag("\\'"),
-                tag("\\n"),
-                tag("\\r"),
-                tag("\\t"),
-                recognize(tuple((char('\\'), hexadecimal_digit, hexadecimal_digit))),
-            )))),
-            char('"'),
-        )),
-        |(input, position)| Expression::String(*input, position),
+fn raw_string<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
+    delimited(
+        char('"'),
+        recognize(many0(alt((
+            recognize(none_of("\\\"")),
+            tag("\\\\"),
+            tag("\\\""),
+            tag("\\'"),
+            tag("\\n"),
+            tag("\\r"),
+            tag("\\t"),
+            recognize(tuple((char('\\'), hexadecimal_digit, hexadecimal_digit))),
+            recognize(preceded(
+                tag("\\x"),
+                cut(terminated(
+                    many1(tuple((hexadecimal_digit, hexadecimal_digit))),
+                    char(';'),
+                )),
+            )),
+        )))),
+        char('"'),
     )(input)
 }
 
@@ -724,9 +730,21 @@ mod tests {
             );
         }
 
+        #[test]
+        fn parse_scheme_hexadecimal_bytes() {
+            assert_eq!(
+                string(Input::new_extra("\"\\x0F;\"", Global)).unwrap().1,
+                Expression::String("\\x0F;", Position::new(0, 7))
+            );
+            assert_eq!(
+                string(Input::new_extra("\"\\xABCD;\"", Global)).unwrap().1,
+                Expression::String("\\xABCD;", Position::new(0, 9))
+            );
+        }
+
         // https://webassembly.github.io/spec/core/text/values.html#strings
         #[test]
-        fn parse_hexadecimal_bytes() {
+        fn parse_wasm_hexadecimal_bytes() {
             assert_eq!(
                 string(Input::new_extra("\"\\00\\FF\"", Global)).unwrap().1,
                 Expression::String("\\00\\FF", Position::new(0, 8))
