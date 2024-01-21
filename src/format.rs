@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Comment, Expression, HashDirective},
+    ast::{Comment, Expression, HashDirective, LineComment},
     context::Context,
     position::Position,
     position_map::PositionMap,
@@ -213,7 +213,7 @@ fn compile_suffix_comment<'a, A: Allocator + Clone + 'a>(
 
     builder.sequence(
         context
-            .drain_current_comment(get_line_index(context, position.start()))
+            .drain_current_line_comment(get_line_index(context, position.start()))
             .map(|comment| {
                 builder.line_suffixes([" ", COMMENT_PREFIX, comment.value().trim_end()])
             }),
@@ -225,8 +225,9 @@ fn compile_block_comment<'a, A: Allocator + Clone + 'a>(
     position: &Position,
 ) -> Document<'a> {
     let builder = context.builder().clone();
-    let comments = builder
-        .allocate_slice(context.drain_comments_before(get_line_index(context, position.start())));
+    let comments = builder.allocate_slice(
+        context.drain_line_comments_before(get_line_index(context, position.start())),
+    );
 
     compile_all_comments(
         context,
@@ -239,14 +240,14 @@ fn compile_remaining_block_comment<'a, A: Allocator + Clone + 'a>(
     context: &mut Context<'a, A>,
 ) -> Document<'a> {
     let builder = context.builder().clone();
-    let comments = builder.allocate_slice(context.drain_comments_before(usize::MAX));
+    let comments = builder.allocate_slice(context.drain_line_comments_before(usize::MAX));
 
     compile_all_comments(context, comments, None)
 }
 
 fn compile_all_comments<'a, A: Allocator + Clone + 'a>(
     context: &Context<A>,
-    comments: &'a [&'a Comment<'a>],
+    comments: &'a [&'a LineComment<'a>],
     last_line_index: Option<usize>,
 ) -> Document<'a> {
     context.builder().sequence(
@@ -282,7 +283,7 @@ fn has_extra_line<A: Allocator + Clone>(
     let line_index = get_line_index(context, expression.position().start());
 
     context
-        .peek_comments_before(line_index)
+        .peek_line_comments_before(line_index)
         .next()
         .map(|comment| get_line_index(context, comment.position().start()))
         .unwrap_or(line_index)
@@ -769,6 +770,8 @@ mod tests {
     }
 
     mod comment {
+        use crate::ast::LineComment;
+
         use super::*;
         use pretty_assertions::assert_eq;
 
@@ -777,7 +780,7 @@ mod tests {
             assert_eq!(
                 format(
                     &[Expression::Symbol("foo", Position::new(1, 2))],
-                    &[Comment::new("bar", Position::new(0, 1))],
+                    &[LineComment::new("bar", Position::new(0, 1)).into()],
                     &[],
                     &PositionMap::new("\na"),
                     Global,
@@ -797,7 +800,7 @@ mod tests {
             assert_eq!(
                 format(
                     &[Expression::Symbol("foo", Position::new(2, 3))],
-                    &[Comment::new("bar", Position::new(0, 1))],
+                    &[LineComment::new("bar", Position::new(0, 1)).into()],
                     &[],
                     &PositionMap::new("\n\na"),
                     Global,
@@ -819,8 +822,8 @@ mod tests {
                 format(
                     &[Expression::Symbol("foo", Position::new(3, 4))],
                     &[
-                        Comment::new("bar", Position::new(0, 1)),
-                        Comment::new("baz", Position::new(1, 2))
+                        LineComment::new("bar", Position::new(0, 1)).into(),
+                        LineComment::new("baz", Position::new(1, 2)).into()
                     ],
                     &[],
                     &PositionMap::new("\n\n\na"),
@@ -844,8 +847,8 @@ mod tests {
                 format(
                     &[Expression::Symbol("foo", Position::new(4, 5))],
                     &[
-                        Comment::new("bar", Position::new(0, 1)),
-                        Comment::new("baz", Position::new(2, 3))
+                        LineComment::new("bar", Position::new(0, 1)).into(),
+                        LineComment::new("baz", Position::new(2, 3)).into()
                     ],
                     &[],
                     &PositionMap::new("\n\n\n\na"),
@@ -872,7 +875,7 @@ mod tests {
                         Expression::Symbol("foo", Position::new(0, 1)),
                         Expression::Symbol("baz", Position::new(2, 3))
                     ],
-                    &[Comment::new("bar", Position::new(1, 2))],
+                    &[LineComment::new("bar", Position::new(1, 2)).into()],
                     &[],
                     &PositionMap::new("\n\n\n"),
                     Global,
@@ -901,7 +904,7 @@ mod tests {
                         ],
                         Position::new(0, 1)
                     )],
-                    &[Comment::new("bar", Position::new(1, 2))],
+                    &[LineComment::new("bar", Position::new(1, 2)).into()],
                     &[],
                     &PositionMap::new("\n\n\n"),
                     Global,
@@ -922,7 +925,7 @@ mod tests {
             assert_eq!(
                 format(
                     &[Expression::Symbol("foo", Position::new(0, 1))],
-                    &[Comment::new("bar", Position::new(0, 1))],
+                    &[LineComment::new("bar", Position::new(0, 1)).into()],
                     &[],
                     &PositionMap::new("\na"),
                     Global,
@@ -942,8 +945,8 @@ mod tests {
                 format(
                     &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[
-                        Comment::new("bar", Position::new(0, 1)),
-                        Comment::new("baz", Position::new(0, 1))
+                        LineComment::new("bar", Position::new(0, 1)).into(),
+                        LineComment::new("baz", Position::new(0, 1)).into()
                     ],
                     &[],
                     &PositionMap::new("\na"),
@@ -968,7 +971,7 @@ mod tests {
                         vec![Expression::Symbol("foo", Position::new(1, 2))],
                         Position::new(0, 1)
                     )],
-                    &[Comment::new("bar", Position::new(0, 1))],
+                    &[LineComment::new("bar", Position::new(0, 1)).into()],
                     &[],
                     &PositionMap::new("\n\n"),
                     Global,
@@ -996,7 +999,7 @@ mod tests {
                         ],
                         Position::new(0, 1)
                     )],
-                    &[Comment::new("foo", Position::new(1, 2))],
+                    &[LineComment::new("foo", Position::new(1, 2)).into()],
                     &[],
                     &PositionMap::new("\n\n\n"),
                     Global,
@@ -1017,7 +1020,7 @@ mod tests {
             assert_eq!(
                 format(
                     &[Expression::Symbol("foo", Position::new(0, 1))],
-                    &[Comment::new("bar", Position::new(1, 2))],
+                    &[LineComment::new("bar", Position::new(1, 2)).into()],
                     &[],
                     &PositionMap::new("\n\n"),
                     Global,
@@ -1039,8 +1042,8 @@ mod tests {
                 format(
                     &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[
-                        Comment::new("bar", Position::new(1, 2)),
-                        Comment::new("baz", Position::new(2, 3))
+                        LineComment::new("bar", Position::new(1, 2)).into(),
+                        LineComment::new("baz", Position::new(2, 3)).into()
                     ],
                     &[],
                     &PositionMap::new("\n\n\n"),
@@ -1064,8 +1067,8 @@ mod tests {
                 format(
                     &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[
-                        Comment::new("bar", Position::new(1, 2)),
-                        Comment::new("baz", Position::new(3, 4))
+                        LineComment::new("bar", Position::new(1, 2)).into(),
+                        LineComment::new("baz", Position::new(3, 4)).into()
                     ],
                     &[],
                     &PositionMap::new("\n\n\n\n"),

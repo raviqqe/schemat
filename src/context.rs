@@ -1,9 +1,13 @@
-use crate::{ast::Comment, position::Position, position_map::PositionMap};
+use crate::{
+    ast::{Comment, LineComment},
+    position::Position,
+    position_map::PositionMap,
+};
 use mfmt::Builder;
 use std::{alloc::Allocator, collections::VecDeque};
 
 pub struct Context<'a, A: Allocator + Clone> {
-    comments: VecDeque<&'a Comment<'a>>,
+    line_comments: VecDeque<&'a LineComment<'a>>,
     position_map: &'a PositionMap,
     builder: Builder<A>,
 }
@@ -15,7 +19,16 @@ impl<'a, A: Allocator + Clone> Context<'a, A> {
         builder: Builder<A>,
     ) -> Self {
         Self {
-            comments: comments.iter().collect(),
+            line_comments: comments
+                .iter()
+                .flat_map(|comment| {
+                    if let Comment::Line(comment) = comment {
+                        Some(comment)
+                    } else {
+                        None
+                    }
+                })
+                .collect(),
             position_map,
             builder,
         }
@@ -29,34 +42,37 @@ impl<'a, A: Allocator + Clone> Context<'a, A> {
         &self.builder
     }
 
-    pub fn drain_comments_before<'b>(
+    pub fn drain_line_comments_before<'b>(
         &'b mut self,
         line_index: usize,
-    ) -> impl Iterator<Item = &'a Comment<'a>> + 'b {
-        self.comments.drain(
+    ) -> impl Iterator<Item = &'a LineComment<'a>> + 'b {
+        self.line_comments.drain(
             ..self
-                .comments
+                .line_comments
                 .iter()
                 .position(|comment| self.line_index(comment.position()) >= line_index)
-                .unwrap_or(self.comments.len()),
+                .unwrap_or(self.line_comments.len()),
         )
     }
 
-    pub fn drain_current_comment(
+    pub fn drain_current_line_comment(
         &mut self,
         line_index: usize,
-    ) -> impl Iterator<Item = &'a Comment<'a>> + '_ {
-        self.drain_comments_before(line_index + 1)
+    ) -> impl Iterator<Item = &'a LineComment<'a>> + '_ {
+        self.drain_line_comments_before(line_index + 1)
     }
 
-    pub fn peek_comments_before(&self, line_index: usize) -> impl Iterator<Item = &'_ Comment> {
-        self.comments
+    pub fn peek_line_comments_before(
+        &self,
+        line_index: usize,
+    ) -> impl Iterator<Item = &LineComment> {
+        self.line_comments
             .range(
                 ..self
-                    .comments
+                    .line_comments
                     .iter()
                     .position(|comment| self.line_index(comment.position()) >= line_index)
-                    .unwrap_or(self.comments.len()),
+                    .unwrap_or(self.line_comments.len()),
             )
             .copied()
     }
