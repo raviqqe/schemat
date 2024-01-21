@@ -721,7 +721,7 @@ mod tests {
             );
             assert_eq!(
                 string(Input::new_extra("\"\\xABCD;\"", Global)).unwrap().1,
-                Expression::String("\\xABCD;", Position::new(0, 7))
+                Expression::String("\\xABCD;", Position::new(0, 9))
             );
         }
 
