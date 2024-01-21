@@ -5,7 +5,7 @@ use crate::{
 };
 use nom::{
     branch::alt,
-    bytes::complete::{tag, take_until, take_while, take_while1},
+    bytes::complete::{tag, take_until},
     character::complete::{anychar, char, multispace0, multispace1, none_of, satisfy, space0},
     combinator::{all_consuming, cut, map, not, opt, peek, recognize, value},
     error::context,
@@ -60,38 +60,26 @@ fn symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
 
 fn raw_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
     map(
-        positioned(alt((
-            recognize(tuple((
-                satisfy(is_head_symbol_character),
-                take_while(is_tail_symbol_character),
-            ))),
-            recognize(tuple((
-                char(HASH_CHARACTER),
-                alt((
-                    value(
-                        (),
-                        tuple((
-                            char('\\'),
-                            cut(alt((
-                                value((), take_while1(is_tail_symbol_character)),
-                                value((), anychar),
-                            ))),
-                        )),
-                    ),
-                    value((), take_while1(is_tail_symbol_character)),
-                )),
-            ))),
-        ))),
+        positioned(alt((recognize(tuple((
+            head_symbol_character,
+            many0(tail_symbol_character),
+        ))),))),
         |(input, position)| Expression::Symbol(&input, position),
     )(input)
 }
 
-fn is_head_symbol_character(character: char) -> bool {
-    character.is_alphanumeric() || SYMBOL_SIGNS.contains(character)
+fn head_symbol_character<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
+    recognize(alt((
+        value(
+            (),
+            satisfy(|character| character.is_alphanumeric() || SYMBOL_SIGNS.contains(character)),
+        ),
+        value((), tuple((char('\\'), anychar))),
+    )))(input)
 }
 
-fn is_tail_symbol_character(character: char) -> bool {
-    is_head_symbol_character(character) || character == HASH_CHARACTER
+fn tail_symbol_character<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
+    alt((head_symbol_character, recognize(char(HASH_CHARACTER))))(input)
 }
 
 fn expression<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
@@ -332,8 +320,8 @@ mod tests {
             Expression::Symbol("a#a", Position::new(0, 3))
         );
         assert_eq!(
-            expression(Input::new_extra("\\", Global)).unwrap().1,
-            Expression::Symbol("\\", Position::new(0, 1))
+            expression(Input::new_extra("\\#", Global)).unwrap().1,
+            Expression::Symbol("\\#", Position::new(0, 2))
         );
     }
 
