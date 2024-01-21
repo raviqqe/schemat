@@ -16,7 +16,7 @@ use nom::{
 use std::alloc::Allocator;
 
 const HASH_CHARACTER: char = '#';
-const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&|~^.:";
+const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&~^.:";
 
 pub type IResult<'a, T, A> = nom::IResult<Input<'a, A>, T, NomError<'a, A>>;
 
@@ -225,8 +225,23 @@ fn blank<A: Allocator + Clone>(input: Input<A>) -> IResult<(), A> {
 }
 
 fn comment<A: Allocator + Clone>(input: Input<A>) -> IResult<Comment, A> {
+    alt((line_comment,))(input)
+}
+
+fn line_comment<A: Allocator + Clone>(input: Input<A>) -> IResult<Comment, A> {
     map(
         terminated(
+            positioned_meta(preceded(char(';'), take_until("\n"))),
+            newline,
+        ),
+        |(input, position)| Comment::new(&input, position),
+    )(input)
+}
+
+fn block_comment<A: Allocator + Clone>(input: Input<A>) -> IResult<Comment, A> {
+    map(
+        delimited(
+            tag("#|"),
             positioned_meta(preceded(char(';'), take_until("\n"))),
             newline,
         ),
