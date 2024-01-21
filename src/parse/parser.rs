@@ -389,6 +389,10 @@ mod tests {
             symbol(Input::new_extra("#\\space", Global)).unwrap().1,
             Expression::Symbol("#\\space", Position::new(0, 7))
         );
+        assert_eq!(
+            symbol(Input::new_extra("#\\\n", Global)).unwrap().1,
+            Expression::Symbol("#\\\n", Position::new(0, 3))
+        );
     }
 
     #[test]
