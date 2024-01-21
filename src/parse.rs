@@ -44,6 +44,7 @@ fn convert_result<T, A: Allocator + Clone>(
 mod tests {
     use super::*;
     use crate::position::Position;
+    use pretty_assertions::assert_eq;
     use std::alloc::Global;
 
     #[test]
@@ -63,7 +64,11 @@ mod tests {
     fn parse_shebang() {
         assert_eq!(
             parse("#!/bin/sh\n#t", Global),
-            Ok(vec![Expression::Symbol("#t", Position::new(10, 12))])
+            Ok(vec![Expression::Quote(
+                "#",
+                Expression::Symbol("t", Position::new(11, 12)).into(),
+                Position::new(10, 12)
+            )])
         );
     }
 
@@ -71,7 +76,11 @@ mod tests {
     fn parse_lang_directive() {
         assert_eq!(
             parse("#lang racket\n#t", Global),
-            Ok(vec![Expression::Symbol("#t", Position::new(13, 15))])
+            Ok(vec![Expression::Quote(
+                "#",
+                Expression::Symbol("t", Position::new(14, 15)).into(),
+                Position::new(13, 15)
+            )])
         );
     }
 
@@ -126,6 +135,16 @@ mod tests {
                 Expression::List("(", ")", vec![], Position::new(1, 3)).into(),
                 Position::new(0, 3)
             )])
+        );
+    }
+
+    #[test]
+    fn parse_symbol_starting_with_escaped_hash() {
+        assert_eq!(
+            parse("\\#foo", Global),
+            Ok(vec![
+                Expression::Symbol("\\#foo", Position::new(0, 5)).into(),
+            ])
         );
     }
 }

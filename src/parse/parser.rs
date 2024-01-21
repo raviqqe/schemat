@@ -5,9 +5,9 @@ use crate::{
 };
 use nom::{
     branch::alt,
-    bytes::complete::{tag, take_until, take_while, take_while1},
-    character::complete::{char, multispace0, multispace1, none_of, satisfy, space0},
-    combinator::{all_consuming, cut, map, not, opt, peek, recognize, value},
+    bytes::complete::{tag, take_until},
+    character::complete::{anychar, char, multispace0, multispace1, none_of, satisfy, space0},
+    combinator::{all_consuming, cut, eof, map, not, peek, recognize, value},
     error::context,
     multi::{fold_many0, many0_count, many1_count},
     sequence::{delimited, preceded, terminated, tuple},
@@ -33,7 +33,7 @@ pub fn comments<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Comment, A
 
     all_consuming(fold_many0(
         alt((
-            map(none_of("\";#"), |_| None),
+            map(none_of("\";#\\"), |_| None),
             map(raw_string, |_| None),
             map(raw_symbol, |_| None),
             map(quote, |_| None),
@@ -60,38 +60,26 @@ fn symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
 
 fn raw_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
     map(
-        positioned(alt((
-            recognize(tuple((
-                satisfy(is_head_symbol_character),
-                take_while(is_tail_symbol_character),
-            ))),
-            recognize(tuple((
-                char(HASH_CHARACTER),
-                alt((
-                    value(
-                        (),
-                        tuple((
-                            char('\\'),
-                            cut(tuple((
-                                satisfy(|character| !character.is_whitespace()),
-                                take_while(is_tail_symbol_character),
-                            ))),
-                        )),
-                    ),
-                    value((), take_while1(is_tail_symbol_character)),
-                )),
-            ))),
-        ))),
+        positioned(alt((recognize(tuple((
+            head_symbol_character,
+            many0(tail_symbol_character),
+        ))),))),
         |(input, position)| Expression::Symbol(&input, position),
     )(input)
 }
 
-fn is_head_symbol_character(character: char) -> bool {
-    character.is_alphanumeric() || SYMBOL_SIGNS.contains(character)
+fn head_symbol_character<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
+    recognize(alt((
+        value(
+            (),
+            satisfy(|character| character.is_alphanumeric() || SYMBOL_SIGNS.contains(character)),
+        ),
+        value((), tuple((char('\\'), anychar))),
+    )))(input)
 }
 
-fn is_tail_symbol_character(character: char) -> bool {
-    is_head_symbol_character(character) || character == HASH_CHARACTER
+fn tail_symbol_character<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
+    alt((head_symbol_character, recognize(char(HASH_CHARACTER))))(input)
 }
 
 fn expression<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
@@ -122,7 +110,12 @@ fn quote<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
         tag(",@"),
         tag(","),
         hash_semicolon,
-        recognize(tuple((tag("#"), opt(raw_symbol), peek(not(multispace1))))),
+        recognize(tuple((
+            tag("#"),
+            raw_symbol,
+            peek(not(alt((multispace1, eof)))),
+        ))),
+        tag("#"),
     ))(input)
 }
 
@@ -285,11 +278,19 @@ mod tests {
     fn parse_false() {
         assert_eq!(
             expression(Input::new_extra("#f", Global)).unwrap().1,
-            Expression::Symbol("#f", Position::new(0, 2))
+            Expression::Quote(
+                "#",
+                Expression::Symbol("f", Position::new(1, 2)).into(),
+                Position::new(0, 2)
+            )
         );
         assert_eq!(
             expression(Input::new_extra("#false", Global)).unwrap().1,
-            Expression::Symbol("#false", Position::new(0, 6))
+            Expression::Quote(
+                "#",
+                Expression::Symbol("false", Position::new(1, 6)).into(),
+                Position::new(0, 6)
+            )
         );
     }
 
@@ -297,11 +298,19 @@ mod tests {
     fn parse_true() {
         assert_eq!(
             expression(Input::new_extra("#t", Global)).unwrap().1,
-            Expression::Symbol("#t", Position::new(0, 2))
+            Expression::Quote(
+                "#",
+                Expression::Symbol("t", Position::new(1, 2)).into(),
+                Position::new(0, 2)
+            )
         );
         assert_eq!(
             expression(Input::new_extra("#true", Global)).unwrap().1,
-            Expression::Symbol("#true", Position::new(0, 5))
+            Expression::Quote(
+                "#",
+                Expression::Symbol("true", Position::new(1, 5)).into(),
+                Position::new(0, 5)
+            )
         );
     }
 
@@ -330,6 +339,10 @@ mod tests {
         assert_eq!(
             expression(Input::new_extra("a#a", Global)).unwrap().1,
             Expression::Symbol("a#a", Position::new(0, 3))
+        );
+        assert_eq!(
+            expression(Input::new_extra("\\#", Global)).unwrap().1,
+            Expression::Symbol("\\#", Position::new(0, 2))
         );
     }
 
@@ -367,17 +380,52 @@ mod tests {
     fn parse_character() {
         assert_eq!(
             expression(Input::new_extra("#\\a", Global)).unwrap().1,
-            Expression::Symbol("#\\a", Position::new(0, 3))
+            Expression::Quote(
+                "#",
+                Expression::Symbol("\\a", Position::new(1, 3)).into(),
+                Position::new(0, 3)
+            )
         );
         assert_eq!(
             expression(Input::new_extra("#\\(", Global)).unwrap().1,
-            Expression::Symbol("#\\(", Position::new(0, 3))
+            Expression::Quote(
+                "#",
+                Expression::Symbol("\\(", Position::new(1, 3)).into(),
+                Position::new(0, 3)
+            )
         );
         assert_eq!(
             expression(Input::new_extra("#\\;", Global)).unwrap().1,
-            Expression::Symbol("#\\;", Position::new(0, 3))
+            Expression::Quote(
+                "#",
+                Expression::Symbol("\\;", Position::new(1, 3)).into(),
+                Position::new(0, 3)
+            )
         );
-        assert!(expression(Input::new_extra("#\\ ", Global)).is_err());
+        assert_eq!(
+            expression(Input::new_extra("#\\ ", Global)).unwrap().1,
+            Expression::Quote(
+                "#",
+                Expression::Symbol("\\ ", Position::new(1, 3)).into(),
+                Position::new(0, 3)
+            )
+        );
+        assert_eq!(
+            expression(Input::new_extra("#\\space", Global)).unwrap().1,
+            Expression::Quote(
+                "#",
+                Expression::Symbol("\\space", Position::new(1, 7)).into(),
+                Position::new(0, 7)
+            )
+        );
+        assert_eq!(
+            expression(Input::new_extra("#\\\n", Global)).unwrap().1,
+            Expression::Quote(
+                "#",
+                Expression::Symbol("\\\n", Position::new(1, 3)).into(),
+                Position::new(0, 3)
+            )
+        );
     }
 
     #[test]
@@ -560,7 +608,11 @@ mod tests {
                     .unwrap()
                     .1,
                 (
-                    Expression::Symbol("#u8", Position::new(0, 3)),
+                    Expression::Quote(
+                        "#",
+                        Expression::Symbol("u8", Position::new(1, 3)).into(),
+                        Position::new(0, 3)
+                    ),
                     Expression::List("(", ")", vec![], Position::new(4, 6))
                 )
             );
