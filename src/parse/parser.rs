@@ -139,6 +139,7 @@ fn raw_string<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A
                 recognize(none_of("\\\"")),
                 tag("\\\\"),
                 tag("\\\""),
+                tag("\\'"),
                 tag("\\n"),
                 tag("\\r"),
                 tag("\\t"),
@@ -701,7 +702,7 @@ mod tests {
         fn parse_escaped_double_quote() {
             assert_eq!(
                 string(Input::new_extra("\"\\\"\"", Global)).unwrap().1,
-                Expression::String("\\\"", Position::new(0, 5))
+                Expression::String("\\\"", Position::new(0, 4))
             );
         }
 
@@ -709,7 +710,7 @@ mod tests {
         fn parse_escaped_single_quote() {
             assert_eq!(
                 string(Input::new_extra("\"\\'\"", Global)).unwrap().1,
-                Expression::String("\\'", Position::new(0, 5))
+                Expression::String("\\'", Position::new(0, 4))
             );
         }
 
