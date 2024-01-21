@@ -7,7 +7,7 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, take_until},
     character::complete::{anychar, char, multispace0, multispace1, none_of, satisfy, space0},
-    combinator::{all_consuming, cut, map, not, opt, peek, recognize, value},
+    combinator::{all_consuming, cut, eof, map, not, opt, peek, recognize, value},
     error::context,
     multi::{fold_many0, many0_count, many1_count},
     sequence::{delimited, preceded, terminated, tuple},
@@ -110,7 +110,11 @@ fn quote<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
         tag(",@"),
         tag(","),
         hash_semicolon,
-        // recognize(tuple((tag("#"), raw_symbol, peek(not(multispace1))))),
+        recognize(tuple((
+            tag("#"),
+            raw_symbol,
+            peek(not(alt((multispace1, eof)))),
+        ))),
         tag("#"),
     ))(input)
 }
