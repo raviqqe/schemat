@@ -698,6 +698,22 @@ mod tests {
         }
 
         #[test]
+        fn parse_escaped_double_quote() {
+            assert_eq!(
+                string(Input::new_extra("\"\\\"\"", Global)).unwrap().1,
+                Expression::String("\\\"", Position::new(0, 5))
+            );
+        }
+
+        #[test]
+        fn parse_escaped_single_quote() {
+            assert_eq!(
+                string(Input::new_extra("\"\\'\"", Global)).unwrap().1,
+                Expression::String("\\'", Position::new(0, 5))
+            );
+        }
+
+        #[test]
         fn parse_escaped_characters() {
             assert_eq!(
                 string(Input::new_extra("\"\\\\\\n\\r\\t\"", Global))
