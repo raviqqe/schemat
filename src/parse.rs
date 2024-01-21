@@ -174,11 +174,9 @@ mod tests {
                     "#",
                     Expression::Symbol("f", Position::new(2, 3)).into(),
                     Position::new(1, 3)
-                )
-                .into()],
+                )],
                 Position::new(0, 4)
-            )
-            .into()])
+            )])
         );
     }
 }
