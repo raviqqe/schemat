@@ -816,7 +816,7 @@ mod tests {
             fn parse_one_line() {
                 assert_eq!(
                     comments(Input::new_extra("#|foo|#", Global)).unwrap().1,
-                    vec![]
+                    vec![Comment::new("#|foo|#", Position::new(0, 10))]
                 );
             }
 
