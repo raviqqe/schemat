@@ -21,7 +21,7 @@ impl<'a, A: Allocator + Clone> Context<'a, A> {
         Self {
             line_comments: comments
                 .iter()
-                .flat_map(|comment| {
+                .filter_map(|comment| {
                     if let Comment::Line(comment) = comment {
                         Some(comment)
                     } else {
