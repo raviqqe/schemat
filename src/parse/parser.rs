@@ -110,11 +110,11 @@ fn quote<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
         tag(",@"),
         tag(","),
         hash_semicolon,
-        // recognize(tuple((
-        //     tag("#"),
-        //     raw_symbol,
-        //     peek(not(alt((multispace1, eof)))),
-        // ))),
+        recognize(tuple((
+            tag("#"),
+            raw_symbol,
+            peek(not(alt((multispace1, eof)))),
+        ))),
         tag("#"),
     ))(input)
 }
@@ -273,46 +273,6 @@ mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
     use std::alloc::Global;
-
-    #[test]
-    fn parse_false() {
-        assert_eq!(
-            expression(Input::new_extra("#f", Global)).unwrap().1,
-            Expression::Quote(
-                "#",
-                Expression::Symbol("f", Position::new(1, 2)).into(),
-                Position::new(0, 2)
-            )
-        );
-        assert_eq!(
-            expression(Input::new_extra("#false", Global)).unwrap().1,
-            Expression::Quote(
-                "#",
-                Expression::Symbol("false", Position::new(1, 6)).into(),
-                Position::new(0, 6)
-            )
-        );
-    }
-
-    #[test]
-    fn parse_true() {
-        assert_eq!(
-            expression(Input::new_extra("#t", Global)).unwrap().1,
-            Expression::Quote(
-                "#",
-                Expression::Symbol("t", Position::new(1, 2)).into(),
-                Position::new(0, 2)
-            )
-        );
-        assert_eq!(
-            expression(Input::new_extra("#true", Global)).unwrap().1,
-            Expression::Quote(
-                "#",
-                Expression::Symbol("true", Position::new(1, 5)).into(),
-                Position::new(0, 5)
-            )
-        );
-    }
 
     #[test]
     fn parse_symbol() {
@@ -511,6 +471,75 @@ mod tests {
                 Position::new(0, 8)
             )
         );
+    }
+
+    mod boolean {
+        use super::*;
+        use pretty_assertions::assert_eq;
+
+        #[test]
+        fn parse_false() {
+            assert_eq!(
+                expression(Input::new_extra("#f", Global)).unwrap().1,
+                Expression::Quote(
+                    "#",
+                    Expression::Symbol("f", Position::new(1, 2)).into(),
+                    Position::new(0, 2)
+                )
+            );
+            assert_eq!(
+                expression(Input::new_extra("#false", Global)).unwrap().1,
+                Expression::Quote(
+                    "#",
+                    Expression::Symbol("false", Position::new(1, 6)).into(),
+                    Position::new(0, 6)
+                )
+            );
+        }
+
+        #[test]
+        fn parse_true() {
+            assert_eq!(
+                expression(Input::new_extra("#t", Global)).unwrap().1,
+                Expression::Quote(
+                    "#",
+                    Expression::Symbol("t", Position::new(1, 2)).into(),
+                    Position::new(0, 2)
+                )
+            );
+            assert_eq!(
+                expression(Input::new_extra("#true", Global)).unwrap().1,
+                Expression::Quote(
+                    "#",
+                    Expression::Symbol("true", Position::new(1, 5)).into(),
+                    Position::new(0, 5)
+                )
+            );
+        }
+
+        #[test]
+        fn parse_boolean_followed_by_comment() {
+            assert_eq!(
+                expression(Input::new_extra("#f;", Global)).unwrap().1,
+                Expression::Quote(
+                    "#",
+                    Expression::Symbol("f", Position::new(1, 2)).into(),
+                    Position::new(0, 2)
+                )
+            );
+        }
+
+        #[test]
+        fn parse_boolean_followed_by_right_parenthesis() {
+            assert_eq!(
+                expression(Input::new_extra("#f)", Global)).unwrap().1,
+                Expression::Quote(
+                    "#",
+                    Expression::Symbol("f", Position::new(1, 2)).into(),
+                    Position::new(0, 2)
+                )
+            );
+        }
     }
 
     mod quote {
