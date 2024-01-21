@@ -15,7 +15,6 @@ use nom::{
 };
 use std::alloc::Allocator;
 
-const HASH_CHARACTER: char = '#';
 const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&|~^.:";
 
 pub type IResult<'a, T, A> = nom::IResult<Input<'a, A>, T, NomError<'a, A>>;
@@ -55,17 +54,13 @@ pub fn hash_directives<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Has
 }
 
 fn symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
-    token(raw_symbol)(input)
+    map(token(positioned(raw_symbol)), |(input, position)| {
+        Expression::Symbol(&input, position)
+    })(input)
 }
 
-fn raw_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
-    map(
-        positioned(alt((recognize(tuple((
-            head_symbol_character,
-            many0(tail_symbol_character),
-        ))),))),
-        |(input, position)| Expression::Symbol(&input, position),
-    )(input)
+fn raw_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
+    recognize(tuple((head_symbol_character, many0(tail_symbol_character))))(input)
 }
 
 fn head_symbol_character<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
@@ -79,7 +74,7 @@ fn head_symbol_character<A: Allocator + Clone>(input: Input<A>) -> IResult<Input
 }
 
 fn tail_symbol_character<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
-    alt((head_symbol_character, recognize(char(HASH_CHARACTER))))(input)
+    alt((head_symbol_character, recognize(char('#'))))(input)
 }
 
 fn expression<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
@@ -109,18 +104,10 @@ fn quote<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
         tag("`"),
         tag(",@"),
         tag(","),
-        hash_semicolon,
-        recognize(tuple((
-            tag("#"),
-            raw_symbol,
-            peek(not(alt((multispace1, eof)))),
-        ))),
+        tag("#;"),
         tag("#"),
+        terminated(raw_symbol, peek(not(alt((multispace1, eof))))),
     ))(input)
-}
-
-fn hash_semicolon<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
-    tag("#;")(input)
 }
 
 fn list_like<'a, A: Allocator + Clone>(
