@@ -144,6 +144,7 @@ fn raw_string<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
             tag("\\n"),
             tag("\\r"),
             tag("\\t"),
+            tag("\\\n"),
             recognize(tuple((char('\\'), hexadecimal_digit, hexadecimal_digit))),
             recognize(preceded(
                 tag("\\x"),
