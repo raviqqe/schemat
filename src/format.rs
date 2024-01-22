@@ -1405,8 +1405,8 @@ mod tests {
                     .unwrap(),
                     indoc!(
                         "
-                    '((foo bar))
-                    "
+                        '((foo bar))
+                        "
                     )
                 );
             }
@@ -1442,9 +1442,9 @@ mod tests {
                     .unwrap(),
                     indoc!(
                         "
-                    '((foo
-                       bar))
-                    "
+                        '((foo
+                           bar))
+                        "
                     )
                 );
             }

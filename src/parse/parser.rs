@@ -249,7 +249,10 @@ fn block_comment<A: Allocator + Clone>(input: Input<A>) -> IResult<BlockComment,
 fn hash_directive<A: Allocator + Clone>(input: Input<A>) -> IResult<HashDirective, A> {
     map(
         terminated(
-            positioned_meta(preceded(char('#'), take_until("\n"))),
+            positioned_meta(preceded(
+                tuple((char('#'), not(peek(char('|'))))),
+                take_until("\n"),
+            )),
             newline,
         ),
         |(input, position)| HashDirective::new(&input, position),
@@ -698,6 +701,16 @@ mod tests {
                     .unwrap()
                     .1,
                 HashDirective::new("lang r7rs", Position::new(0, 10))
+            );
+        }
+
+        #[test]
+        fn parse_comment() {
+            assert_eq!(
+                hash_directives(Input::new_extra("#||#\n", Global))
+                    .unwrap()
+                    .1,
+                vec![]
             );
         }
     }
