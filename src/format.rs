@@ -1127,22 +1127,26 @@ mod tests {
             );
         }
 
-        #[test]
-        fn format_block_comment_with_blank_lines() {
-            assert_eq!(
-                format(
-                    &[
-                        Expression::Symbol("foo", Position::new(0, 1)),
-                        Expression::Symbol("bar", Position::new(14, 15))
-                    ],
-                    &[BlockComment::new("foo", Position::new(5, 6)).into(),],
-                    &[],
-                    &PositionMap::new("foo\n\n#|foo|#\n\nbar"),
-                    Global,
-                )
-                .unwrap(),
-                indoc!(
-                    "
+        mod block {
+            use super::*;
+            use pretty_assertions::assert_eq;
+
+            #[test]
+            fn format_block_comment_with_blank_lines() {
+                assert_eq!(
+                    format(
+                        &[
+                            Expression::Symbol("foo", Position::new(0, 1)),
+                            Expression::Symbol("bar", Position::new(14, 15))
+                        ],
+                        &[BlockComment::new("foo", Position::new(5, 6)).into(),],
+                        &[],
+                        &PositionMap::new("foo\n\n#|foo|#\n\nbar"),
+                        Global,
+                    )
+                    .unwrap(),
+                    indoc!(
+                        "
                     foo
 
                     #|
@@ -1151,26 +1155,26 @@ mod tests {
 
                     bar
                     "
-                )
-            );
-        }
+                    )
+                );
+            }
 
-        #[test]
-        fn format_block_comment_with_extra_blank_lines() {
-            assert_eq!(
-                format(
-                    &[
-                        Expression::Symbol("foo", Position::new(0, 1)),
-                        Expression::Symbol("bar", Position::new(16, 17))
-                    ],
-                    &[BlockComment::new("foo", Position::new(6, 7)).into(),],
-                    &[],
-                    &PositionMap::new("foo\n\n\n#|foo|#\n\n\nbar"),
-                    Global,
-                )
-                .unwrap(),
-                indoc!(
-                    "
+            #[test]
+            fn format_block_comment_with_extra_blank_lines() {
+                assert_eq!(
+                    format(
+                        &[
+                            Expression::Symbol("foo", Position::new(0, 1)),
+                            Expression::Symbol("bar", Position::new(16, 17))
+                        ],
+                        &[BlockComment::new("foo", Position::new(6, 7)).into(),],
+                        &[],
+                        &PositionMap::new("foo\n\n\n#|foo|#\n\n\nbar"),
+                        Global,
+                    )
+                    .unwrap(),
+                    indoc!(
+                        "
                     foo
 
                     #|
@@ -1179,8 +1183,9 @@ mod tests {
 
                     bar
                     "
-                )
-            );
+                    )
+                );
+            }
         }
     }
 
