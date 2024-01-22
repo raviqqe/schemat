@@ -49,6 +49,18 @@ impl<'a, A: Allocator + Clone> Context<'a, A> {
         self.drain_comments(line_index + 1)
     }
 
+    pub fn drain_inline_comments(&mut self, position: &Position) -> impl Iterator<Item = &Comment> {
+        self.comments
+            .range(
+                ..self
+                    .comments
+                    .iter()
+                    .position(|comment| comment.position().end() > position.start())
+                    .unwrap_or(self.comments.len()),
+            )
+            .copied()
+    }
+
     pub fn peek_comments(&self, line_index: usize) -> impl Iterator<Item = &Comment> {
         self.comments
             .range(

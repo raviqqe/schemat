@@ -1,4 +1,4 @@
-#![feature(allocator_api)]
+#![feature(allocator_api, iter_intersperse)]
 
 mod ast;
 mod context;

@@ -191,6 +191,27 @@ fn compile_expressions<'a, A: Allocator + Clone + 'a>(
     sequence(documents.leak())
 }
 
+fn compile_token<'a, A: Allocator + Clone + 'a>(
+    context: &'a mut Context<'a, A>,
+    document: Document<'a>,
+    position: &Position,
+) -> Document<'a> {
+    let builder = context.builder().clone();
+    let comments = context.drain_inline_comments(position).collect::<Vec<_>>();
+
+    if comments.is_empty() {
+        builder.sequence(
+            comments
+                .iter()
+                .map(|comment| builder.sequence(["#|", comment.value(), "|#"]))
+                .intersperse(" ".into())
+                .chain([document]),
+        )
+    } else {
+        document
+    }
+}
+
 fn compile_line_comment<'a, A: Allocator + Clone + 'a>(
     context: &mut Context<'a, A>,
     position: &Position,
