@@ -191,39 +191,32 @@ fn compile_expressions<'a, A: Allocator + Clone + 'a>(
     sequence(documents.leak())
 }
 
-fn compile_token<'a, A: Allocator + Clone + 'a>(
-    context: &'a mut Context<'a, A>,
-    document: Document<'a>,
-    position: &Position,
-) -> Document<'a> {
-    let builder = context.builder().clone();
-    let comments = context.drain_inline_comments(position).collect::<Vec<_>>();
-
-    if comments.is_empty() {
-        builder.sequence(
-            comments
-                .iter()
-                .map(|comment| builder.sequence(["#|", comment.value(), "|#"]))
-                .intersperse(" ".into())
-                .chain([document]),
-        )
-    } else {
-        document
-    }
-}
-
 fn compile_line_comment<'a, A: Allocator + Clone + 'a>(
     context: &mut Context<'a, A>,
     position: &Position,
     document: impl Fn(&mut Context<'a, A>) -> Document<'a>,
 ) -> Document<'a> {
     let block_comment = compile_block_comment(context, position);
+    let inline_comments = compile_inline_comments(context, position);
     let document = document(context);
     let suffix_comment = compile_suffix_comment(context, position);
 
     context
         .builder()
-        .sequence([block_comment, document, suffix_comment])
+        .sequence([block_comment, inline_comments, document, suffix_comment])
+}
+
+fn compile_inline_comments<'a, A: Allocator + Clone + 'a>(
+    context: &mut Context<'a, A>,
+    position: &Position,
+) -> Document<'a> {
+    let builder = context.builder().clone();
+
+    builder.sequence(
+        context
+            .drain_inline_comments(position)
+            .map(|comment| builder.sequence(["#|", comment.value(), "|# "])),
+    )
 }
 
 fn compile_suffix_comment<'a, A: Allocator + Clone + 'a>(
