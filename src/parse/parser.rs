@@ -35,8 +35,8 @@ pub fn comments<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Comment, A
             map(none_of("\";#\\"), |_| None),
             map(raw_string, |_| None),
             map(raw_symbol, |_| None),
-            map(quote, |_| None),
             map(comment, Some),
+            map(quote, |_| None),
         )),
         move || Vec::new_in(allocator.clone()),
         |mut all, comment| {
@@ -888,6 +888,14 @@ mod tests {
                         .unwrap()
                         .1,
                     BlockComment::new("\nfoo\nbar\nbaz\n", Position::new(0, 17))
+                );
+            }
+
+            #[test]
+            fn parse_in_comments() {
+                assert_eq!(
+                    comments(Input::new_extra("#|foo|#", Global)).unwrap().1,
+                    vec![BlockComment::new("foo", Position::new(0, 7)).into()]
                 );
             }
         }
