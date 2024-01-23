@@ -107,7 +107,7 @@ async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
         if error {
             Ok(())
         } else {
-            Err(format!("{} / {} file(s) failed", error_count, count).into())
+            Err(format!("{} / {} file(s) failed to format", error_count, count).into())
         }
     }
 }
