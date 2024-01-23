@@ -144,6 +144,7 @@ fn raw_string<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
             tag("\\n"),
             tag("\\r"),
             tag("\\t"),
+            tag("\\\n"),
             recognize(tuple((char('\\'), hexadecimal_digit, hexadecimal_digit))),
             recognize(preceded(
                 tag("\\x"),
@@ -779,6 +780,14 @@ mod tests {
             assert_eq!(
                 string(Input::new_extra("\"\\00\\FF\"", Global)).unwrap().1,
                 Expression::String("\\00\\FF", Position::new(0, 8))
+            );
+        }
+
+        #[test]
+        fn parse_multi_line() {
+            assert_eq!(
+                string(Input::new_extra("\"a\\\nb\"", Global)).unwrap().1,
+                Expression::String("a\\\nb", Position::new(0, 6))
             );
         }
     }

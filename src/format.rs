@@ -483,6 +483,21 @@ mod tests {
     }
 
     #[test]
+    fn format_multi_line_string() {
+        assert_eq!(
+            format(
+                &[Expression::String("a\\\nb", Position::new(0, 6))],
+                &[],
+                &[],
+                &PositionMap::new("\"a\\\nb\""),
+                Global,
+            )
+            .unwrap(),
+            "\"a\\\nb\"\n"
+        );
+    }
+
+    #[test]
     fn format_symbol() {
         assert_eq!(
             format(
