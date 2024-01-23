@@ -131,9 +131,8 @@ async fn format_paths(paths: &[String], verbose: bool) -> Result<(), Box<dyn Err
 
 fn read_paths(paths: &[String]) -> Result<impl Iterator<Item = PathBuf>, Box<dyn Error>> {
     Ok(paths
-        .into_iter()
-        .map(|path| Ok::<_, Box<dyn Error>>(glob::glob(&path)?.collect::<Result<Vec<_>, _>>()?))
-        .into_iter()
+        .iter()
+        .map(|path| Ok::<_, Box<dyn Error>>(glob::glob(path)?.collect::<Result<Vec<_>, _>>()?))
         .collect::<Result<Vec<_>, _>>()?
         .into_iter()
         .flatten())
