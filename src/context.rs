@@ -29,10 +29,10 @@ impl<'a, A: Allocator + Clone> Context<'a, A> {
         &self.builder
     }
 
-    pub fn drain_comments<'b>(
-        &'b mut self,
+    pub fn drain_comments(
+        &mut self,
         line_index: usize,
-    ) -> impl Iterator<Item = &'a Comment<'a>> + 'b {
+    ) -> impl Iterator<Item = &'a Comment<'a>> + '_ {
         self.comments.drain(
             ..self
                 .comments
