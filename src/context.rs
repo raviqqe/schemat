@@ -29,7 +29,7 @@ impl<'a, A: Allocator + Clone> Context<'a, A> {
         &self.builder
     }
 
-    pub fn drain_comments(
+    pub fn drain_multi_line_comments(
         &mut self,
         line_index: usize,
     ) -> impl Iterator<Item = &'a Comment<'a>> + '_ {
@@ -46,7 +46,8 @@ impl<'a, A: Allocator + Clone> Context<'a, A> {
         &mut self,
         line_index: usize,
     ) -> impl Iterator<Item = &'a Comment<'a>> + '_ {
-        self.drain_comments(line_index + 1)
+        // TODO Filter only line comments.
+        self.drain_multi_line_comments(line_index + 1)
     }
 
     pub fn drain_inline_comments(

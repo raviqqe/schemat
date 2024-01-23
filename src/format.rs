@@ -239,8 +239,9 @@ fn compile_block_comment<'a, A: Allocator + Clone + 'a>(
     position: &Position,
 ) -> Document<'a> {
     let builder = context.builder().clone();
-    let comments =
-        builder.allocate_slice(context.drain_comments(get_line_index(context, position.start())));
+    let comments = builder.allocate_slice(
+        context.drain_multi_line_comments(get_line_index(context, position.start())),
+    );
 
     compile_all_comments(
         context,
@@ -253,7 +254,7 @@ fn compile_remaining_block_comment<'a, A: Allocator + Clone + 'a>(
     context: &mut Context<'a, A>,
 ) -> Document<'a> {
     let builder = context.builder().clone();
-    let comments = builder.allocate_slice(context.drain_comments(usize::MAX));
+    let comments = builder.allocate_slice(context.drain_multi_line_comments(usize::MAX));
 
     compile_all_comments(context, comments, None)
 }
