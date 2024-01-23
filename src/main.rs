@@ -106,7 +106,7 @@ async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
             match result {
                 Ok(path) => {
                     if arguments.verbose {
-                        eprintln!("{}\t{}", "FORMATTED".blue(), path.display());
+                        eprintln!("{}\t{}", "FORMAT".blue(), path.display());
                     }
                 }
                 Err(error) => {
