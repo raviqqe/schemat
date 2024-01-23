@@ -15,7 +15,7 @@ use crate::{
 use bumpalo::Bump;
 use clap::Parser;
 use colored::Colorize;
-use futures::future::try_join_all;
+use futures::future::{join_all, try_join_all};
 use glob::{GlobError, PatternError};
 use std::{
     error::Error,
@@ -60,20 +60,28 @@ async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
         let mut count = 0;
         let mut error_count = 0;
 
-        for (path, path_success) in try_join_all(read_paths(arguments.paths)?.map(|path| async {
+        for result in join_all(read_paths(arguments.paths)?.map(|path| async {
             let path = path?;
             let success = check_path(&path).await?;
             Ok::<_, Box<dyn Error>>((path, success))
         }))
-        .await?
+        .await
         {
             count += 1;
 
-            if !path_success {
-                eprintln!("{}\t{}", "FAIL".red(), path.display());
-                error_count += 1;
-            } else if arguments.verbose {
-                eprintln!("{}\t{}", "OK".green(), path.display());
+            match result {
+                Ok((path, path_success)) => {
+                    if !path_success {
+                        eprintln!("{}\t{}", "FAIL".red(), path.display());
+                        error_count += 1;
+                    } else if arguments.verbose {
+                        eprintln!("{}\t{}", "OK".green(), path.display());
+                    }
+                }
+                Err(error) => {
+                    eprintln!("{}", error);
+                    error_count += 1;
+                }
             }
         }
 
@@ -83,6 +91,7 @@ async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
             Err(format!("{} / {} file(s) failed", error_count, count).into())
         }
     } else {
+        let mut error = false;
         for path in try_join_all(read_paths(arguments.paths)?.map(|path| async {
             let path = path?;
             format_path(&path).await?;
@@ -95,7 +104,11 @@ async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
             }
         }
 
-        Ok(())
+        if error {
+            Ok(())
+        } else {
+            Err(format!("{} / {} file(s) failed", error_count, count).into())
+        }
     }
 }
 
