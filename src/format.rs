@@ -238,7 +238,7 @@ fn compile_inline_comment<'a, A: Allocator + Clone + 'a>(
     builder.sequence(
         context
             .drain_inline_comments(position)
-            .map(|comment| builder.sequence(["#|", comment.value(), "|#"])),
+            .map(|comment| builder.sequence(["#|", comment.content(), "|#"])),
     )
 }
 
@@ -252,7 +252,7 @@ fn compile_suffix_comment<'a, A: Allocator + Clone + 'a>(
         context
             .drain_current_line_comment(line_index(context, position.start()))
             .map(|comment| {
-                builder.line_suffixes([" ", COMMENT_PREFIX, comment.value().trim_end()])
+                builder.line_suffixes([" ", COMMENT_PREFIX, comment.content().trim_end()])
             }),
     )
 }
@@ -300,7 +300,7 @@ fn compile_all_comments<'a, A: Allocator + Clone + 'a>(
                 Comment::Block(comment) => context.builder().sequence([
                     "#|".into(),
                     line(),
-                    comment.value().trim().into(),
+                    comment.content().trim().into(),
                     line(),
                     "|#".into(),
                     line(),
@@ -312,7 +312,7 @@ fn compile_all_comments<'a, A: Allocator + Clone + 'a>(
                 ]),
                 Comment::Line(comment) => context.builder().sequence([
                     COMMENT_PREFIX.into(),
-                    comment.value().trim_end().into(),
+                    comment.content().trim_end().into(),
                     context.builder().r#break(line()),
                     if line_index(context, comment.position().end() - 1) + 1 < next_line_index {
                         line()
