@@ -1225,8 +1225,8 @@ mod tests {
                         .unwrap(),
                         indoc!(
                             "
-                        (foo bar #|baz|# qux)
-                        "
+                            (foo bar #|baz|# qux)
+                            "
                         )
                     );
                 }
