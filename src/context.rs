@@ -46,8 +46,16 @@ impl<'a, A: Allocator + Clone> Context<'a, A> {
         &mut self,
         line_index: usize,
     ) -> impl Iterator<Item = &'a Comment<'a>> + '_ {
-        // TODO Filter only line comments.
-        self.drain_multi_line_comments(line_index + 1)
+        self.comments.drain(
+            ..self
+                .comments
+                .iter()
+                .position(|comment| {
+                    !matches!(comment, Comment::Line(_))
+                        || self.line_index(comment.position()) > line_index
+                })
+                .unwrap_or(self.comments.len()),
+        )
     }
 
     pub fn drain_inline_comments(
