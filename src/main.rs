@@ -2,12 +2,14 @@
 
 mod ast;
 mod context;
+mod error;
 mod format;
 mod parse;
 mod position;
 mod position_map;
 
 use crate::{
+    error::ApplicationError,
     format::format,
     parse::{parse, parse_comments, parse_hash_directives, ParseError},
     position_map::PositionMap,
@@ -15,8 +17,7 @@ use crate::{
 use bumpalo::Bump;
 use clap::Parser;
 use colored::Colorize;
-use futures::future::join_all;
-use glob::{GlobError, PatternError};
+use futures::future::{join_all, try_join_all};
 use std::{
     error::Error,
     path::{Path, PathBuf},
@@ -25,6 +26,7 @@ use std::{
 use tokio::{
     fs::{read_to_string, write},
     io::{stdin, stdout, AsyncReadExt, AsyncWriteExt},
+    task::spawn_blocking,
 };
 
 #[derive(clap::Parser)]
@@ -60,8 +62,7 @@ async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
         let mut count = 0;
         let mut error_count = 0;
 
-        for result in join_all(read_paths(arguments.paths)?.map(|path| async {
-            let path = path?;
+        for result in join_all(read_paths(arguments.paths).await?.map(|path| async {
             let success = check_path(&path).await?;
             Ok::<_, Box<dyn Error>>((path, success))
         }))
@@ -94,8 +95,7 @@ async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
         let mut error_count = 0;
         let mut count = 0;
 
-        for result in join_all(read_paths(arguments.paths)?.map(|path| async {
-            let path = path?;
+        for result in join_all(read_paths(arguments.paths).await?.map(|path| async {
             format_path(&path).await?;
             Ok::<_, Box<dyn Error>>(path)
         }))
@@ -124,15 +124,17 @@ async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
     }
 }
 
-fn read_paths(
-    paths: Vec<String>,
-) -> Result<impl Iterator<Item = Result<PathBuf, GlobError>>, PatternError> {
-    Ok(paths
-        .into_iter()
-        .map(|path| glob::glob(&path))
-        .collect::<Result<Vec<_>, _>>()?
-        .into_iter()
-        .flatten())
+async fn read_paths(paths: Vec<String>) -> Result<impl Iterator<Item = PathBuf>, ApplicationError> {
+    Ok(try_join_all(paths.into_iter().map(|path| {
+        spawn_blocking(move || {
+            Ok::<_, ApplicationError>(glob::glob(&path)?.collect::<Result<Vec<PathBuf>, _>>()?)
+        })
+    }))
+    .await?
+    .into_iter()
+    .collect::<Result<Vec<Vec<PathBuf>>, _>>()?
+    .into_iter()
+    .flatten())
 }
 
 async fn format_stdin() -> Result<(), Box<dyn Error>> {
