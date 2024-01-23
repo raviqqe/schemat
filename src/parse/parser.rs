@@ -751,6 +751,14 @@ mod tests {
                 Expression::String("\\00\\FF", Position::new(0, 8))
             );
         }
+
+        #[test]
+        fn parse_multi_line() {
+            assert_eq!(
+                string(Input::new_extra("\"a\\\nb\"", Global)).unwrap().1,
+                Expression::String("a\\\nb", Position::new(0, 6))
+            );
+        }
     }
 
     mod comment {
