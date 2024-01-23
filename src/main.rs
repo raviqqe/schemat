@@ -17,7 +17,7 @@ use crate::{
 use bumpalo::Bump;
 use clap::Parser;
 use colored::Colorize;
-use futures::future::{join_all, try_join_all};
+use futures::future::join_all;
 use std::{
     error::Error,
     path::{Path, PathBuf},
@@ -26,7 +26,6 @@ use std::{
 use tokio::{
     fs::{read_to_string, write},
     io::{stdin, stdout, AsyncReadExt, AsyncWriteExt},
-    task::spawn_blocking,
 };
 
 #[derive(clap::Parser)]
@@ -62,7 +61,7 @@ async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
         let mut count = 0;
         let mut error_count = 0;
 
-        for result in join_all(read_paths(arguments.paths).await?.map(|path| async {
+        for result in join_all(read_paths(arguments.paths)?.map(|path| async {
             let success = check_path(&path).await?;
             Ok::<_, Box<dyn Error>>((path, success))
         }))
@@ -95,7 +94,7 @@ async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
         let mut error_count = 0;
         let mut count = 0;
 
-        for result in join_all(read_paths(arguments.paths).await?.map(|path| async {
+        for result in join_all(read_paths(arguments.paths)?.map(|path| async {
             format_path(&path).await?;
             Ok::<_, Box<dyn Error>>(path)
         }))
@@ -124,17 +123,16 @@ async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
     }
 }
 
-async fn read_paths(paths: Vec<String>) -> Result<impl Iterator<Item = PathBuf>, ApplicationError> {
-    Ok(try_join_all(paths.into_iter().map(|path| {
-        spawn_blocking(move || {
+fn read_paths(paths: Vec<String>) -> Result<impl Iterator<Item = PathBuf>, ApplicationError> {
+    Ok(paths
+        .into_iter()
+        .map(|path| {
             Ok::<_, ApplicationError>(glob::glob(&path)?.collect::<Result<Vec<PathBuf>, _>>()?)
         })
-    }))
-    .await?
-    .into_iter()
-    .collect::<Result<Vec<Vec<PathBuf>>, _>>()?
-    .into_iter()
-    .flatten())
+        .into_iter()
+        .collect::<Result<Vec<Vec<PathBuf>>, _>>()?
+        .into_iter()
+        .flatten())
 }
 
 async fn format_stdin() -> Result<(), Box<dyn Error>> {
