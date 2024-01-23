@@ -15,8 +15,7 @@ use crate::{
 use bumpalo::Bump;
 use clap::Parser;
 use colored::Colorize;
-use futures::future::try_join_all;
-use glob::{GlobError, PatternError};
+use futures::future::join_all;
 use std::{
     error::Error,
     path::{Path, PathBuf},
@@ -57,54 +56,83 @@ async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
     } else if arguments.paths.is_empty() {
         format_stdin().await
     } else if arguments.check {
-        let mut count = 0;
-        let mut error_count = 0;
-
-        for (path, path_success) in try_join_all(read_paths(arguments.paths)?.map(|path| async {
-            let path = path?;
-            let success = check_path(&path).await?;
-            Ok::<_, Box<dyn Error>>((path, success))
-        }))
-        .await?
-        {
-            count += 1;
-
-            if !path_success {
-                eprintln!("{}\t{}", "FAIL".red(), path.display());
-                error_count += 1;
-            } else if arguments.verbose {
-                eprintln!("{}\t{}", "OK".green(), path.display());
-            }
-        }
-
-        if error_count == 0 {
-            Ok(())
-        } else {
-            Err(format!("{} / {} file(s) failed", error_count, count).into())
-        }
+        check_paths(&arguments.paths, arguments.verbose).await
     } else {
-        for path in try_join_all(read_paths(arguments.paths)?.map(|path| async {
-            let path = path?;
-            format_path(&path).await?;
-            Ok::<_, Box<dyn Error>>(path)
-        }))
-        .await?
-        {
-            if arguments.verbose {
-                eprintln!("formatted {}", path.display());
-            }
-        }
-
-        Ok(())
+        format_paths(&arguments.paths, arguments.verbose).await
     }
 }
 
-fn read_paths(
-    paths: Vec<String>,
-) -> Result<impl Iterator<Item = Result<PathBuf, GlobError>>, PatternError> {
+async fn check_paths(paths: &[String], verbose: bool) -> Result<(), Box<dyn Error>> {
+    let mut count = 0;
+    let mut error_count = 0;
+
+    for result in join_all(read_paths(paths)?.map(|path| async {
+        let success = check_path(&path).await?;
+        Ok::<_, Box<dyn Error>>((path, success))
+    }))
+    .await
+    {
+        count += 1;
+
+        match result {
+            Ok((path, path_success)) => {
+                if !path_success {
+                    eprintln!("{}\t{}", "FAIL".red(), path.display());
+                    error_count += 1;
+                } else if verbose {
+                    eprintln!("{}\t{}", "OK".green(), path.display());
+                }
+            }
+            Err(error) => {
+                eprintln!("{}\t{}", "ERROR".red(), error);
+                error_count += 1;
+            }
+        }
+    }
+
+    if error_count == 0 {
+        Ok(())
+    } else {
+        Err(format!("{} / {} file(s) failed", error_count, count).into())
+    }
+}
+
+async fn format_paths(paths: &[String], verbose: bool) -> Result<(), Box<dyn Error>> {
+    let mut count = 0;
+    let mut error_count = 0;
+
+    for result in join_all(read_paths(paths)?.map(|path| async {
+        format_path(&path).await?;
+        Ok::<_, Box<dyn Error>>(path)
+    }))
+    .await
+    {
+        count += 1;
+
+        match result {
+            Ok(path) => {
+                if verbose {
+                    eprintln!("{}\t{}", "FORMAT".blue(), path.display());
+                }
+            }
+            Err(error) => {
+                eprintln!("{}\t{}", "ERROR".red(), error);
+                error_count += 1;
+            }
+        }
+    }
+
+    if error_count == 0 {
+        Ok(())
+    } else {
+        Err(format!("{} / {} file(s) failed to format", error_count, count).into())
+    }
+}
+
+fn read_paths(paths: &[String]) -> Result<impl Iterator<Item = PathBuf>, Box<dyn Error>> {
     Ok(paths
-        .into_iter()
-        .map(|path| glob::glob(&path))
+        .iter()
+        .map(|path| Ok::<_, Box<dyn Error>>(glob::glob(path)?.collect::<Result<Vec<_>, _>>()?))
         .collect::<Result<Vec<_>, _>>()?
         .into_iter()
         .flatten())
