@@ -95,7 +95,7 @@ fn compile_expression<'a, A: Allocator + Clone + 'a>(
     expression: &'a Expression<'a, A>,
     data: bool,
 ) -> Document<'a> {
-    compile_line_comment(context, expression.position(), |context| match expression {
+    compile_comment(context, expression.position(), |context| match expression {
         Expression::List(left, right, expressions, position) => {
             compile_list(context, expressions, position, left, right, data)
         }
@@ -132,7 +132,7 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
     let builder = context.builder().clone();
 
     builder.sequence([
-        compile_line_comment(context, position, |_| left.into()),
+        compile_comment(context, position, |_| left.into()),
         builder.indent(
             builder.offside(
                 builder.sequence(
@@ -191,19 +191,19 @@ fn compile_expressions<'a, A: Allocator + Clone + 'a>(
     sequence(documents.leak())
 }
 
-fn compile_line_comment<'a, A: Allocator + Clone + 'a>(
+fn compile_comment<'a, A: Allocator + Clone + 'a>(
     context: &mut Context<'a, A>,
     position: &Position,
     document: impl Fn(&mut Context<'a, A>) -> Document<'a>,
 ) -> Document<'a> {
     let block_comment = compile_block_comment(context, position);
-    let inline_comments = compile_inline_comments(context, position);
+    let inline_comment = compile_inline_comments(context, position);
     let document = document(context);
     let suffix_comment = compile_suffix_comment(context, position);
 
     context
         .builder()
-        .sequence([block_comment, inline_comments, document, suffix_comment])
+        .sequence([block_comment, inline_comment, document, suffix_comment])
 }
 
 fn compile_inline_comments<'a, A: Allocator + Clone + 'a>(
@@ -1157,19 +1157,24 @@ mod tests {
             fn format_inline_in_middle() {
                 assert_eq!(
                     format(
-                        &[
-                            Expression::Symbol("foo", Position::new(0, 3)),
-                            Expression::Symbol("baz", Position::new(10, 13))
-                        ],
-                        &[BlockComment::new("bar", Position::new(3, 10)).into(),],
+                        &[Expression::List(
+                            "(",
+                            ")",
+                            vec![
+                                Expression::Symbol("foo", Position::new(1, 4)),
+                                Expression::Symbol("baz", Position::new(11, 14))
+                            ],
+                            Position::new(0, 15)
+                        ),],
+                        &[BlockComment::new("bar", Position::new(4, 11)).into(),],
                         &[],
-                        &PositionMap::new("foo#|bar|#baz"),
+                        &PositionMap::new("(foo#|bar|#baz)"),
                         Global,
                     )
                     .unwrap(),
                     indoc!(
                         "
-                        foo #|bar|# baz
+                        (foo #|bar|# baz)
                         "
                     )
                 );
