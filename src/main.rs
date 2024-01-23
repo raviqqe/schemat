@@ -98,8 +98,8 @@ async fn check_paths(paths: &[String], verbose: bool) -> Result<(), Box<dyn Erro
 }
 
 async fn format_paths(paths: &[String], verbose: bool) -> Result<(), Box<dyn Error>> {
-    let mut error_count = 0;
     let mut count = 0;
+    let mut error_count = 0;
 
     for result in join_all(read_paths(paths)?.map(|path| async {
         format_path(&path).await?;
