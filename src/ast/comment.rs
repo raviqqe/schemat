@@ -11,10 +11,10 @@ pub enum Comment<'a> {
 }
 
 impl<'a> Comment<'a> {
-    pub fn value(&self) -> &str {
+    pub fn content(&self) -> &str {
         match self {
-            Self::Block(comment) => comment.value(),
-            Self::Line(comment) => comment.value(),
+            Self::Block(comment) => comment.content(),
+            Self::Line(comment) => comment.content(),
         }
     }
 
