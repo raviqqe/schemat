@@ -2,14 +2,12 @@
 
 mod ast;
 mod context;
-mod error;
 mod format;
 mod parse;
 mod position;
 mod position_map;
 
 use crate::{
-    error::ApplicationError,
     format::format,
     parse::{parse, parse_comments, parse_hash_directives, ParseError},
     position_map::PositionMap,
@@ -123,11 +121,11 @@ async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
     }
 }
 
-fn read_paths(paths: Vec<String>) -> Result<impl Iterator<Item = PathBuf>, ApplicationError> {
+fn read_paths(paths: Vec<String>) -> Result<impl Iterator<Item = PathBuf>, Box<dyn Error>> {
     Ok(paths
         .into_iter()
         .map(|path| {
-            Ok::<_, ApplicationError>(glob::glob(&path)?.collect::<Result<Vec<PathBuf>, _>>()?)
+            Ok::<_, Box<dyn Error>>(glob::glob(&path)?.collect::<Result<Vec<PathBuf>, _>>()?)
         })
         .into_iter()
         .collect::<Result<Vec<Vec<PathBuf>>, _>>()?
