@@ -906,9 +906,11 @@ mod tests {
             #[test]
             fn parse_multi_line() {
                 assert_eq!(
+                    // spell-checker: disable-next-line
                     block_comment(Input::new_extra("#|\nfoo\nbar\nbaz\n|#", Global))
                         .unwrap()
                         .1,
+                    // spell-checker: disable-next-line
                     BlockComment::new("\nfoo\nbar\nbaz\n", Position::new(0, 17))
                 );
             }
