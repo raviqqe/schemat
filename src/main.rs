@@ -15,7 +15,7 @@ use crate::{
 use bumpalo::Bump;
 use clap::Parser;
 use colored::Colorize;
-use futures::future::{join_all, try_join_all};
+use futures::future::join_all;
 use glob::{GlobError, PatternError};
 use std::{
     error::Error,
@@ -79,7 +79,7 @@ async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
                     }
                 }
                 Err(error) => {
-                    eprintln!("{}", error);
+                    eprintln!("{}\t{}", "ERROR".red(), error);
                     error_count += 1;
                 }
             }
@@ -106,11 +106,11 @@ async fn run(arguments: Arguments) -> Result<(), Box<dyn Error>> {
             match result {
                 Ok(path) => {
                     if arguments.verbose {
-                        eprintln!("formatted {}", path.display());
+                        eprintln!("{}\t{}", "ERROR".red(), path.display());
                     }
                 }
                 Err(error) => {
-                    eprintln!("{}", error);
+                    eprintln!("{}\t{}", "ERROR".red(), error);
                     error_count += 1;
                 }
             }
