@@ -1170,8 +1170,8 @@ mod tests {
                         .unwrap(),
                         indoc!(
                             "
-                        #|foo|# bar
-                        "
+                            #|foo|# bar
+                            "
                         )
                     );
                 }
@@ -1197,8 +1197,8 @@ mod tests {
                         .unwrap(),
                         indoc!(
                             "
-                        (foo #|bar|# baz)
-                        "
+                            (foo #|bar|# baz)
+                            "
                         )
                     );
                 }
@@ -1253,8 +1253,8 @@ mod tests {
                         .unwrap(),
                         indoc!(
                             "
-                        (foo bar qux #|baz|#)
-                        "
+                            (foo bar qux #|baz|#)
+                            "
                         )
                     );
                 }
