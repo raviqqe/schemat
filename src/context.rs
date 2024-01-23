@@ -29,10 +29,10 @@ impl<'a, A: Allocator + Clone> Context<'a, A> {
         &self.builder
     }
 
-    pub fn drain_comments_before<'b>(
-        &'b mut self,
+    pub fn drain_multi_line_comments(
+        &mut self,
         line_index: usize,
-    ) -> impl Iterator<Item = &'a Comment<'a>> + 'b {
+    ) -> impl Iterator<Item = &'a Comment<'a>> + '_ {
         self.comments.drain(
             ..self
                 .comments
@@ -42,14 +42,36 @@ impl<'a, A: Allocator + Clone> Context<'a, A> {
         )
     }
 
-    pub fn drain_current_comment(
+    pub fn drain_current_line_comment(
         &mut self,
         line_index: usize,
     ) -> impl Iterator<Item = &'a Comment<'a>> + '_ {
-        self.drain_comments_before(line_index + 1)
+        self.comments.drain(
+            ..self
+                .comments
+                .iter()
+                .position(|comment| {
+                    !matches!(comment, Comment::Line(_))
+                        || self.line_index(comment.position()) > line_index
+                })
+                .unwrap_or(self.comments.len()),
+        )
     }
 
-    pub fn peek_comments_before(&self, line_index: usize) -> impl Iterator<Item = &'_ Comment> {
+    pub fn drain_inline_comments(
+        &mut self,
+        position: &Position,
+    ) -> impl Iterator<Item = &'a Comment<'a>> + '_ {
+        self.comments.drain(
+            ..self
+                .comments
+                .iter()
+                .position(|comment| comment.position().end() > position.start())
+                .unwrap_or(self.comments.len()),
+        )
+    }
+
+    pub fn peek_comments(&self, line_index: usize) -> impl Iterator<Item = &Comment> {
         self.comments
             .range(
                 ..self

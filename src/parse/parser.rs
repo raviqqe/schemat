@@ -1,6 +1,6 @@
 use super::{error::NomError, input::Input};
 use crate::{
-    ast::{Comment, Expression, HashDirective},
+    ast::{BlockComment, Comment, Expression, HashDirective, LineComment},
     position::Position,
 };
 use nom::{
@@ -15,7 +15,7 @@ use nom::{
 };
 use std::alloc::Allocator;
 
-const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&|~^.:";
+const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&~^.:";
 
 pub type IResult<'a, T, A> = nom::IResult<Input<'a, A>, T, NomError<'a, A>>;
 
@@ -35,8 +35,8 @@ pub fn comments<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Comment, A
             map(none_of("\";#\\"), |_| None),
             map(raw_string, |_| None),
             map(raw_symbol, |_| None),
-            map(quote, |_| None),
             map(comment, Some),
+            map(quote, |_| None),
         )),
         move || Vec::new_in(allocator.clone()),
         |mut all, comment| {
@@ -220,19 +220,40 @@ fn blank<A: Allocator + Clone>(input: Input<A>) -> IResult<(), A> {
 }
 
 fn comment<A: Allocator + Clone>(input: Input<A>) -> IResult<Comment, A> {
+    alt((
+        map(line_comment, From::from),
+        map(block_comment, From::from),
+    ))(input)
+}
+
+fn line_comment<A: Allocator + Clone>(input: Input<A>) -> IResult<LineComment, A> {
     map(
         terminated(
             positioned_meta(preceded(char(';'), take_until("\n"))),
             newline,
         ),
-        |(input, position)| Comment::new(&input, position),
+        |(input, position)| LineComment::new(&input, position),
+    )(input)
+}
+
+fn block_comment<A: Allocator + Clone>(input: Input<A>) -> IResult<BlockComment, A> {
+    map(
+        positioned_meta(delimited(
+            tag("#|"),
+            recognize(many0(tuple((not(tag("|#")), anychar)))),
+            tag("|#"),
+        )),
+        |(input, position)| BlockComment::new(&input, position),
     )(input)
 }
 
 fn hash_directive<A: Allocator + Clone>(input: Input<A>) -> IResult<HashDirective, A> {
     map(
         terminated(
-            positioned_meta(preceded(char('#'), take_until("\n"))),
+            positioned_meta(preceded(
+                tuple((char('#'), not(peek(char('|'))))),
+                take_until("\n"),
+            )),
             newline,
         ),
         |(input, position)| HashDirective::new(&input, position),
@@ -683,6 +704,16 @@ mod tests {
                 HashDirective::new("lang r7rs", Position::new(0, 10))
             );
         }
+
+        #[test]
+        fn parse_comment() {
+            assert_eq!(
+                hash_directives(Input::new_extra("#||#\n", Global))
+                    .unwrap()
+                    .1,
+                vec![]
+            );
+        }
     }
 
     mod string {
@@ -769,7 +800,7 @@ mod tests {
         fn parse_empty() {
             assert_eq!(
                 comment(Input::new_extra(";\n", Global)).unwrap().1,
-                Comment::new("", Position::new(0, 1))
+                LineComment::new("", Position::new(0, 1)).into()
             );
         }
 
@@ -777,7 +808,7 @@ mod tests {
         fn parse_comment() {
             assert_eq!(
                 comment(Input::new_extra(";foo\n", Global)).unwrap().1,
-                Comment::new("foo", Position::new(0, 4))
+                LineComment::new("foo", Position::new(0, 4)).into()
             );
         }
 
@@ -788,8 +819,8 @@ mod tests {
                     .unwrap()
                     .1,
                 vec![
-                    Comment::new("foo", Position::new(0, 4)),
-                    Comment::new("bar", Position::new(5, 9))
+                    LineComment::new("foo", Position::new(0, 4)).into(),
+                    LineComment::new("bar", Position::new(5, 9)).into()
                 ]
             );
         }
@@ -801,8 +832,8 @@ mod tests {
                     .unwrap()
                     .1,
                 vec![
-                    Comment::new("foo", Position::new(0, 4)),
-                    Comment::new("bar", Position::new(6, 10))
+                    LineComment::new("foo", Position::new(0, 4)).into(),
+                    LineComment::new("bar", Position::new(6, 10)).into()
                 ]
             );
         }
@@ -813,7 +844,7 @@ mod tests {
                 comments(Input::new_extra("#;foo\n;bar\n", Global))
                     .unwrap()
                     .1,
-                vec![Comment::new("bar", Position::new(6, 10))]
+                vec![LineComment::new("bar", Position::new(6, 10)).into()]
             );
         }
 
@@ -823,7 +854,7 @@ mod tests {
                 comments(Input::new_extra("#foo\n;bar\n", Global))
                     .unwrap()
                     .1,
-                vec![Comment::new("bar", Position::new(5, 9))]
+                vec![LineComment::new("bar", Position::new(5, 9)).into()]
             );
         }
 
@@ -841,13 +872,56 @@ mod tests {
                 comments(Input::new_extra("(f\n;foo\nx)", Global))
                     .unwrap()
                     .1,
-                vec![Comment::new("foo", Position::new(3, 7))]
+                vec![LineComment::new("foo", Position::new(3, 7)).into()]
             );
         }
 
         #[test]
         fn parse_comment_with_vector() {
             assert_eq!(comments(Input::new_extra("#()", Global)).unwrap().1, vec![]);
+        }
+
+        mod block {
+            use super::*;
+            use pretty_assertions::assert_eq;
+
+            #[test]
+            fn parse_empty() {
+                assert_eq!(
+                    block_comment(Input::new_extra("#||#", Global)).unwrap().1,
+                    BlockComment::new("", Position::new(0, 4))
+                );
+            }
+
+            #[test]
+            fn parse_one_line() {
+                assert_eq!(
+                    block_comment(Input::new_extra("#|foo|#", Global))
+                        .unwrap()
+                        .1,
+                    BlockComment::new("foo", Position::new(0, 7))
+                );
+            }
+
+            #[test]
+            fn parse_multi_line() {
+                assert_eq!(
+                    // spell-checker: disable-next-line
+                    block_comment(Input::new_extra("#|\nfoo\nbar\nbaz\n|#", Global))
+                        .unwrap()
+                        .1,
+                    // spell-checker: disable-next-line
+                    BlockComment::new("\nfoo\nbar\nbaz\n", Position::new(0, 17))
+                );
+            }
+
+            #[test]
+            fn parse_in_comments() {
+                assert_eq!(
+                    comments(Input::new_extra("#|foo|#", Global)).unwrap().1,
+                    vec![BlockComment::new("foo", Position::new(0, 7)).into()]
+                );
+            }
         }
     }
 }

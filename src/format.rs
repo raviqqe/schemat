@@ -95,7 +95,7 @@ fn compile_expression<'a, A: Allocator + Clone + 'a>(
     expression: &'a Expression<'a, A>,
     data: bool,
 ) -> Document<'a> {
-    compile_line_comment(context, expression.position(), |context| match expression {
+    compile_comment(context, expression.position(), |context| match expression {
         Expression::List(left, right, expressions, position) => {
             compile_list(context, expressions, position, left, right, data)
         }
@@ -120,11 +120,11 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
     right: &'a str,
     data: bool,
 ) -> Document<'a> {
-    let line_index = get_line_index(context, position.start());
+    let index = line_index(context, position.start());
 
     let index = expressions
         .iter()
-        .position(|expression| get_line_index(context, expression.position().start()) != line_index)
+        .position(|expression| line_index(context, expression.position().start()) != index)
         .unwrap_or(expressions.len());
     let first = &expressions[..index];
     let last = &expressions[index..];
@@ -132,7 +132,11 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
     let builder = context.builder().clone();
 
     builder.sequence([
-        compile_line_comment(context, position, |_| left.into()),
+        compile_comment(
+            context,
+            &position.set_end(position.start() + left.len()),
+            |_| left.into(),
+        ),
         builder.indent(
             builder.offside(
                 builder.sequence(
@@ -160,7 +164,17 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
                 !data,
             ),
         ),
-        right.into(),
+        {
+            let position = position.set_start(position.end() - right.len());
+            let inline_comment = compile_inline_comment(context, &position);
+            let inline_space = if is_empty(&inline_comment) {
+                empty()
+            } else {
+                " ".into()
+            };
+
+            builder.sequence([inline_space, inline_comment, right.into()])
+        },
     ])
 }
 
@@ -191,18 +205,41 @@ fn compile_expressions<'a, A: Allocator + Clone + 'a>(
     sequence(documents.leak())
 }
 
-fn compile_line_comment<'a, A: Allocator + Clone + 'a>(
+fn compile_comment<'a, A: Allocator + Clone + 'a>(
     context: &mut Context<'a, A>,
     position: &Position,
     document: impl Fn(&mut Context<'a, A>) -> Document<'a>,
 ) -> Document<'a> {
     let block_comment = compile_block_comment(context, position);
+    let inline_comment = compile_inline_comment(context, position);
+    let inline_space = if is_empty(&inline_comment) {
+        empty()
+    } else {
+        " ".into()
+    };
     let document = document(context);
     let suffix_comment = compile_suffix_comment(context, position);
 
-    context
-        .builder()
-        .sequence([block_comment, document, suffix_comment])
+    context.builder().sequence([
+        block_comment,
+        inline_comment,
+        inline_space,
+        document,
+        suffix_comment,
+    ])
+}
+
+fn compile_inline_comment<'a, A: Allocator + Clone + 'a>(
+    context: &mut Context<'a, A>,
+    position: &Position,
+) -> Document<'a> {
+    let builder = context.builder().clone();
+
+    builder.sequence(
+        context
+            .drain_inline_comments(position)
+            .map(|comment| builder.sequence(["#|", comment.value(), "|#"])),
+    )
 }
 
 fn compile_suffix_comment<'a, A: Allocator + Clone + 'a>(
@@ -213,7 +250,7 @@ fn compile_suffix_comment<'a, A: Allocator + Clone + 'a>(
 
     builder.sequence(
         context
-            .drain_current_comment(get_line_index(context, position.start()))
+            .drain_current_line_comment(line_index(context, position.start()))
             .map(|comment| {
                 builder.line_suffixes([" ", COMMENT_PREFIX, comment.value().trim_end()])
             }),
@@ -226,12 +263,12 @@ fn compile_block_comment<'a, A: Allocator + Clone + 'a>(
 ) -> Document<'a> {
     let builder = context.builder().clone();
     let comments = builder
-        .allocate_slice(context.drain_comments_before(get_line_index(context, position.start())));
+        .allocate_slice(context.drain_multi_line_comments(line_index(context, position.start())));
 
     compile_all_comments(
         context,
         comments,
-        Some(get_line_index(context, position.start())),
+        Some(line_index(context, position.start())),
     )
 }
 
@@ -239,7 +276,7 @@ fn compile_remaining_block_comment<'a, A: Allocator + Clone + 'a>(
     context: &mut Context<'a, A>,
 ) -> Document<'a> {
     let builder = context.builder().clone();
-    let comments = builder.allocate_slice(context.drain_comments_before(usize::MAX));
+    let comments = builder.allocate_slice(context.drain_multi_line_comments(usize::MAX));
 
     compile_all_comments(context, comments, None)
 }
@@ -256,20 +293,33 @@ fn compile_all_comments<'a, A: Allocator + Clone + 'a>(
                 comments
                     .iter()
                     .skip(1)
-                    .map(|comment| get_line_index(context, comment.position().start()))
+                    .map(|comment| line_index(context, comment.position().start()))
                     .chain([last_line_index.unwrap_or(0)]),
             )
-            .map(|(comment, next_line_index)| {
-                context.builder().sequence([
-                    COMMENT_PREFIX.into(),
-                    comment.value().trim_end().into(),
-                    context.builder().r#break(line()),
-                    if get_line_index(context, comment.position().end() - 1) + 1 < next_line_index {
+            .map(|(comment, next_line_index)| match comment {
+                Comment::Block(comment) => context.builder().sequence([
+                    "#|".into(),
+                    line(),
+                    comment.value().trim().into(),
+                    line(),
+                    "|#".into(),
+                    line(),
+                    if line_index(context, comment.position().end() - 1) + 1 < next_line_index {
                         line()
                     } else {
                         empty()
                     },
-                ])
+                ]),
+                Comment::Line(comment) => context.builder().sequence([
+                    COMMENT_PREFIX.into(),
+                    comment.value().trim_end().into(),
+                    context.builder().r#break(line()),
+                    if line_index(context, comment.position().end() - 1) + 1 < next_line_index {
+                        line()
+                    } else {
+                        empty()
+                    },
+                ]),
             }),
     )
 }
@@ -279,21 +329,18 @@ fn has_extra_line<A: Allocator + Clone>(
     last_expression: &Expression<A>,
     expression: &Expression<A>,
 ) -> bool {
-    let line_index = get_line_index(context, expression.position().start());
+    let index = line_index(context, expression.position().start());
 
     context
-        .peek_comments_before(line_index)
+        .peek_comments(index)
         .next()
-        .map(|comment| get_line_index(context, comment.position().start()))
-        .unwrap_or(line_index)
-        .saturating_sub(get_line_index(
-            context,
-            last_expression.position().end() - 1,
-        ))
+        .map(|comment| line_index(context, comment.position().start()))
+        .unwrap_or(index)
+        .saturating_sub(line_index(context, last_expression.position().end() - 1))
         > 1
 }
 
-fn get_line_index<A: Allocator + Clone>(context: &Context<A>, offset: usize) -> usize {
+fn line_index<A: Allocator + Clone>(context: &Context<A>, offset: usize) -> usize {
     context
         .position_map()
         .line_index(offset)
@@ -303,7 +350,11 @@ fn get_line_index<A: Allocator + Clone>(context: &Context<A>, offset: usize) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{position::Position, position_map::PositionMap};
+    use crate::{
+        ast::{BlockComment, LineComment},
+        position::Position,
+        position_map::PositionMap,
+    };
     use indoc::indoc;
     use pretty_assertions::assert_eq;
     use std::alloc::Global;
@@ -643,12 +694,12 @@ mod tests {
                     &[Expression::List(
                         "(",
                         ")",
-                        vec![Expression::Symbol("foo", Position::new(1, 1))],
-                        Position::new(0, 0)
+                        vec![Expression::Symbol("foo", Position::new(2, 5))],
+                        Position::new(0, 6)
                     )],
                     &[],
                     &[],
-                    &PositionMap::new("\n\n"),
+                    &PositionMap::new("(\nfoo)"),
                     Global,
                 )
                 .unwrap(),
@@ -788,11 +839,11 @@ mod tests {
         use pretty_assertions::assert_eq;
 
         #[test]
-        fn format_block_comment() {
+        fn format_multi_line_comment() {
             assert_eq!(
                 format(
                     &[Expression::Symbol("foo", Position::new(1, 2))],
-                    &[Comment::new("bar", Position::new(0, 1))],
+                    &[LineComment::new("bar", Position::new(0, 1)).into()],
                     &[],
                     &PositionMap::new("\na"),
                     Global,
@@ -808,11 +859,11 @@ mod tests {
         }
 
         #[test]
-        fn format_block_comment_with_extra_line() {
+        fn format_multi_line_comment_with_extra_line() {
             assert_eq!(
                 format(
                     &[Expression::Symbol("foo", Position::new(2, 3))],
-                    &[Comment::new("bar", Position::new(0, 1))],
+                    &[LineComment::new("bar", Position::new(0, 1)).into()],
                     &[],
                     &PositionMap::new("\n\na"),
                     Global,
@@ -829,13 +880,13 @@ mod tests {
         }
 
         #[test]
-        fn format_block_comments() {
+        fn format_multi_line_comments() {
             assert_eq!(
                 format(
                     &[Expression::Symbol("foo", Position::new(3, 4))],
                     &[
-                        Comment::new("bar", Position::new(0, 1)),
-                        Comment::new("baz", Position::new(1, 2))
+                        LineComment::new("bar", Position::new(0, 1)).into(),
+                        LineComment::new("baz", Position::new(1, 2)).into()
                     ],
                     &[],
                     &PositionMap::new("\n\n\na"),
@@ -854,13 +905,13 @@ mod tests {
         }
 
         #[test]
-        fn format_block_comments_with_extra_line() {
+        fn format_multi_line_comments_with_extra_line() {
             assert_eq!(
                 format(
                     &[Expression::Symbol("foo", Position::new(4, 5))],
                     &[
-                        Comment::new("bar", Position::new(0, 1)),
-                        Comment::new("baz", Position::new(2, 3))
+                        LineComment::new("bar", Position::new(0, 1)).into(),
+                        LineComment::new("baz", Position::new(2, 3)).into()
                     ],
                     &[],
                     &PositionMap::new("\n\n\n\na"),
@@ -880,14 +931,14 @@ mod tests {
         }
 
         #[test]
-        fn format_block_comment_after_expression() {
+        fn format_multi_line_comment_after_expression() {
             assert_eq!(
                 format(
                     &[
                         Expression::Symbol("foo", Position::new(0, 1)),
                         Expression::Symbol("baz", Position::new(2, 3))
                     ],
-                    &[Comment::new("bar", Position::new(1, 2))],
+                    &[LineComment::new("bar", Position::new(1, 2)).into()],
                     &[],
                     &PositionMap::new("\n\n\n"),
                     Global,
@@ -904,7 +955,7 @@ mod tests {
         }
 
         #[test]
-        fn format_block_comment_after_expression_in_list() {
+        fn format_multi_line_comment_after_expression_in_list() {
             assert_eq!(
                 format(
                     &[Expression::List(
@@ -916,7 +967,7 @@ mod tests {
                         ],
                         Position::new(0, 1)
                     )],
-                    &[Comment::new("bar", Position::new(1, 2))],
+                    &[LineComment::new("bar", Position::new(1, 2)).into()],
                     &[],
                     &PositionMap::new("\n\n\n"),
                     Global,
@@ -937,7 +988,7 @@ mod tests {
             assert_eq!(
                 format(
                     &[Expression::Symbol("foo", Position::new(0, 1))],
-                    &[Comment::new("bar", Position::new(0, 1))],
+                    &[LineComment::new("bar", Position::new(0, 1)).into()],
                     &[],
                     &PositionMap::new("\na"),
                     Global,
@@ -957,8 +1008,8 @@ mod tests {
                 format(
                     &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[
-                        Comment::new("bar", Position::new(0, 1)),
-                        Comment::new("baz", Position::new(0, 1))
+                        LineComment::new("bar", Position::new(0, 1)).into(),
+                        LineComment::new("baz", Position::new(0, 1)).into()
                     ],
                     &[],
                     &PositionMap::new("\na"),
@@ -980,12 +1031,12 @@ mod tests {
                     &[Expression::List(
                         "(",
                         ")",
-                        vec![Expression::Symbol("foo", Position::new(1, 2))],
-                        Position::new(0, 1)
+                        vec![Expression::Symbol("foo", Position::new(6, 9))],
+                        Position::new(0, 10)
                     )],
-                    &[Comment::new("bar", Position::new(0, 1))],
+                    &[LineComment::new("bar", Position::new(1, 5)).into()],
                     &[],
-                    &PositionMap::new("\n\n"),
+                    &PositionMap::new("(;bar\nfoo)"),
                     Global,
                 )
                 .unwrap(),
@@ -1011,7 +1062,7 @@ mod tests {
                         ],
                         Position::new(0, 1)
                     )],
-                    &[Comment::new("foo", Position::new(1, 2))],
+                    &[LineComment::new("foo", Position::new(1, 2)).into()],
                     &[],
                     &PositionMap::new("\n\n\n"),
                     Global,
@@ -1028,11 +1079,11 @@ mod tests {
         }
 
         #[test]
-        fn format_remaining_block_comment() {
+        fn format_remaining_multi_line_comment() {
             assert_eq!(
                 format(
                     &[Expression::Symbol("foo", Position::new(0, 1))],
-                    &[Comment::new("bar", Position::new(1, 2))],
+                    &[LineComment::new("bar", Position::new(1, 2)).into()],
                     &[],
                     &PositionMap::new("\n\n"),
                     Global,
@@ -1049,13 +1100,13 @@ mod tests {
         }
 
         #[test]
-        fn format_remaining_block_comments() {
+        fn format_remaining_multi_line_comments() {
             assert_eq!(
                 format(
                     &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[
-                        Comment::new("bar", Position::new(1, 2)),
-                        Comment::new("baz", Position::new(2, 3))
+                        LineComment::new("bar", Position::new(1, 2)).into(),
+                        LineComment::new("baz", Position::new(2, 3)).into()
                     ],
                     &[],
                     &PositionMap::new("\n\n\n"),
@@ -1074,13 +1125,13 @@ mod tests {
         }
 
         #[test]
-        fn format_remaining_block_comments_with_extra_line() {
+        fn format_remaining_multi_line_comments_with_extra_line() {
             assert_eq!(
                 format(
                     &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[
-                        Comment::new("bar", Position::new(1, 2)),
-                        Comment::new("baz", Position::new(3, 4))
+                        LineComment::new("bar", Position::new(1, 2)).into(),
+                        LineComment::new("baz", Position::new(3, 4)).into()
                     ],
                     &[],
                     &PositionMap::new("\n\n\n\n"),
@@ -1097,6 +1148,204 @@ mod tests {
                     "
                 )
             );
+        }
+
+        mod block {
+            use super::*;
+
+            mod inline {
+                use super::*;
+                use pretty_assertions::assert_eq;
+
+                #[test]
+                fn format_inline_in_front() {
+                    assert_eq!(
+                        format(
+                            &[Expression::Symbol("bar", Position::new(8, 11))],
+                            &[BlockComment::new("foo", Position::new(0, 8)).into(),],
+                            &[],
+                            &PositionMap::new("#|foo|#bar"),
+                            Global,
+                        )
+                        .unwrap(),
+                        indoc!(
+                            "
+                            #|foo|# bar
+                            "
+                        )
+                    );
+                }
+
+                #[test]
+                fn format_inline_after_first_expression() {
+                    assert_eq!(
+                        format(
+                            &[Expression::List(
+                                "(",
+                                ")",
+                                vec![
+                                    Expression::Symbol("foo", Position::new(1, 4)),
+                                    Expression::Symbol("baz", Position::new(11, 14))
+                                ],
+                                Position::new(0, 15)
+                            ),],
+                            &[BlockComment::new("bar", Position::new(4, 11)).into(),],
+                            &[],
+                            &PositionMap::new("(foo#|bar|#baz)"),
+                            Global,
+                        )
+                        .unwrap(),
+                        indoc!(
+                            "
+                            (foo #|bar|# baz)
+                            "
+                        )
+                    );
+                }
+
+                #[test]
+                fn format_inline_after_second_expression() {
+                    assert_eq!(
+                        format(
+                            &[Expression::List(
+                                "(",
+                                ")",
+                                vec![
+                                    Expression::Symbol("foo", Position::new(1, 4)),
+                                    Expression::Symbol("bar", Position::new(5, 8)),
+                                    Expression::Symbol("qux", Position::new(15, 18)),
+                                ],
+                                Position::new(0, 19)
+                            ),],
+                            &[BlockComment::new("baz", Position::new(8, 15)).into(),],
+                            &[],
+                            &PositionMap::new("(foo bar#|baz|#qux)"),
+                            Global,
+                        )
+                        .unwrap(),
+                        indoc!(
+                            "
+                            (foo bar #|baz|# qux)
+                            "
+                        )
+                    );
+                }
+
+                #[test]
+                fn format_inline_after_third_expression() {
+                    assert_eq!(
+                        format(
+                            &[Expression::List(
+                                "(",
+                                ")",
+                                vec![
+                                    Expression::Symbol("foo", Position::new(1, 4)),
+                                    Expression::Symbol("bar", Position::new(5, 8)),
+                                    Expression::Symbol("qux", Position::new(9, 12)),
+                                ],
+                                Position::new(0, 20)
+                            ),],
+                            &[BlockComment::new("baz", Position::new(12, 19)).into(),],
+                            &[],
+                            &PositionMap::new("(foo bar qux#|baz|#)"),
+                            Global,
+                        )
+                        .unwrap(),
+                        indoc!(
+                            "
+                            (foo bar qux #|baz|#)
+                            "
+                        )
+                    );
+                }
+            }
+
+            mod multi_line {
+                use super::*;
+                use pretty_assertions::assert_eq;
+
+                #[test]
+                fn format_multi_line() {
+                    assert_eq!(
+                        format(
+                            &[
+                                Expression::Symbol("foo", Position::new(0, 1)),
+                                Expression::Symbol("bar", Position::new(12, 13))
+                            ],
+                            &[BlockComment::new("foo", Position::new(4, 5)).into(),],
+                            &[],
+                            &PositionMap::new("foo\n#|foo|#\nbar"),
+                            Global,
+                        )
+                        .unwrap(),
+                        indoc!(
+                            "
+                            foo
+                            #|
+                            foo
+                            |#
+                            bar
+                            "
+                        )
+                    );
+                }
+
+                #[test]
+                fn format_multi_line_with_blank_lines() {
+                    assert_eq!(
+                        format(
+                            &[
+                                Expression::Symbol("foo", Position::new(0, 1)),
+                                Expression::Symbol("bar", Position::new(14, 15))
+                            ],
+                            &[BlockComment::new("foo", Position::new(5, 6)).into(),],
+                            &[],
+                            &PositionMap::new("foo\n\n#|foo|#\n\nbar"),
+                            Global,
+                        )
+                        .unwrap(),
+                        indoc!(
+                            "
+                            foo
+
+                            #|
+                            foo
+                            |#
+
+                            bar
+                            "
+                        )
+                    );
+                }
+
+                #[test]
+                fn format_multi_line_with_extra_blank_lines() {
+                    assert_eq!(
+                        format(
+                            &[
+                                Expression::Symbol("foo", Position::new(0, 1)),
+                                Expression::Symbol("bar", Position::new(16, 17))
+                            ],
+                            &[BlockComment::new("foo", Position::new(6, 7)).into(),],
+                            &[],
+                            &PositionMap::new("foo\n\n\n#|foo|#\n\n\nbar"),
+                            Global,
+                        )
+                        .unwrap(),
+                        indoc!(
+                            "
+                            foo
+
+                            #|
+                            foo
+                            |#
+
+                            bar
+                            "
+                        )
+                    );
+                }
+            }
         }
     }
 
@@ -1302,8 +1551,8 @@ mod tests {
                     .unwrap(),
                     indoc!(
                         "
-                    '((foo bar))
-                    "
+                        '((foo bar))
+                        "
                     )
                 );
             }
@@ -1339,9 +1588,9 @@ mod tests {
                     .unwrap(),
                     indoc!(
                         "
-                    '((foo
-                       bar))
-                    "
+                        '((foo
+                           bar))
+                        "
                     )
                 );
             }
