@@ -1,7 +1,8 @@
-#![feature(allocator_api, iter_intersperse)]
+#![feature(allocator_api, error_in_core, iter_intersperse)]
 
 mod ast;
 mod context;
+mod error;
 mod format;
 mod parse;
 mod position;
@@ -15,7 +16,8 @@ use crate::{
 use bumpalo::Bump;
 use clap::Parser;
 use colored::Colorize;
-use futures::future::join_all;
+use error::ApplicationError;
+use futures::future::try_join_all;
 use std::{
     error::Error,
     path::{Path, PathBuf},
@@ -24,6 +26,7 @@ use std::{
 use tokio::{
     fs::{read_to_string, write},
     io::{stdin, stdout, AsyncReadExt, AsyncWriteExt},
+    spawn,
 };
 
 #[derive(clap::Parser)]
@@ -66,11 +69,13 @@ async fn check_paths(paths: &[String], verbose: bool) -> Result<(), Box<dyn Erro
     let mut count = 0;
     let mut error_count = 0;
 
-    for result in join_all(read_paths(paths)?.map(|path| async {
-        let success = check_path(&path).await?;
-        Ok::<_, Box<dyn Error>>((path, success))
+    for result in try_join_all(read_paths(paths)?.map(|path| {
+        spawn(async {
+            let success = check_path(&path).await?;
+            Ok::<_, ApplicationError>((path, success))
+        })
     }))
-    .await
+    .await?
     {
         count += 1;
 
@@ -101,11 +106,13 @@ async fn format_paths(paths: &[String], verbose: bool) -> Result<(), Box<dyn Err
     let mut count = 0;
     let mut error_count = 0;
 
-    for result in join_all(read_paths(paths)?.map(|path| async {
-        format_path(&path).await?;
-        Ok::<_, Box<dyn Error>>(path)
+    for result in try_join_all(read_paths(paths)?.map(|path| {
+        spawn(async {
+            format_path(&path).await?;
+            Ok::<_, ApplicationError>(path)
+        })
     }))
-    .await
+    .await?
     {
         count += 1;
 
@@ -129,10 +136,10 @@ async fn format_paths(paths: &[String], verbose: bool) -> Result<(), Box<dyn Err
     }
 }
 
-fn read_paths(paths: &[String]) -> Result<impl Iterator<Item = PathBuf>, Box<dyn Error>> {
+fn read_paths(paths: &[String]) -> Result<impl Iterator<Item = PathBuf>, ApplicationError> {
     Ok(paths
         .iter()
-        .map(|path| Ok::<_, Box<dyn Error>>(glob::glob(path)?.collect::<Result<Vec<_>, _>>()?))
+        .map(|path| Ok::<_, ApplicationError>(glob::glob(path)?.collect::<Result<Vec<_>, _>>()?))
         .collect::<Result<Vec<_>, _>>()?
         .into_iter()
         .flatten())
@@ -142,7 +149,8 @@ async fn format_stdin() -> Result<(), Box<dyn Error>> {
     let mut source = Default::default();
     stdin().read_to_string(&mut source).await?;
     let position_map = PositionMap::new(&source);
-    let convert_error = |error: ParseError| error.to_string("<stdin>", &source, &position_map);
+    let convert_error =
+        |error: ParseError| convert_parse_error(error, "<stdin>", &source, &position_map);
     let allocator = Bump::new();
 
     stdout()
@@ -161,13 +169,13 @@ async fn format_stdin() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-async fn check_path(path: &Path) -> Result<bool, Box<dyn Error>> {
+async fn check_path(path: &Path) -> Result<bool, ApplicationError> {
     let source = read_to_string(path).await?;
 
     Ok(source == format_string(&source, &path.display().to_string())?)
 }
 
-async fn format_path(path: &Path) -> Result<(), Box<dyn Error>> {
+async fn format_path(path: &Path) -> Result<(), ApplicationError> {
     write(
         path,
         format_string(&read_to_string(path).await?, &path.display().to_string())?,
@@ -177,9 +185,9 @@ async fn format_path(path: &Path) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn format_string(source: &str, name: &str) -> Result<String, Box<dyn Error>> {
+fn format_string(source: &str, name: &str) -> Result<String, ApplicationError> {
     let position_map = PositionMap::new(source);
-    let convert_error = |error: ParseError| error.to_string(name, source, &position_map);
+    let convert_error = |error: ParseError| convert_parse_error(error, name, source, &position_map);
     let allocator = Bump::new();
 
     let source = format(
@@ -191,4 +199,13 @@ fn format_string(source: &str, name: &str) -> Result<String, Box<dyn Error>> {
     )?;
 
     Ok(source)
+}
+
+fn convert_parse_error(
+    error: ParseError,
+    name: &str,
+    source: &str,
+    position_map: &PositionMap,
+) -> ApplicationError {
+    ApplicationError::Parse(error.to_string(name, source, position_map))
 }
