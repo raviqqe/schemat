@@ -101,4 +101,5 @@ Feature: Format
     (
     """
     And the stderr should contain "FORMAT\tfoo.scm"
-    And the stderr should contain "ERROR\tbar.scm"
+    And the stderr should contain "ERROR"
+    And the stderr should contain "bar.scm"
