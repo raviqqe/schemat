@@ -17,7 +17,7 @@ use bumpalo::Bump;
 use clap::Parser;
 use colored::Colorize;
 use error::ApplicationError;
-use futures::future::{join_all, try_join_all};
+use futures::future::try_join_all;
 use std::{
     error::Error,
     path::{Path, PathBuf},
