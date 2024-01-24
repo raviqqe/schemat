@@ -79,8 +79,8 @@ Feature: Format
     """
     bar
     """
-    And the stderr should contain "foo.scm"
-    And the stderr should contain "bar.scm"
+    And the stderr should contain "FORMAT\tfoo.scm"
+    And the stderr should contain "FORMAT\tbar.scm"
 
   Scenario: Format valid and invalid files with a verbose option
     Given a file named "foo.scm" with:
