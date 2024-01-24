@@ -136,10 +136,10 @@ async fn format_paths(paths: &[String], verbose: bool) -> Result<(), Box<dyn Err
     }
 }
 
-fn read_paths(paths: &[String]) -> Result<impl Iterator<Item = PathBuf>, Box<dyn Error>> {
+fn read_paths(paths: &[String]) -> Result<impl Iterator<Item = PathBuf>, ApplicationError> {
     Ok(paths
         .iter()
-        .map(|path| Ok::<_, Box<dyn Error>>(glob::glob(path)?.collect::<Result<Vec<_>, _>>()?))
+        .map(|path| Ok::<_, ApplicationError>(glob::glob(path)?.collect::<Result<Vec<_>, _>>()?))
         .collect::<Result<Vec<_>, _>>()?
         .into_iter()
         .flatten())
@@ -149,7 +149,8 @@ async fn format_stdin() -> Result<(), Box<dyn Error>> {
     let mut source = Default::default();
     stdin().read_to_string(&mut source).await?;
     let position_map = PositionMap::new(&source);
-    let convert_error = |error: ParseError| error.to_string("<stdin>", &source, &position_map);
+    let convert_error =
+        |error: ParseError| convert_parse_error(error, "<stdin>", &source, &position_map);
     let allocator = Bump::new();
 
     stdout()
@@ -186,8 +187,7 @@ async fn format_path(path: &Path) -> Result<(), ApplicationError> {
 
 fn format_string(source: &str, name: &str) -> Result<String, ApplicationError> {
     let position_map = PositionMap::new(source);
-    let convert_error =
-        |error: ParseError| ApplicationError::Parse(error.to_string(name, source, &position_map));
+    let convert_error = |error: ParseError| convert_parse_error(error, name, source, &position_map);
     let allocator = Bump::new();
 
     let source = format(
@@ -199,4 +199,13 @@ fn format_string(source: &str, name: &str) -> Result<String, ApplicationError> {
     )?;
 
     Ok(source)
+}
+
+fn convert_parse_error(
+    error: ParseError,
+    name: &str,
+    source: &str,
+    position_map: &PositionMap,
+) -> ApplicationError {
+    ApplicationError::Parse(error.to_string(name, source, &position_map))
 }
