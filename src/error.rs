@@ -12,7 +12,7 @@ pub enum ApplicationError {
     Glob(GlobError),
     Io(io::Error),
     Parse(String),
-    Patttern(PatternError),
+    Pattern(PatternError),
 }
 
 impl Error for ApplicationError {}
@@ -24,7 +24,7 @@ impl Display for ApplicationError {
             Self::Glob(error) => error.fmt(formatter),
             Self::Io(error) => error.fmt(formatter),
             Self::Parse(error) => error.fmt(formatter),
-            Self::Patttern(error) => error.fmt(formatter),
+            Self::Pattern(error) => error.fmt(formatter),
         }
     }
 }
@@ -49,6 +49,6 @@ impl From<io::Error> for ApplicationError {
 
 impl From<PatternError> for ApplicationError {
     fn from(error: PatternError) -> Self {
-        Self::Patttern(error)
+        Self::Pattern(error)
     }
 }
