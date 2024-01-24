@@ -207,5 +207,5 @@ fn convert_parse_error(
     source: &str,
     position_map: &PositionMap,
 ) -> ApplicationError {
-    ApplicationError::Parse(error.to_string(name, source, &position_map))
+    ApplicationError::Parse(error.to_string(name, source, position_map))
 }
