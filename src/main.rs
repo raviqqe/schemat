@@ -17,7 +17,7 @@ use bumpalo::Bump;
 use clap::Parser;
 use colored::Colorize;
 use error::ApplicationError;
-use futures::future::join_all;
+use futures::future::{join_all, try_join_all};
 use std::{
     error::Error,
     path::{Path, PathBuf},
@@ -69,11 +69,13 @@ async fn check_paths(paths: &[String], verbose: bool) -> Result<(), Box<dyn Erro
     let mut count = 0;
     let mut error_count = 0;
 
-    for result in join_all(read_paths(paths)?.map(|path| async {
-        let success = check_path(&path).await?;
-        Ok::<_, Box<dyn Error>>((path, success))
+    for result in try_join_all(read_paths(paths)?.map(|path| {
+        spawn(async {
+            let success = check_path(&path).await?;
+            Ok::<_, ApplicationError>((path, success))
+        })
     }))
-    .await
+    .await?
     {
         count += 1;
 
@@ -104,17 +106,17 @@ async fn format_paths(paths: &[String], verbose: bool) -> Result<(), Box<dyn Err
     let mut count = 0;
     let mut error_count = 0;
 
-    for result in join_all(read_paths(paths)?.map(|path| {
+    for result in try_join_all(read_paths(paths)?.map(|path| {
         spawn(async {
             format_path(&path).await?;
             Ok::<_, ApplicationError>(path)
         })
     }))
-    .await
+    .await?
     {
         count += 1;
 
-        match result? {
+        match result {
             Ok(path) => {
                 if verbose {
                     eprintln!("{}\t{}", "FORMAT".blue(), path.display());
@@ -166,7 +168,7 @@ async fn format_stdin() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-async fn check_path(path: &Path) -> Result<bool, Box<dyn Error>> {
+async fn check_path(path: &Path) -> Result<bool, ApplicationError> {
     let source = read_to_string(path).await?;
 
     Ok(source == format_string(&source, &path.display().to_string())?)
