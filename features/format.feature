@@ -79,9 +79,27 @@ Feature: Format
     """
     bar
     """
+    And the stderr should contain "FORMAT\tfoo.scm"
+    And the stderr should contain "FORMAT\tbar.scm"
+
+  Scenario: Format valid and invalid files with a verbose option
+    Given a file named "foo.scm" with:
+    """
+    ()
+    """
+    And a file named "bar.scm" with:
+    """
+    (
+    """
+    When I run `schemat --verbose foo.scm bar.scm`
     Then a file named "foo.scm" should contain exactly:
     """
-    foo
+    ()
     """
-    And the stderr should contain "foo.scm"
+    And a file named "bar.scm" should contain exactly:
+    """
+    (
+    """
+    And the stderr should contain "FORMAT\tfoo.scm"
+    And the stderr should contain "ERROR"
     And the stderr should contain "bar.scm"

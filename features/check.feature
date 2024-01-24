@@ -16,6 +16,16 @@ Feature: Check
     """
     When I run `schemat --check foo.scm`
     Then the exit status should not be 0
+    And the stderr should contain "FAIL\tfoo.scm"
+
+  Scenario: Check an invalid file
+    Given a file named "foo.scm" with:
+    """
+    (
+    """
+    When I run `schemat --check foo.scm`
+    Then the exit status should not be 0
+    And the stderr should contain "ERROR"
     And the stderr should contain "foo.scm"
 
   Scenario: Check files
@@ -61,7 +71,7 @@ Feature: Check
     When I run `schemat --check foo.scm bar.scm`
     Then the exit status should not be 0
     And the stderr should not contain "foo.scm"
-    And the stderr should contain "bar.scm"
+    And the stderr should contain "FAIL\tbar.scm"
 
   Scenario: Check files not formatted with a verbose option
     Given a file named "foo.scm" with:
@@ -75,8 +85,8 @@ Feature: Check
     """
     When I run `schemat --check --verbose foo.scm bar.scm`
     Then the exit status should not be 0
-    And the stderr should contain "foo.scm"
-    And the stderr should contain "bar.scm"
+    And the stderr should contain "OK\tfoo.scm"
+    And the stderr should contain "FAIL\tbar.scm"
 
   Scenario: Fail to check stdin
     Given a file named "foo.scm" with:
