@@ -1,7 +1,8 @@
-#![feature(allocator_api, iter_intersperse)]
+#![feature(allocator_api, error_in_core, iter_intersperse)]
 
 mod ast;
 mod context;
+mod error;
 mod format;
 mod parse;
 mod position;
@@ -15,6 +16,7 @@ use crate::{
 use bumpalo::Bump;
 use clap::Parser;
 use colored::Colorize;
+use error::ApplicationError;
 use futures::future::join_all;
 use std::{
     error::Error,
@@ -24,6 +26,7 @@ use std::{
 use tokio::{
     fs::{read_to_string, write},
     io::{stdin, stdout, AsyncReadExt, AsyncWriteExt},
+    spawn,
 };
 
 #[derive(clap::Parser)]
@@ -101,9 +104,11 @@ async fn format_paths(paths: &[String], verbose: bool) -> Result<(), Box<dyn Err
     let mut count = 0;
     let mut error_count = 0;
 
-    for result in join_all(read_paths(paths)?.map(|path| async {
-        format_path(&path).await?;
-        Ok::<_, Box<dyn Error>>(path)
+    for result in join_all(read_paths(paths)?.map(|path| {
+        spawn(async {
+            format_path(&path).await?;
+            Ok::<_, Box<dyn Error + Send>>(path)
+        })
     }))
     .await
     {
@@ -167,7 +172,7 @@ async fn check_path(path: &Path) -> Result<bool, Box<dyn Error>> {
     Ok(source == format_string(&source, &path.display().to_string())?)
 }
 
-async fn format_path(path: &Path) -> Result<(), Box<dyn Error>> {
+async fn format_path(path: &Path) -> Result<(), ApplicationError> {
     write(
         path,
         format_string(&read_to_string(path).await?, &path.display().to_string())?,
