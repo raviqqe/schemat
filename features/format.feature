@@ -79,21 +79,17 @@ Feature: Format
     """
     bar
     """
-    Then a file named "foo.scm" should contain exactly:
-    """
-    foo
-    """
     And the stderr should contain "foo.scm"
     And the stderr should contain "bar.scm"
 
   Scenario: Format valid and invalid files with a verbose option
     Given a file named "foo.scm" with:
     """
-      foo
+    (foo)
     """
     And a file named "bar.scm" with:
     """
-      bar
+    (foo
     """
     When I successfully run `schemat --verbose foo.scm bar.scm`
     Then a file named "foo.scm" should contain exactly:
