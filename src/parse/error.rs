@@ -32,7 +32,7 @@ impl ParseError {
         let bytes = &source.as_bytes()[position_map.line_range(self.offset).expect("valid offset")];
 
         format!(
-            "{}\n{}:{}:{}: {}",
+            "{} {}:{}:{}: {}",
             &self.message,
             name,
             &position_map.line_index(self.offset).expect("valid offset") + 1,
