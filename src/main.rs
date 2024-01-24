@@ -107,7 +107,7 @@ async fn format_paths(paths: &[String], verbose: bool) -> Result<(), Box<dyn Err
     for result in join_all(read_paths(paths)?.map(|path| {
         spawn(async {
             format_path(&path).await?;
-            Ok::<_, Box<dyn Error + Send>>(path)
+            Ok(path)
         })
     }))
     .await
@@ -182,9 +182,10 @@ async fn format_path(path: &Path) -> Result<(), ApplicationError> {
     Ok(())
 }
 
-fn format_string(source: &str, name: &str) -> Result<String, Box<dyn Error>> {
+fn format_string(source: &str, name: &str) -> Result<String, ApplicationError> {
     let position_map = PositionMap::new(source);
-    let convert_error = |error: ParseError| error.to_string(name, source, &position_map);
+    let convert_error =
+        |error: ParseError| ApplicationError::Parse(error.to_string(name, source, &position_map));
     let allocator = Bump::new();
 
     let source = format(
