@@ -107,14 +107,14 @@ async fn format_paths(paths: &[String], verbose: bool) -> Result<(), Box<dyn Err
     for result in join_all(read_paths(paths)?.map(|path| {
         spawn(async {
             format_path(&path).await?;
-            Ok(path)
+            Ok::<_, ApplicationError>(path)
         })
     }))
     .await
     {
         count += 1;
 
-        match result {
+        match result? {
             Ok(path) => {
                 if verbose {
                     eprintln!("{}\t{}", "FORMAT".blue(), path.display());
