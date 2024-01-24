@@ -48,7 +48,6 @@ impl ParseError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use indoc::indoc;
     use nom::error::ErrorKind;
     use pretty_assertions::assert_eq;
     use std::alloc::Global;
@@ -68,13 +67,7 @@ mod tests {
 
         assert_eq!(
             error.to_string("foo.scm", source, &position_map),
-            indoc!(
-                "
-                    failed to parse
-                    foo.scm:1:1: foo
-                "
-            )
-            .trim()
+            "failed to parse foo.scm:1:1: foo"
         );
     }
 }
