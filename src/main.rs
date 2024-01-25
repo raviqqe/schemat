@@ -179,7 +179,8 @@ async fn format_path(path: &Path) -> Result<(), ApplicationError> {
     let source = read_to_string(path).await?;
     let formatted = format_string(&source, &path.display().to_string())?;
 
-    // Skip write to a file for performance and reducing workload to a file system.
+    // Skip write to a file to improve performance and reduce workload to a file
+    // system.
     if source != formatted {
         write(path, formatted).await?;
     }
