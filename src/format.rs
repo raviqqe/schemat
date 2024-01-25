@@ -120,7 +120,7 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
 
     let index = expressions
         .iter()
-        .position(|expression| line_index(context, expression.position().start()) != index)
+        .position(|expression| line_index(context, expression.position().start()) > index)
         .unwrap_or(expressions.len());
     let first = &expressions[..index];
     let last = &expressions[index..];
