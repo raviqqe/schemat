@@ -53,7 +53,7 @@ fn compile_module<'a, A: Allocator + Clone + 'a>(
             )])
         },
         {
-            let expressions = compile_expressions(context, module, false);
+            let expressions = compile_expressions(context, module, None, false);
 
             if is_empty(&expressions) {
                 empty()
@@ -115,7 +115,7 @@ fn compile_expression<'a, A: Allocator + Clone + 'a>(
 fn compile_list<'a, A: Allocator + Clone + 'a>(
     context: &mut Context<'a, A>,
     expressions: &'a [Expression<'a, A>],
-    position: &Position,
+    position: &'a Position,
     left: &'a str,
     right: &'a str,
     data: bool,
@@ -128,49 +128,53 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
             &position.set_end(position.start() + left.len()),
             |_| left.into(),
         ),
-        builder.indent(if data || expressions.is_empty() {
-            let document = compile_expressions(context, expressions, data);
+        builder.indent(builder.offside(
+            if data || expressions.is_empty() {
+                let document = compile_expressions(context, expressions, Some(position), data);
 
-            builder.offside(
                 if expression_line_index(context, expressions, 0)
                     == expression_line_index(context, expressions, 1)
                 {
                     builder.flatten(document)
                 } else {
                     builder.r#break(document)
-                },
-                !data,
-            )
-        } else {
-            let arguments =
-                builder.offside(compile_expressions(context, &expressions[1..], data), data);
-
-            let document = builder.sequence([
-                compile_expression(context, &expressions[0], data),
-                if is_empty(&arguments) {
-                    empty()
-                } else {
-                    builder.sequence([
-                        line(),
-                        if expression_line_index(context, expressions, 1)
-                            == expression_line_index(context, expressions, 2)
-                        {
-                            builder.flatten(arguments)
-                        } else {
-                            builder.r#break(arguments)
-                        },
-                    ])
-                },
-            ]);
-
-            if expression_line_index(context, expressions, 0)
-                == expression_line_index(context, expressions, 1)
-            {
-                builder.flatten(document)
+                }
             } else {
-                builder.r#break(document)
-            }
-        }),
+                let arguments = compile_expressions(
+                    context,
+                    &expressions[1..],
+                    Some(expressions[0].position()),
+                    data,
+                );
+
+                let document = builder.sequence([
+                    compile_expression(context, &expressions[0], data),
+                    if is_empty(&arguments) {
+                        empty()
+                    } else {
+                        builder.sequence([
+                            line(),
+                            if expression_line_index(context, expressions, 1)
+                                == expression_line_index(context, expressions, 2)
+                            {
+                                builder.flatten(arguments)
+                            } else {
+                                builder.r#break(arguments)
+                            },
+                        ])
+                    },
+                ]);
+
+                if expression_line_index(context, expressions, 0)
+                    == expression_line_index(context, expressions, 1)
+                {
+                    builder.flatten(document)
+                } else {
+                    builder.r#break(document)
+                }
+            },
+            !data,
+        )),
         {
             let position = position.set_start(position.end() - right.len());
             let inline_comment = compile_inline_comment(context, &position);
@@ -188,25 +192,26 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
 fn compile_expressions<'a, A: Allocator + Clone + 'a>(
     context: &mut Context<'a, A>,
     expressions: &'a [Expression<'a, A>],
+    mut last_position: Option<&'a Position>,
     data: bool,
 ) -> Document<'a> {
     let mut documents =
         Vec::with_capacity_in(2 * expressions.len(), context.builder().allocator().clone());
-    let mut last_expression = None;
 
-    for expression in expressions {
-        if let Some(last_expression) = last_expression {
+    for (index, expression) in expressions.iter().enumerate() {
+        if index != 0 {
             documents.push(line());
-            documents.extend(if has_extra_line(context, last_expression, expression) {
-                Some(line())
-            } else {
-                None
-            });
+        }
+
+        if let Some(last_position) = last_position {
+            if has_extra_line(context, expression, last_position) {
+                documents.push(line());
+            }
         }
 
         documents.push(compile_expression(context, expression, data));
 
-        last_expression = Some(expression);
+        last_position = Some(expression.position());
     }
 
     sequence(documents.leak())
@@ -333,8 +338,8 @@ fn compile_all_comments<'a, A: Allocator + Clone + 'a>(
 
 fn has_extra_line<A: Allocator + Clone>(
     context: &Context<A>,
-    last_expression: &Expression<A>,
     expression: &Expression<A>,
+    last_position: &Position,
 ) -> bool {
     let index = line_index(context, expression.position().start());
 
@@ -343,7 +348,7 @@ fn has_extra_line<A: Allocator + Clone>(
         .next()
         .map(|comment| line_index(context, comment.position().start()))
         .unwrap_or(index)
-        .saturating_sub(line_index(context, last_expression.position().end() - 1))
+        .saturating_sub(line_index(context, last_position.end() - 1))
         > 1
 }
 
@@ -722,8 +727,7 @@ mod tests {
                 .unwrap(),
                 indoc!(
                     "
-                    (
-                      foo)
+                    (foo)
                     "
                 )
             );
@@ -1059,8 +1063,7 @@ mod tests {
                 .unwrap(),
                 indoc!(
                     "
-                    ( ;bar
-                      foo)
+                    (foo) ;bar
                     "
                 )
             );
@@ -1509,13 +1512,13 @@ mod tests {
                             "(",
                             ")",
                             vec![
-                                Expression::Symbol("foo", Position::new(3, 4)),
-                                Expression::Symbol("bar", Position::new(3, 4))
+                                Expression::Symbol("foo", Position::new(2, 5)),
+                                Expression::Symbol("bar", Position::new(6, 9))
                             ],
-                            Position::new(0, 1)
+                            Position::new(0, 10)
                         )
                         .into(),
-                        Position::new(0, 1)
+                        Position::new(0, 10)
                     )],
                     &[],
                     &[],
@@ -1525,9 +1528,67 @@ mod tests {
                 .unwrap(),
                 indoc!(
                     "
-                    '(
-                      foo
+                    '(foo
                       bar)
+                    "
+                )
+            );
+        }
+
+        #[test]
+        fn format_line_comment_on_multi_line_expression() {
+            assert_eq!(
+                format(
+                    &[Expression::Quote(
+                        "'",
+                        Expression::List(
+                            "(",
+                            ")",
+                            vec![Expression::Symbol("foo", Position::new(7, 10))],
+                            Position::new(0, 11)
+                        )
+                        .into(),
+                        Position::new(0, 11)
+                    )],
+                    &[LineComment::new("bar", Position::new(2, 6)).into()],
+                    &[],
+                    &PositionMap::new("'(;bar\nfoo)"),
+                    Global,
+                )
+                .unwrap(),
+                indoc!(
+                    "
+                    '(;bar
+                      foo)
+                    "
+                )
+            );
+        }
+
+        #[test]
+        fn format_first_element_on_second_line() {
+            assert_eq!(
+                format(
+                    &[Expression::Quote(
+                        "'",
+                        Expression::List(
+                            "(",
+                            ")",
+                            vec![Expression::Symbol("foo", Position::new(3, 6))],
+                            Position::new(0, 7)
+                        )
+                        .into(),
+                        Position::new(0, 7)
+                    )],
+                    &[],
+                    &[],
+                    &PositionMap::new("'(\nfoo)"),
+                    Global,
+                )
+                .unwrap(),
+                indoc!(
+                    "
+                    '(foo)
                     "
                 )
             );
