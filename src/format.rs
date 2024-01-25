@@ -1545,7 +1545,7 @@ mod tests {
                             "(",
                             ")",
                             vec![Expression::Symbol("foo", Position::new(7, 10))],
-                            Position::new(0, 11)
+                            Position::new(1, 11)
                         )
                         .into(),
                         Position::new(0, 11)
@@ -1575,7 +1575,7 @@ mod tests {
                             "(",
                             ")",
                             vec![Expression::Symbol("foo", Position::new(3, 6))],
-                            Position::new(0, 7)
+                            Position::new(1, 7)
                         )
                         .into(),
                         Position::new(0, 7)
