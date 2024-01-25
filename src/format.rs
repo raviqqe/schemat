@@ -121,14 +121,10 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
     data: bool,
 ) -> Document<'a> {
     let index = line_index(context, position.start());
-
     let index = expressions
         .iter()
         .position(|expression| line_index(context, expression.position().start()) != index)
         .unwrap_or(expressions.len());
-    let first = &expressions[..index];
-    let last = &expressions[index..];
-
     let builder = context.builder().clone();
 
     builder.sequence([
@@ -137,8 +133,11 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
             &position.set_end(position.start() + left.len()),
             |_| left.into(),
         ),
-        builder.indent(
-            builder.offside(
+        builder.indent(builder.offside(
+            if data || expressions.is_empty() {
+                let first = &expressions[..index];
+                let last = &expressions[index..];
+
                 builder.sequence(
                     [builder.flatten(compile_expressions(context, first, data))]
                         .into_iter()
@@ -160,10 +159,41 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
                                 ),
                             )
                         }),
-                ),
-                !data,
-            ),
-        ),
+                )
+            } else {
+                let predicate = &expressions[0];
+                let first = &expressions[1..index];
+                let last = &expressions[index..];
+
+                builder.sequence([
+                    compile_expression(context, predicate, data),
+                    builder.offside(
+                        builder.sequence(
+                            [builder.flatten(compile_expressions(context, first, data))]
+                                .into_iter()
+                                .chain(match (first.last(), last.first()) {
+                                    (Some(first), Some(last))
+                                        if has_extra_line(context, first, last) =>
+                                    {
+                                        Some(line())
+                                    }
+                                    _ => None,
+                                })
+                                .chain(if last.is_empty() {
+                                    None
+                                } else {
+                                    Some(builder.r#break(builder.sequence([
+                                        line(),
+                                        compile_expressions(context, last, data),
+                                    ])))
+                                }),
+                        ),
+                        !data,
+                    ),
+                ])
+            },
+            !data,
+        )),
         {
             let position = position.set_start(position.end() - right.len());
             let inline_comment = compile_inline_comment(context, &position);
