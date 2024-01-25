@@ -120,11 +120,6 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
     right: &'a str,
     data: bool,
 ) -> Document<'a> {
-    let index = line_index(context, position.start());
-    let index = expressions
-        .iter()
-        .position(|expression| line_index(context, expression.position().start()) != index)
-        .unwrap_or(expressions.len());
     let builder = context.builder().clone();
 
     builder.sequence([
@@ -133,67 +128,49 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
             &position.set_end(position.start() + left.len()),
             |_| left.into(),
         ),
-        builder.indent(builder.offside(
-            if data || expressions.is_empty() {
-                let first = &expressions[..index];
-                let last = &expressions[index..];
+        builder.indent(if data || expressions.is_empty() {
+            let document = compile_expressions(context, expressions, data);
 
-                builder.sequence(
-                    [builder.flatten(compile_expressions(context, first, data))]
-                        .into_iter()
-                        .chain(match (first.last(), last.first()) {
-                            (Some(first), Some(last)) if has_extra_line(context, first, last) => {
-                                Some(line())
-                            }
-                            _ => None,
-                        })
-                        .chain(if last.is_empty() {
-                            None
+            builder.offside(
+                if expression_line_index(context, expressions, 0)
+                    == expression_line_index(context, expressions, 1)
+                {
+                    builder.flatten(document)
+                } else {
+                    builder.r#break(document)
+                },
+                !data,
+            )
+        } else {
+            let arguments =
+                builder.offside(compile_expressions(context, &expressions[1..], data), data);
+
+            let document = builder.sequence([
+                compile_expression(context, &expressions[0], data),
+                if is_empty(&arguments) {
+                    empty()
+                } else {
+                    builder.sequence([
+                        line(),
+                        if expression_line_index(context, expressions, 1)
+                            == expression_line_index(context, expressions, 2)
+                        {
+                            builder.flatten(arguments)
                         } else {
-                            Some(
-                                builder.r#break(
-                                    builder.sequence([
-                                        line(),
-                                        compile_expressions(context, last, data),
-                                    ]),
-                                ),
-                            )
-                        }),
-                )
-            } else {
-                let predicate = &expressions[0];
-                let first = &expressions[1..index];
-                let last = &expressions[index..];
+                            builder.r#break(arguments)
+                        },
+                    ])
+                },
+            ]);
 
-                builder.sequence([
-                    compile_expression(context, predicate, data),
-                    builder.offside(
-                        builder.sequence(
-                            [builder.flatten(compile_expressions(context, first, data))]
-                                .into_iter()
-                                .chain(match (first.last(), last.first()) {
-                                    (Some(first), Some(last))
-                                        if has_extra_line(context, first, last) =>
-                                    {
-                                        Some(line())
-                                    }
-                                    _ => None,
-                                })
-                                .chain(if last.is_empty() {
-                                    None
-                                } else {
-                                    Some(builder.r#break(builder.sequence([
-                                        line(),
-                                        compile_expressions(context, last, data),
-                                    ])))
-                                }),
-                        ),
-                        !data,
-                    ),
-                ])
-            },
-            !data,
-        )),
+            if expression_line_index(context, expressions, 0)
+                == expression_line_index(context, expressions, 1)
+            {
+                builder.flatten(document)
+            } else {
+                builder.r#break(document)
+            }
+        }),
         {
             let position = position.set_start(position.end() - right.len());
             let inline_comment = compile_inline_comment(context, &position);
@@ -368,6 +345,16 @@ fn has_extra_line<A: Allocator + Clone>(
         .unwrap_or(index)
         .saturating_sub(line_index(context, last_expression.position().end() - 1))
         > 1
+}
+
+fn expression_line_index<A: Allocator + Clone>(
+    context: &Context<A>,
+    expressions: &[Expression<A>],
+    index: usize,
+) -> Option<usize> {
+    expressions
+        .get(index)
+        .map(|expression| line_index(context, expression.position().start()))
 }
 
 fn line_index<A: Allocator + Clone>(context: &Context<A>, offset: usize) -> usize {
