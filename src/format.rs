@@ -142,6 +142,12 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
                 builder.sequence(
                     [builder.flatten(compile_expressions(context, first, data))]
                         .into_iter()
+                        .chain(match (first.last(), last.first()) {
+                            (Some(first), Some(last)) if line_gap(context, first, last) > 1 => {
+                                Some(line())
+                            }
+                            _ => None,
+                        })
                         .chain(if last.is_empty() {
                             None
                         } else {
@@ -637,6 +643,7 @@ mod tests {
                 indoc!(
                     "
                     (foo
+
                       bar)
                     "
                 )
