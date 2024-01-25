@@ -121,19 +121,18 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
     data: bool,
 ) -> Document<'a> {
     let builder = context.builder().clone();
+    let parenthesis_position = position.set_end(position.start() + left.len());
 
     builder.sequence([
-        compile_comment(
-            context,
-            &position.set_end(position.start() + left.len()),
-            |_| left.into(),
-        ),
+        compile_comment(context, &parenthesis_position, |_| left.into()),
         builder.indent(builder.offside(
             if data || expressions.is_empty() {
-                let document = compile_expressions(context, expressions, Some(position), data);
+                let document =
+                    compile_expressions(context, expressions, Some(&parenthesis_position), data);
+                let index = expression_line_index(context, expressions, 0);
 
-                if expression_line_index(context, expressions, 0)
-                    == expression_line_index(context, expressions, 1)
+                if Some(line_index(context, position.start())) == index
+                    && index == expression_line_index(context, expressions, 1)
                 {
                     builder.flatten(document)
                 } else {
@@ -176,8 +175,8 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
             !data,
         )),
         {
-            let position = position.set_start(position.end() - right.len());
-            let inline_comment = compile_inline_comment(context, &position);
+            let inline_comment =
+                compile_inline_comment(context, &position.set_start(position.end() - right.len()));
             let inline_space = if is_empty(&inline_comment) {
                 empty()
             } else {
@@ -192,11 +191,12 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
 fn compile_expressions<'a, A: Allocator + Clone + 'a>(
     context: &mut Context<'a, A>,
     expressions: &'a [Expression<'a, A>],
-    mut last_position: Option<&'a Position>,
+    last_position: Option<&Position>,
     data: bool,
 ) -> Document<'a> {
     let mut documents =
         Vec::with_capacity_in(2 * expressions.len(), context.builder().allocator().clone());
+    let mut last_position = last_position;
 
     for (index, expression) in expressions.iter().enumerate() {
         if index != 0 {
@@ -204,7 +204,7 @@ fn compile_expressions<'a, A: Allocator + Clone + 'a>(
         }
 
         if let Some(last_position) = last_position {
-            if has_extra_line(context, expression, last_position) {
+            if line_gap(context, expression, last_position) > 1 {
                 documents.push(line());
             }
         }
@@ -336,11 +336,11 @@ fn compile_all_comments<'a, A: Allocator + Clone + 'a>(
     )
 }
 
-fn has_extra_line<A: Allocator + Clone>(
+fn line_gap<A: Allocator + Clone>(
     context: &Context<A>,
     expression: &Expression<A>,
     last_position: &Position,
-) -> bool {
+) -> usize {
     let index = line_index(context, expression.position().start());
 
     context
@@ -349,7 +349,6 @@ fn has_extra_line<A: Allocator + Clone>(
         .map(|comment| line_index(context, comment.position().start()))
         .unwrap_or(index)
         .saturating_sub(line_index(context, last_position.end() - 1))
-        > 1
 }
 
 fn expression_line_index<A: Allocator + Clone>(
