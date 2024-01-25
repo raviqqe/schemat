@@ -165,7 +165,7 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
                 compile_inline_comment(context, &position.set_start(position.end() - right.len()));
 
             builder.sequence([
-                if is_empty(&inline_comment) {
+                if is_empty(&inline_comment) || expressions.is_empty() {
                     empty()
                 } else {
                     " ".into()
@@ -1155,7 +1155,7 @@ mod tests {
                 use pretty_assertions::assert_eq;
 
                 #[test]
-                fn format_inline_in_front() {
+                fn format_in_front() {
                     assert_eq!(
                         format(
                             &[Expression::Symbol("bar", Position::new(8, 11))],
@@ -1174,7 +1174,7 @@ mod tests {
                 }
 
                 #[test]
-                fn format_inline_after_first_expression() {
+                fn format_after_first_expression() {
                     assert_eq!(
                         format(
                             &[Expression::List(
@@ -1201,7 +1201,7 @@ mod tests {
                 }
 
                 #[test]
-                fn format_inline_after_second_expression() {
+                fn format_after_second_expression() {
                     assert_eq!(
                         format(
                             &[Expression::List(
@@ -1229,7 +1229,7 @@ mod tests {
                 }
 
                 #[test]
-                fn format_inline_after_third_expression() {
+                fn format_after_third_expression() {
                     assert_eq!(
                         format(
                             &[Expression::List(
@@ -1255,6 +1255,25 @@ mod tests {
                         )
                     );
                 }
+
+                #[test]
+                fn format_in_empty_list() {
+                    assert_eq!(
+                        format(
+                            &[Expression::List("(", ")", vec![], Position::new(0, 9))],
+                            &[BlockComment::new("foo", Position::new(1, 8)).into(),],
+                            &[],
+                            &PositionMap::new("(#|foo|#)"),
+                            Global,
+                        )
+                        .unwrap(),
+                        indoc!(
+                            "
+                            (#|foo|#)
+                            "
+                        )
+                    );
+                }
             }
 
             mod multi_line {
@@ -1262,7 +1281,7 @@ mod tests {
                 use pretty_assertions::assert_eq;
 
                 #[test]
-                fn format_multi_line() {
+                fn format_with_no_blank_line() {
                     assert_eq!(
                         format(
                             &[
@@ -1288,7 +1307,7 @@ mod tests {
                 }
 
                 #[test]
-                fn format_multi_line_with_blank_lines() {
+                fn format_with_blank_lines() {
                     assert_eq!(
                         format(
                             &[
@@ -1316,7 +1335,7 @@ mod tests {
                 }
 
                 #[test]
-                fn format_multi_line_with_extra_blank_lines() {
+                fn format_with_extra_blank_lines() {
                     assert_eq!(
                         format(
                             &[
@@ -1572,6 +1591,7 @@ mod tests {
                 )
             );
         }
+
         mod nested {
             use super::*;
             use pretty_assertions::assert_eq;
