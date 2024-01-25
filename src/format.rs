@@ -142,12 +142,6 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
                 builder.sequence(
                     [builder.flatten(compile_expressions(context, first, data))]
                         .into_iter()
-                        .chain(match (first.last(), last.first()) {
-                            (Some(first), Some(last)) if has_extra_line(context, first, last) => {
-                                Some(line())
-                            }
-                            _ => None,
-                        })
                         .chain(if last.is_empty() {
                             None
                         } else {
@@ -592,7 +586,7 @@ mod tests {
         }
 
         #[test]
-        fn keep_no_blank_line() {
+        fn format_blank_line() {
             assert_eq!(
                 format(
                     &[Expression::List(
@@ -620,28 +614,27 @@ mod tests {
         }
 
         #[test]
-        fn keep_blank_line() {
+        fn format_blank_lines() {
             assert_eq!(
                 format(
                     &[Expression::List(
                         "(",
                         ")",
                         vec![
-                            Expression::Symbol("foo", Position::new(0, 1)),
-                            Expression::Symbol("bar", Position::new(2, 3))
+                            Expression::Symbol("foo", Position::new(1, 4)),
+                            Expression::Symbol("bar", Position::new(6, 9))
                         ],
-                        Position::new(0, 1)
+                        Position::new(0, 10)
                     )],
                     &[],
                     &[],
-                    &PositionMap::new("\n\na"),
+                    &PositionMap::new("(foo\n\nbar)"),
                     Global,
                 )
                 .unwrap(),
                 indoc!(
                     "
                     (foo
-
                       bar)
                     "
                 )
@@ -649,7 +642,7 @@ mod tests {
         }
 
         #[test]
-        fn keep_blank_line_with_multi_line_expression() {
+        fn format_blank_lines_with_multi_line_expression() {
             assert_eq!(
                 format(
                     &[Expression::List(
@@ -660,18 +653,18 @@ mod tests {
                                 "(",
                                 ")",
                                 vec![
-                                    Expression::Symbol("foo", Position::new(0, 1)),
-                                    Expression::Symbol("bar", Position::new(1, 2))
+                                    Expression::Symbol("foo", Position::new(2, 5)),
+                                    Expression::Symbol("bar", Position::new(6, 9))
                                 ],
-                                Position::new(0, 1)
+                                Position::new(1, 16)
                             ),
-                            Expression::Symbol("baz", Position::new(3, 4))
+                            Expression::Symbol("baz", Position::new(12, 15))
                         ],
-                        Position::new(0, 1)
+                        Position::new(0, 16)
                     )],
                     &[],
                     &[],
-                    &PositionMap::new("\n\n\na"),
+                    &PositionMap::new("((foo\nbar)\n\nbaz)"),
                     Global,
                 )
                 .unwrap(),
@@ -679,7 +672,6 @@ mod tests {
                     "
                     ((foo
                         bar)
-
                       baz)
                     "
                 )
