@@ -99,14 +99,10 @@ fn compile_expression<'a, A: Allocator + Clone + 'a>(
         Expression::List(left, right, expressions, position) => {
             compile_list(context, expressions, position, left, right, data)
         }
-        Expression::Quote(sign, expression, _) => {
-            let builder = context.builder().clone();
-
-            builder.sequence([
-                (*sign).into(),
-                compile_expression(context, expression, *sign != ","),
-            ])
-        }
+        Expression::Quote(sign, expression, _) => context.builder().clone().sequence([
+            (*sign).into(),
+            compile_expression(context, expression, *sign != ","),
+        ]),
         Expression::String(string, _) => context.builder().sequence(["\"", *string, "\""]),
         Expression::Symbol(name, _) => (*name).into(),
     })
