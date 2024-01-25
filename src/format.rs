@@ -1516,6 +1516,64 @@ mod tests {
             );
         }
 
+        #[test]
+        fn format_line_comment_on_multi_line_expression() {
+            assert_eq!(
+                format(
+                    &[Expression::Quote(
+                        "'",
+                        Expression::List(
+                            "(",
+                            ")",
+                            vec![Expression::Symbol("foo", Position::new(7, 10))],
+                            Position::new(1, 11)
+                        )
+                        .into(),
+                        Position::new(0, 11)
+                    )],
+                    &[LineComment::new("bar", Position::new(2, 6)).into()],
+                    &[],
+                    &PositionMap::new("'(;bar\nfoo)"),
+                    Global,
+                )
+                .unwrap(),
+                indoc!(
+                    "
+                    '(;bar
+                      foo)
+                    "
+                )
+            );
+        }
+
+        #[test]
+        fn format_first_element_on_second_line() {
+            assert_eq!(
+                format(
+                    &[Expression::Quote(
+                        "'",
+                        Expression::List(
+                            "(",
+                            ")",
+                            vec![Expression::Symbol("foo", Position::new(3, 6))],
+                            Position::new(1, 7)
+                        )
+                        .into(),
+                        Position::new(0, 7)
+                    )],
+                    &[],
+                    &[],
+                    &PositionMap::new("'(\nfoo)"),
+                    Global,
+                )
+                .unwrap(),
+                indoc!(
+                    "
+                    '(foo)
+                    "
+                )
+            );
+        }
         mod nested {
             use super::*;
             use pretty_assertions::assert_eq;
