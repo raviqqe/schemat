@@ -159,15 +159,18 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
             ),
         ),
         {
-            let position = position.set_start(position.end() - right.len());
-            let inline_comment = compile_inline_comment(context, &position);
-            let inline_space = if is_empty(&inline_comment) {
-                empty()
-            } else {
-                " ".into()
-            };
+            let inline_comment =
+                compile_inline_comment(context, &position.set_start(position.end() - right.len()));
 
-            builder.sequence([inline_space, inline_comment, right.into()])
+            builder.sequence([
+                if is_empty(&inline_comment) {
+                    empty()
+                } else {
+                    " ".into()
+                },
+                inline_comment,
+                right.into(),
+            ])
         },
     ])
 }
@@ -185,7 +188,7 @@ fn compile_expressions<'a, A: Allocator + Clone + 'a>(
         if let Some(last_expression) = last_expression {
             documents.push(line());
 
-            if has_extra_line(context, last_expression, expression) {
+            if line_gap(context, last_expression, expression) > 1 {
                 documents.push(line());
             }
         }
@@ -317,11 +320,11 @@ fn compile_all_comments<'a, A: Allocator + Clone + 'a>(
     )
 }
 
-fn has_extra_line<A: Allocator + Clone>(
+fn line_gap<A: Allocator + Clone>(
     context: &Context<A>,
     last_expression: &Expression<A>,
     expression: &Expression<A>,
-) -> bool {
+) -> usize {
     let index = line_index(context, expression.position().start());
 
     context
@@ -330,7 +333,6 @@ fn has_extra_line<A: Allocator + Clone>(
         .map(|comment| line_index(context, comment.position().start()))
         .unwrap_or(index)
         .saturating_sub(line_index(context, last_expression.position().end() - 1))
-        > 1
 }
 
 fn line_index<A: Allocator + Clone>(context: &Context<A>, offset: usize) -> usize {
