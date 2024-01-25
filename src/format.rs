@@ -665,7 +665,7 @@ mod tests {
                                     Expression::Symbol("foo", Position::new(2, 5)),
                                     Expression::Symbol("bar", Position::new(6, 9))
                                 ],
-                                Position::new(1, 16)
+                                Position::new(1, 10)
                             ),
                             Expression::Symbol("baz", Position::new(12, 15))
                         ],
@@ -681,6 +681,7 @@ mod tests {
                     "
                     ((foo
                         bar)
+
                       baz)
                     "
                 )
