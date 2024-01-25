@@ -99,14 +99,10 @@ fn compile_expression<'a, A: Allocator + Clone + 'a>(
         Expression::List(left, right, expressions, position) => {
             compile_list(context, expressions, position, left, right, data)
         }
-        Expression::Quote(sign, expression, _) => {
-            let builder = context.builder().clone();
-
-            builder.sequence([
-                (*sign).into(),
-                compile_expression(context, expression, *sign != ","),
-            ])
-        }
+        Expression::Quote(sign, expression, _) => context.builder().clone().sequence([
+            (*sign).into(),
+            compile_expression(context, expression, *sign != ","),
+        ]),
         Expression::String(string, _) => context.builder().sequence(["\"", *string, "\""]),
         Expression::Symbol(name, _) => (*name).into(),
     })
@@ -124,7 +120,7 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
 
     let index = expressions
         .iter()
-        .position(|expression| line_index(context, expression.position().start()) != index)
+        .position(|expression| line_index(context, expression.position().start()) > index)
         .unwrap_or(expressions.len());
     let first = &expressions[..index];
     let last = &expressions[index..];
@@ -143,7 +139,7 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
                     [builder.flatten(compile_expressions(context, first, data))]
                         .into_iter()
                         .chain(match (first.last(), last.first()) {
-                            (Some(first), Some(last)) if has_extra_line(context, first, last) => {
+                            (Some(first), Some(last)) if line_gap(context, first, last) > 1 => {
                                 Some(line())
                             }
                             _ => None,
@@ -165,15 +161,18 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
             ),
         ),
         {
-            let position = position.set_start(position.end() - right.len());
-            let inline_comment = compile_inline_comment(context, &position);
-            let inline_space = if is_empty(&inline_comment) {
-                empty()
-            } else {
-                " ".into()
-            };
+            let inline_comment =
+                compile_inline_comment(context, &position.set_start(position.end() - right.len()));
 
-            builder.sequence([inline_space, inline_comment, right.into()])
+            builder.sequence([
+                if is_empty(&inline_comment) || expressions.is_empty() {
+                    empty()
+                } else {
+                    " ".into()
+                },
+                inline_comment,
+                right.into(),
+            ])
         },
     ])
 }
@@ -190,11 +189,10 @@ fn compile_expressions<'a, A: Allocator + Clone + 'a>(
     for expression in expressions {
         if let Some(last_expression) = last_expression {
             documents.push(line());
-            documents.extend(if has_extra_line(context, last_expression, expression) {
-                Some(line())
-            } else {
-                None
-            });
+
+            if line_gap(context, last_expression, expression) > 1 {
+                documents.push(line());
+            }
         }
 
         documents.push(compile_expression(context, expression, data));
@@ -324,11 +322,11 @@ fn compile_all_comments<'a, A: Allocator + Clone + 'a>(
     )
 }
 
-fn has_extra_line<A: Allocator + Clone>(
+fn line_gap<A: Allocator + Clone>(
     context: &Context<A>,
     last_expression: &Expression<A>,
     expression: &Expression<A>,
-) -> bool {
+) -> usize {
     let index = line_index(context, expression.position().start());
 
     context
@@ -337,7 +335,6 @@ fn has_extra_line<A: Allocator + Clone>(
         .map(|comment| line_index(context, comment.position().start()))
         .unwrap_or(index)
         .saturating_sub(line_index(context, last_expression.position().end() - 1))
-        > 1
 }
 
 fn line_index<A: Allocator + Clone>(context: &Context<A>, offset: usize) -> usize {
@@ -593,7 +590,7 @@ mod tests {
         }
 
         #[test]
-        fn keep_no_blank_line() {
+        fn format_blank_line() {
             assert_eq!(
                 format(
                     &[Expression::List(
@@ -621,21 +618,21 @@ mod tests {
         }
 
         #[test]
-        fn keep_blank_line() {
+        fn format_blank_lines() {
             assert_eq!(
                 format(
                     &[Expression::List(
                         "(",
                         ")",
                         vec![
-                            Expression::Symbol("foo", Position::new(0, 1)),
-                            Expression::Symbol("bar", Position::new(2, 3))
+                            Expression::Symbol("foo", Position::new(1, 4)),
+                            Expression::Symbol("bar", Position::new(6, 9))
                         ],
-                        Position::new(0, 1)
+                        Position::new(0, 10)
                     )],
                     &[],
                     &[],
-                    &PositionMap::new("\n\na"),
+                    &PositionMap::new("(foo\n\nbar)"),
                     Global,
                 )
                 .unwrap(),
@@ -650,7 +647,7 @@ mod tests {
         }
 
         #[test]
-        fn keep_blank_line_with_multi_line_expression() {
+        fn format_blank_lines_with_multi_line_expression() {
             assert_eq!(
                 format(
                     &[Expression::List(
@@ -661,18 +658,18 @@ mod tests {
                                 "(",
                                 ")",
                                 vec![
-                                    Expression::Symbol("foo", Position::new(0, 1)),
-                                    Expression::Symbol("bar", Position::new(1, 2))
+                                    Expression::Symbol("foo", Position::new(2, 5)),
+                                    Expression::Symbol("bar", Position::new(6, 9))
                                 ],
-                                Position::new(0, 1)
+                                Position::new(1, 10)
                             ),
-                            Expression::Symbol("baz", Position::new(3, 4))
+                            Expression::Symbol("baz", Position::new(12, 15))
                         ],
-                        Position::new(0, 1)
+                        Position::new(0, 16)
                     )],
                     &[],
                     &[],
-                    &PositionMap::new("\n\n\na"),
+                    &PositionMap::new("((foo\nbar)\n\nbaz)"),
                     Global,
                 )
                 .unwrap(),
@@ -1158,7 +1155,7 @@ mod tests {
                 use pretty_assertions::assert_eq;
 
                 #[test]
-                fn format_inline_in_front() {
+                fn format_in_front() {
                     assert_eq!(
                         format(
                             &[Expression::Symbol("bar", Position::new(8, 11))],
@@ -1177,7 +1174,7 @@ mod tests {
                 }
 
                 #[test]
-                fn format_inline_after_first_expression() {
+                fn format_after_first_expression() {
                     assert_eq!(
                         format(
                             &[Expression::List(
@@ -1204,7 +1201,7 @@ mod tests {
                 }
 
                 #[test]
-                fn format_inline_after_second_expression() {
+                fn format_after_second_expression() {
                     assert_eq!(
                         format(
                             &[Expression::List(
@@ -1232,7 +1229,7 @@ mod tests {
                 }
 
                 #[test]
-                fn format_inline_after_third_expression() {
+                fn format_after_third_expression() {
                     assert_eq!(
                         format(
                             &[Expression::List(
@@ -1258,6 +1255,25 @@ mod tests {
                         )
                     );
                 }
+
+                #[test]
+                fn format_in_empty_list() {
+                    assert_eq!(
+                        format(
+                            &[Expression::List("(", ")", vec![], Position::new(0, 9))],
+                            &[BlockComment::new("foo", Position::new(1, 8)).into(),],
+                            &[],
+                            &PositionMap::new("(#|foo|#)"),
+                            Global,
+                        )
+                        .unwrap(),
+                        indoc!(
+                            "
+                            (#|foo|#)
+                            "
+                        )
+                    );
+                }
             }
 
             mod multi_line {
@@ -1265,7 +1281,7 @@ mod tests {
                 use pretty_assertions::assert_eq;
 
                 #[test]
-                fn format_multi_line() {
+                fn format_with_no_blank_line() {
                     assert_eq!(
                         format(
                             &[
@@ -1291,7 +1307,7 @@ mod tests {
                 }
 
                 #[test]
-                fn format_multi_line_with_blank_lines() {
+                fn format_with_blank_lines() {
                     assert_eq!(
                         format(
                             &[
@@ -1319,7 +1335,7 @@ mod tests {
                 }
 
                 #[test]
-                fn format_multi_line_with_extra_blank_lines() {
+                fn format_with_extra_blank_lines() {
                     assert_eq!(
                         format(
                             &[
@@ -1511,6 +1527,66 @@ mod tests {
                     '(
                       foo
                       bar)
+                    "
+                )
+            );
+        }
+
+        #[test]
+        fn format_line_comment_on_multi_line_expression() {
+            assert_eq!(
+                format(
+                    &[Expression::Quote(
+                        "'",
+                        Expression::List(
+                            "(",
+                            ")",
+                            vec![Expression::Symbol("foo", Position::new(7, 10))],
+                            Position::new(1, 11)
+                        )
+                        .into(),
+                        Position::new(0, 11)
+                    )],
+                    &[LineComment::new("bar", Position::new(2, 6)).into()],
+                    &[],
+                    &PositionMap::new("'(;bar\nfoo)"),
+                    Global,
+                )
+                .unwrap(),
+                indoc!(
+                    "
+                    '( ;bar
+                      foo)
+                    "
+                )
+            );
+        }
+
+        #[test]
+        fn format_first_element_on_second_line() {
+            assert_eq!(
+                format(
+                    &[Expression::Quote(
+                        "'",
+                        Expression::List(
+                            "(",
+                            ")",
+                            vec![Expression::Symbol("foo", Position::new(3, 6))],
+                            Position::new(1, 7)
+                        )
+                        .into(),
+                        Position::new(0, 7)
+                    )],
+                    &[],
+                    &[],
+                    &PositionMap::new("'(\nfoo)"),
+                    Global,
+                )
+                .unwrap(),
+                indoc!(
+                    "
+                    '(
+                      foo)
                     "
                 )
             );
