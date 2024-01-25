@@ -190,11 +190,10 @@ fn compile_expressions<'a, A: Allocator + Clone + 'a>(
     for expression in expressions {
         if let Some(last_expression) = last_expression {
             documents.push(line());
-            documents.extend(if has_extra_line(context, last_expression, expression) {
-                Some(line())
-            } else {
-                None
-            });
+
+            if has_extra_line(context, last_expression, expression) {
+                documents.push(line());
+            }
         }
 
         documents.push(compile_expression(context, expression, data));
