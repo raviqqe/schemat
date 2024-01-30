@@ -644,8 +644,13 @@ mod tests {
             assert_eq!(
                 expression(Input::new_extra(",@foo", Global)).unwrap().1,
                 Expression::Quote(
-                    ",@",
-                    Expression::Symbol("foo", Position::new(2, 5)).into(),
+                    ",",
+                    Expression::Quote(
+                        "@",
+                        Expression::Symbol("foo", Position::new(2, 5)).into(),
+                        Position::new(1, 5)
+                    )
+                    .into(),
                     Position::new(0, 5)
                 )
             );
