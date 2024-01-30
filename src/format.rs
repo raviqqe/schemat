@@ -9,6 +9,7 @@ use mfmt::{empty, line, sequence, utility::is_empty, Builder, Document, FormatOp
 use std::alloc::Allocator;
 
 const COMMENT_PREFIX: &str = ";";
+const UNQUOTE_SIGNS: &[&str] = &[",", "@"];
 
 pub fn format<A: Allocator + Clone>(
     module: &[Expression<A>],
@@ -101,7 +102,7 @@ fn compile_expression<'a, A: Allocator + Clone + 'a>(
         }
         Expression::Quote(sign, expression, _) => context.builder().clone().sequence([
             (*sign).into(),
-            compile_expression(context, expression, *sign != ","),
+            compile_expression(context, expression, !UNQUOTE_SIGNS.contains(sign)),
         ]),
         Expression::String(string, _) => context.builder().sequence(["\"", *string, "\""]),
         Expression::Symbol(name, _) => (*name).into(),
@@ -1704,6 +1705,53 @@ mod tests {
                         "
                         ,((foo
                             bar))
+                        "
+                    )
+                );
+            }
+
+            #[test]
+            fn format_splicing_unquote() {
+                assert_eq!(
+                    format(
+                        &[Expression::Quote(
+                            ",",
+                            Expression::Quote(
+                                "@",
+                                Expression::List(
+                                    "(",
+                                    ")",
+                                    vec![
+                                        Expression::Symbol("foo", Position::new(3, 6)),
+                                        Expression::List(
+                                            "(",
+                                            ")",
+                                            vec![
+                                                Expression::Symbol("bar", Position::new(8, 11)),
+                                                Expression::Symbol("baz", Position::new(12, 15)),
+                                            ],
+                                            Position::new(7, 16)
+                                        ),
+                                    ],
+                                    Position::new(2, 17)
+                                )
+                                .into(),
+                                Position::new(1, 17)
+                            )
+                            .into(),
+                            Position::new(0, 17)
+                        )],
+                        &[],
+                        &[],
+                        &PositionMap::new(",@(foo\n(bar\nbaz))"),
+                        Global,
+                    )
+                    .unwrap(),
+                    indoc!(
+                        "
+                        ,@(foo
+                           (bar
+                             baz))
                         "
                     )
                 );
