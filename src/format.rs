@@ -102,7 +102,7 @@ fn compile_expression<'a, A: Allocator + Clone + 'a>(
         }
         Expression::Quote(sign, expression, _) => context.builder().clone().sequence([
             (*sign).into(),
-            compile_expression(context, expression, UNQUOTE_SIGNS.contains(sign)),
+            compile_expression(context, expression, !UNQUOTE_SIGNS.contains(sign)),
         ]),
         Expression::String(string, _) => context.builder().sequence(["\"", *string, "\""]),
         Expression::Symbol(name, _) => (*name).into(),
