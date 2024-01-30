@@ -102,8 +102,8 @@ fn quote<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
     alt((
         tag("'"),
         tag("`"),
-        tag(",@"),
         tag(","),
+        tag("@"),
         tag("#;"),
         tag("#"),
         terminated(raw_symbol, peek(not(alt((multispace1, eof))))),
@@ -644,8 +644,13 @@ mod tests {
             assert_eq!(
                 expression(Input::new_extra(",@foo", Global)).unwrap().1,
                 Expression::Quote(
-                    ",@",
-                    Expression::Symbol("foo", Position::new(2, 5)).into(),
+                    ",",
+                    Expression::Quote(
+                        "@",
+                        Expression::Symbol("foo", Position::new(2, 5)).into(),
+                        Position::new(1, 5)
+                    )
+                    .into(),
                     Position::new(0, 5)
                 )
             );
