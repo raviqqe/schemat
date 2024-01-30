@@ -1722,27 +1722,36 @@ mod tests {
                                     "(",
                                     ")",
                                     vec![
-                                        Expression::Symbol("foo", Position::new(3, 6)).into(),
-                                        Expression::Symbol("bar", Position::new(7, 10)).into()
+                                        Expression::Symbol("foo", Position::new(3, 6)),
+                                        Expression::List(
+                                            "(",
+                                            ")",
+                                            vec![
+                                                Expression::Symbol("bar", Position::new(8, 11)),
+                                                Expression::Symbol("baz", Position::new(12, 15)),
+                                            ],
+                                            Position::new(7, 16)
+                                        ),
                                     ],
-                                    Position::new(2, 11)
+                                    Position::new(2, 17)
                                 )
                                 .into(),
-                                Position::new(1, 11)
+                                Position::new(1, 17)
                             )
                             .into(),
-                            Position::new(0, 11)
+                            Position::new(0, 17)
                         )],
                         &[],
                         &[],
-                        &PositionMap::new(",@(foo\nbar)"),
+                        &PositionMap::new(",@(foo\n(bar\nbaz))"),
                         Global,
                     )
                     .unwrap(),
                     indoc!(
                         "
                         ,@(foo
-                            bar)
+                           (bar
+                             baz))
                         "
                     )
                 );
