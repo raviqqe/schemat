@@ -102,8 +102,8 @@ fn quote<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
     alt((
         tag("'"),
         tag("`"),
-        tag(",@"),
         tag(","),
+        tag("@"),
         tag("#;"),
         tag("#"),
         terminated(raw_symbol, peek(not(alt((multispace1, eof))))),
