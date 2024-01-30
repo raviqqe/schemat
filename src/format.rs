@@ -9,7 +9,7 @@ use mfmt::{empty, line, sequence, utility::is_empty, Builder, Document, FormatOp
 use std::alloc::Allocator;
 
 const COMMENT_PREFIX: &str = ";";
-const UNQUOTE_SIGNS: &[&str] = [",", "@"];
+const UNQUOTE_SIGNS: &[&str] = &[",", "@"];
 
 pub fn format<A: Allocator + Clone>(
     module: &[Expression<A>],
