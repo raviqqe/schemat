@@ -9,7 +9,8 @@ use mfmt::{empty, line, sequence, utility::is_empty, Builder, Document, FormatOp
 use std::alloc::Allocator;
 
 const COMMENT_PREFIX: &str = ";";
-const UNQUOTE_SIGNS: &[&str] = &[",", "@"];
+const QUOTE_SIGNS: &[&str] = &["'", "`", "#"];
+const UNQUOTE_SIGNS: &[&str] = &[","];
 
 pub fn format<A: Allocator + Clone>(
     module: &[Expression<A>],
@@ -102,7 +103,11 @@ fn compile_expression<'a, A: Allocator + Clone + 'a>(
         }
         Expression::Quote(sign, expression, _) => context.builder().clone().sequence([
             (*sign).into(),
-            compile_expression(context, expression, !UNQUOTE_SIGNS.contains(sign)),
+            compile_expression(
+                context,
+                expression,
+                QUOTE_SIGNS.contains(sign) || !UNQUOTE_SIGNS.contains(sign) && data,
+            ),
         ]),
         Expression::String(string, _) => context.builder().sequence(["\"", *string, "\""]),
         Expression::Symbol(name, _) => (*name).into(),
