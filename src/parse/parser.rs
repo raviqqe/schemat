@@ -110,10 +110,10 @@ fn quote<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
     ))(input)
 }
 
-fn list_like<'a, A: Allocator + Clone>(
+fn list_like<A: Allocator + Clone>(
     left: &'static str,
     right: &'static str,
-) -> impl FnMut(Input<'a, A>) -> IResult<Expression<'a, A>, A> {
+) -> impl FnMut(Input<A>) -> IResult<Expression<A>, A> {
     move |input| {
         map(
             token(positioned(tuple((
@@ -168,7 +168,7 @@ fn sign<A: Allocator + Clone>(sign: &'static str) -> impl Fn(Input<A>) -> IResul
 
 fn token<'a, T, A: Allocator + Clone>(
     mut parser: impl Parser<Input<'a, A>, T, NomError<'a, A>>,
-) -> impl FnMut(Input<'a, A>) -> IResult<T, A> {
+) -> impl FnMut(Input<'a, A>) -> IResult<'a, T, A> {
     move |input| preceded(blank, |input| parser.parse(input))(input)
 }
 
@@ -269,7 +269,7 @@ fn newline<A: Allocator + Clone>(input: Input<A>) -> IResult<(), A> {
 
 fn many0<'a, T, A: Allocator + Clone>(
     mut parser: impl Parser<Input<'a, A>, T, NomError<'a, A>>,
-) -> impl FnMut(Input<'a, A>) -> IResult<Vec<T, A>, A> {
+) -> impl FnMut(Input<'a, A>) -> IResult<'a, Vec<T, A>, A> {
     move |input| {
         let allocator = input.extra.clone();
 
