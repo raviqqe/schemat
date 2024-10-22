@@ -9,7 +9,7 @@ pub enum Expression<'a, A: Allocator> {
     Symbol(&'a str, Position),
 }
 
-impl<'a, A: Allocator> Expression<'a, A> {
+impl<A: Allocator> Expression<'_, A> {
     pub fn position(&self) -> &Position {
         match self {
             Self::List(_, _, _, position) => position,
@@ -21,7 +21,7 @@ impl<'a, A: Allocator> Expression<'a, A> {
 }
 
 // TODO Why do we need to do this manually?
-impl<'a, A: Allocator> PartialEq for Expression<'a, A> {
+impl<A: Allocator> PartialEq for Expression<'_, A> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (
@@ -47,7 +47,7 @@ impl<'a, A: Allocator> PartialEq for Expression<'a, A> {
     }
 }
 
-impl<'a, A: Allocator> Eq for Expression<'a, A> {}
+impl<A: Allocator> Eq for Expression<'_, A> {}
 
 #[cfg(test)]
 mod tests {
