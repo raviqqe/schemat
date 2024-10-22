@@ -10,7 +10,7 @@ pub enum Comment<'a> {
     Line(LineComment<'a>),
 }
 
-impl<'a> Comment<'a> {
+impl Comment<'_> {
     pub fn content(&self) -> &str {
         match self {
             Self::Block(comment) => comment.content(),
