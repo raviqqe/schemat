@@ -30,3 +30,8 @@ jobs:
       - uses: lycheeverse/lychee-action@v2
         with:
           fail: true
+  gherkin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: go run github.com/raviqqe/gherkin-format@latest -check .
