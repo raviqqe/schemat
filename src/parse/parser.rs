@@ -18,7 +18,7 @@ use nom::{
 use std::alloc::Allocator;
 
 const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&~^.:";
-const PARENTHESIS_SIGNS: &str = "()[]{}";
+const SPECIAL_SIGNS: &str = ";";
 
 pub type IResult<'a, T, A> = nom::IResult<Input<'a, A>, T, NomError<'a, A>>;
 
@@ -79,7 +79,7 @@ fn raw_quoted_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>,
         recognize(many0(alt((
             recognize(none_of("\\|")),
             tag("\\|"),
-            recognize(tuple((char('\\'), one_of(PARENTHESIS_SIGNS)))),
+            recognize(tuple((char('\\'), one_of(SPECIAL_SIGNS)))),
             escaped_character,
         )))),
         char('|'),
@@ -373,6 +373,10 @@ mod tests {
         assert_eq!(
             expression(Input::new_extra("|\\t\\n|", Global)).unwrap().1,
             Expression::QuotedSymbol("\\t\\n", Position::new(0, 6))
+        );
+        assert_eq!(
+            expression(Input::new_extra("|\\;|", Global)).unwrap().1,
+            Expression::QuotedSymbol("\\;", Position::new(0, 4))
         );
     }
 
