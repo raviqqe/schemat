@@ -75,24 +75,30 @@ fn raw_quoted_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>,
         char('|'),
         recognize(many0(alt((
             recognize(none_of("\\|")),
-            tag("\\\\"),
-            tag("\\\""),
-            tag("\\'"),
-            tag("\\n"),
-            tag("\\r"),
-            tag("\\t"),
-            tag("\\\n"),
-            recognize(tuple((char('\\'), hexadecimal_digit, hexadecimal_digit))),
-            recognize(preceded(
-                tag("\\x"),
-                cut(terminated(
-                    many1(tuple((hexadecimal_digit, hexadecimal_digit))),
-                    char(';'),
-                )),
-            )),
+            tag("\\|"),
+            escaped_character,
         )))),
         char('|'),
     )(input)
+}
+
+fn escaped_character<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
+    alt((
+        tag("\\\\"),
+        tag("\\'"),
+        tag("\\n"),
+        tag("\\r"),
+        tag("\\t"),
+        tag("\\\n"),
+        recognize(tuple((char('\\'), hexadecimal_digit, hexadecimal_digit))),
+        recognize(preceded(
+            tag("\\x"),
+            cut(terminated(
+                many1(tuple((hexadecimal_digit, hexadecimal_digit))),
+                char(';'),
+            )),
+        )),
+    ))(input)
 }
 
 fn head_symbol_character<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
@@ -171,21 +177,8 @@ fn raw_string<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
         char('"'),
         recognize(many0(alt((
             recognize(none_of("\\\"")),
-            tag("\\\\"),
             tag("\\\""),
-            tag("\\'"),
-            tag("\\n"),
-            tag("\\r"),
-            tag("\\t"),
-            tag("\\\n"),
-            recognize(tuple((char('\\'), hexadecimal_digit, hexadecimal_digit))),
-            recognize(preceded(
-                tag("\\x"),
-                cut(terminated(
-                    many1(tuple((hexadecimal_digit, hexadecimal_digit))),
-                    char(';'),
-                )),
-            )),
+            escaped_character,
         )))),
         char('"'),
     )(input)
@@ -366,8 +359,16 @@ mod tests {
             Expression::QuotedSymbol("a b", Position::new(0, 5))
         );
         assert_eq!(
+            expression(Input::new_extra("|\\||", Global)).unwrap().1,
+            Expression::QuotedSymbol("\\|", Position::new(0, 4))
+        );
+        assert_eq!(
             expression(Input::new_extra("|\t\n|", Global)).unwrap().1,
             Expression::QuotedSymbol("\t\n", Position::new(0, 4))
+        );
+        assert_eq!(
+            expression(Input::new_extra("|\\t\\n|", Global)).unwrap().1,
+            Expression::QuotedSymbol("\\t\\n", Position::new(0, 6))
         );
     }
 
