@@ -34,6 +34,7 @@ pub fn comments<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Comment, A
         alt((
             map(none_of("\"|;#\\"), |_| None),
             map(raw_string, |_| None),
+            map(raw_quoted_symbol, |_| None),
             map(raw_symbol, |_| None),
             map(comment, Some),
             map(quote, |_| None),
@@ -54,17 +55,22 @@ pub fn hash_directives<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Has
 }
 
 fn symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
-    map(
-        token(positioned(alt((raw_symbol, quoted_symbol)))),
-        |(input, position)| Expression::Symbol(&input, position),
-    )(input)
+    map(token(positioned(raw_symbol)), |(input, position)| {
+        Expression::Symbol(&input, position)
+    })(input)
 }
 
 fn raw_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
     recognize(tuple((head_symbol_character, many0(tail_symbol_character))))(input)
 }
 
-fn quoted_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
+fn quoted_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
+    map(token(positioned(raw_quoted_symbol)), |(input, position)| {
+        Expression::QuotedSymbol(&input, position)
+    })(input)
+}
+
+fn raw_quoted_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
     delimited(
         char('|'),
         recognize(many0(alt((
@@ -118,6 +124,7 @@ fn expression<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A
                 },
             ),
         ),
+        context("quoted symbol", quoted_symbol),
         context("symbol", symbol),
         context("vector", list_like("[", "]")),
         context("map", list_like("{", "}")),
@@ -346,9 +353,21 @@ mod tests {
             expression(Input::new_extra("\\#", Global)).unwrap().1,
             Expression::Symbol("\\#", Position::new(0, 2))
         );
+    }
+
+    #[test]
+    fn parse_quoted_symbol() {
         assert_eq!(
             expression(Input::new_extra("|a|", Global)).unwrap().1,
-            Expression::Symbol("a", Position::new(0, 3))
+            Expression::QuotedSymbol("a", Position::new(0, 3))
+        );
+        assert_eq!(
+            expression(Input::new_extra("|a b|", Global)).unwrap().1,
+            Expression::QuotedSymbol("a b", Position::new(0, 5))
+        );
+        assert_eq!(
+            expression(Input::new_extra("|\t\n|", Global)).unwrap().1,
+            Expression::QuotedSymbol("\t\n", Position::new(0, 4))
         );
     }
 
