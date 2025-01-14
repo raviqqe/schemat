@@ -6,7 +6,9 @@ use crate::{
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_until},
-    character::complete::{anychar, char, multispace0, multispace1, none_of, satisfy, space0},
+    character::complete::{
+        anychar, char, multispace0, multispace1, none_of, one_of, satisfy, space0,
+    },
     combinator::{all_consuming, cut, eof, map, not, peek, recognize, value},
     error::context,
     multi::{fold_many0, many0_count, many1, many1_count},
@@ -16,6 +18,7 @@ use nom::{
 use std::alloc::Allocator;
 
 const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&~^.:";
+const SPECIAL_SIGNS: &str = ";";
 
 pub type IResult<'a, T, A> = nom::IResult<Input<'a, A>, T, NomError<'a, A>>;
 
@@ -76,6 +79,7 @@ fn raw_quoted_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>,
         recognize(many0(alt((
             recognize(none_of("\\|")),
             tag("\\|"),
+            recognize(tuple((char('\\'), one_of(SPECIAL_SIGNS)))),
             escaped_character,
         )))),
         char('|'),
@@ -369,6 +373,10 @@ mod tests {
         assert_eq!(
             expression(Input::new_extra("|\\t\\n|", Global)).unwrap().1,
             Expression::QuotedSymbol("\\t\\n", Position::new(0, 6))
+        );
+        assert_eq!(
+            expression(Input::new_extra("|\\;|", Global)).unwrap().1,
+            Expression::QuotedSymbol("\\;", Position::new(0, 4))
         );
     }
 
