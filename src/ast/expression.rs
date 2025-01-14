@@ -5,6 +5,7 @@ use std::alloc::Allocator;
 pub enum Expression<'a, A: Allocator> {
     List(&'a str, &'a str, Vec<Expression<'a, A>, A>, Position),
     Quote(&'a str, Box<Expression<'a, A>, A>, Position),
+    QuotedSymbol(&'a str, Position),
     String(&'a str, Position),
     Symbol(&'a str, Position),
 }
@@ -14,6 +15,7 @@ impl<A: Allocator> Expression<'_, A> {
         match self {
             Self::List(_, _, _, position) => position,
             Self::Quote(_, _, position) => position,
+            Self::QuotedSymbol(_, position) => position,
             Self::String(_, position) => position,
             Self::Symbol(_, position) => position,
         }
@@ -35,6 +37,9 @@ impl<A: Allocator> PartialEq for Expression<'_, A> {
             }
             (Self::Quote(sign, one, position), Self::Quote(other_sign, other, other_position)) => {
                 sign == other_sign && one == other && position == other_position
+            }
+            (Self::QuotedSymbol(one, position), Self::QuotedSymbol(other, other_position)) => {
+                one == other && position == other_position
             }
             (Self::String(one, position), Self::String(other, other_position)) => {
                 one == other && position == other_position
