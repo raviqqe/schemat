@@ -357,6 +357,12 @@ mod tests {
             expression(Input::new_extra("\\#", Global)).unwrap().1,
             Expression::Symbol("\\#", Position::new(0, 2))
         );
+        assert_eq!(
+            expression(Input::new_extra("あいうえお", Global))
+                .unwrap()
+                .1,
+            Expression::Symbol("あいうえお", Position::new(0, 15))
+        );
     }
 
     #[test]
