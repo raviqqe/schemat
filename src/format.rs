@@ -109,6 +109,7 @@ fn compile_expression<'a, A: Allocator + Clone + 'a>(
                 QUOTE_SIGNS.contains(sign) || !UNQUOTE_SIGNS.contains(sign) && data,
             ),
         ]),
+        Expression::QuotedSymbol(symbol, _) => context.builder().sequence(["|", *symbol, "|"]),
         Expression::String(string, _) => context.builder().sequence(["\"", *string, "\""]),
         Expression::Symbol(name, _) => (*name).into(),
     })

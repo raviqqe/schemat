@@ -346,6 +346,10 @@ mod tests {
             expression(Input::new_extra("\\#", Global)).unwrap().1,
             Expression::Symbol("\\#", Position::new(0, 2))
         );
+        assert_eq!(
+            expression(Input::new_extra("|a|", Global)).unwrap().1,
+            Expression::Symbol("a", Position::new(0, 3))
+        );
     }
 
     #[test]
