@@ -537,6 +537,21 @@ mod tests {
     }
 
     #[test]
+    fn format_quoted_symbol() {
+        assert_eq!(
+            format(
+                &[Expression::QuotedSymbol("foo", Position::new(0, 3))],
+                &[],
+                &[],
+                &PositionMap::new("foo"),
+                Global,
+            )
+            .unwrap(),
+            "|foo|\n"
+        );
+    }
+
+    #[test]
     fn format_vector() {
         assert_eq!(
             format(
