@@ -366,8 +366,16 @@ mod tests {
             Expression::QuotedSymbol("a b", Position::new(0, 5))
         );
         assert_eq!(
+            expression(Input::new_extra("|\\||", Global)).unwrap().1,
+            Expression::QuotedSymbol("\\|", Position::new(0, 4))
+        );
+        assert_eq!(
             expression(Input::new_extra("|\t\n|", Global)).unwrap().1,
             Expression::QuotedSymbol("\t\n", Position::new(0, 4))
+        );
+        assert_eq!(
+            expression(Input::new_extra("|\\t\\n|", Global)).unwrap().1,
+            Expression::QuotedSymbol("\\t\\n", Position::new(0, 6))
         );
     }
 
