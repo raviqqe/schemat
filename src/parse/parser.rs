@@ -54,40 +54,38 @@ pub fn hash_directives<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Has
 }
 
 fn symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
-    map(token(positioned(raw_symbol)), |(input, position)| {
-        Expression::Symbol(&input, position)
-    })(input)
+    map(
+        token(positioned(alt((raw_symbol, quoted_symbol)))),
+        |(input, position)| Expression::Symbol(&input, position),
+    )(input)
 }
 
 fn raw_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
     recognize(tuple((head_symbol_character, many0(tail_symbol_character))))(input)
 }
 
-fn quoted_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
-    map(
-        delimited(
-            char('|'),
-            recognize(many0(alt((
-                recognize(none_of("\\|")),
-                tag("\\\\"),
-                tag("\\\""),
-                tag("\\'"),
-                tag("\\n"),
-                tag("\\r"),
-                tag("\\t"),
-                tag("\\\n"),
-                recognize(tuple((char('\\'), hexadecimal_digit, hexadecimal_digit))),
-                recognize(preceded(
-                    tag("\\x"),
-                    cut(terminated(
-                        many1(tuple((hexadecimal_digit, hexadecimal_digit))),
-                        char(';'),
-                    )),
+fn quoted_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
+    delimited(
+        char('|'),
+        recognize(many0(alt((
+            recognize(none_of("\\|")),
+            tag("\\\\"),
+            tag("\\\""),
+            tag("\\'"),
+            tag("\\n"),
+            tag("\\r"),
+            tag("\\t"),
+            tag("\\\n"),
+            recognize(tuple((char('\\'), hexadecimal_digit, hexadecimal_digit))),
+            recognize(preceded(
+                tag("\\x"),
+                cut(terminated(
+                    many1(tuple((hexadecimal_digit, hexadecimal_digit))),
+                    char(';'),
                 )),
-            )))),
-            char('|'),
-        ),
-        |(input, position)| Expression::Symbol(&input, position),
+            )),
+        )))),
+        char('|'),
     )(input)
 }
 
