@@ -102,6 +102,13 @@ fn escaped_character<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>,
                 char(';'),
             )),
         )),
+        recognize(tuple((
+            tag("\\u"),
+            hexadecimal_digit,
+            hexadecimal_digit,
+            hexadecimal_digit,
+            hexadecimal_digit,
+        ))),
     ))(input)
 }
 
@@ -851,6 +858,14 @@ mod tests {
             assert_eq!(
                 string(Input::new_extra("\"a\\\nb\"", Global)).unwrap().1,
                 Expression::String("a\\\nb", Position::new(0, 6))
+            );
+        }
+
+        #[test]
+        fn parse_escaped_unicode() {
+            assert_eq!(
+                string(Input::new_extra("\"\\ubeef\"", Global)).unwrap().1,
+                Expression::String("\\ubeef", Position::new(0, 8))
             );
         }
     }
