@@ -32,7 +32,7 @@ pub fn comments<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Comment, A
 
     all_consuming(fold_many0(
         alt((
-            map(none_of("\";#\\"), |_| None),
+            map(none_of("\"|;#\\"), |_| None),
             map(raw_string, |_| None),
             map(raw_symbol, |_| None),
             map(comment, Some),
@@ -61,6 +61,34 @@ fn symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
 
 fn raw_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
     recognize(tuple((head_symbol_character, many0(tail_symbol_character))))(input)
+}
+
+fn quoted_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
+    map(
+        delimited(
+            char('|'),
+            recognize(many0(alt((
+                recognize(none_of("\\|")),
+                tag("\\\\"),
+                tag("\\\""),
+                tag("\\'"),
+                tag("\\n"),
+                tag("\\r"),
+                tag("\\t"),
+                tag("\\\n"),
+                recognize(tuple((char('\\'), hexadecimal_digit, hexadecimal_digit))),
+                recognize(preceded(
+                    tag("\\x"),
+                    cut(terminated(
+                        many1(tuple((hexadecimal_digit, hexadecimal_digit))),
+                        char(';'),
+                    )),
+                )),
+            )))),
+            char('|'),
+        ),
+        |(input, position)| Expression::Symbol(&input, position),
+    )(input)
 }
 
 fn head_symbol_character<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
