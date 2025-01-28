@@ -9,7 +9,7 @@ readme = "./README.md"
 keywords = ["format", "scheme"]
 
 [dependencies]
-bumpalo = { version = "3.16.0", features = ["allocator_api"] }
+bumpalo = { version = "3.17.0", features = ["allocator_api"] }
 clap = { version = "4.5.27", features = ["derive"] }
 colored = "3.0.0"
 futures = "0.3.31"
