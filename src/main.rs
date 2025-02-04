@@ -69,12 +69,9 @@ async fn check_paths(paths: &[String], verbose: bool) -> Result<(), Box<dyn Erro
     let mut count = 0;
     let mut error_count = 0;
 
-    for (path, result) in try_join_all(read_paths(paths)?.map(|path| {
-        spawn(async {
-            let result = check_path(&path).await;
-            (path, result)
-        })
-    }))
+    for (result, path) in try_join_all(
+        read_paths(paths)?.map(|path| spawn(async { (check_path(&path).await, path) })),
+    )
     .await?
     {
         count += 1;
@@ -106,12 +103,9 @@ async fn format_paths(paths: &[String], verbose: bool) -> Result<(), Box<dyn Err
     let mut count = 0;
     let mut error_count = 0;
 
-    for (path, result) in try_join_all(read_paths(paths)?.map(|path| {
-        spawn(async {
-            let result = format_path(&path).await;
-            (path, result)
-        })
-    }))
+    for (result, path) in try_join_all(
+        read_paths(paths)?.map(|path| spawn(async { (format_path(&path).await, path) })),
+    )
     .await?
     {
         count += 1;
