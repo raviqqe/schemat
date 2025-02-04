@@ -27,7 +27,8 @@ pub fn module<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Expression<A
         many0_count(hash_directive),
         many0(expression),
         blank,
-    ))(input)
+    ))
+    .parse(input)
 }
 
 pub fn comments<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Comment, A>, A> {
@@ -50,27 +51,30 @@ pub fn comments<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Comment, A
 
             all
         },
-    ))(input)
+    ))
+    .parse(input)
 }
 
 pub fn hash_directives<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<HashDirective, A>, A> {
-    many0(hash_directive)(input)
+    many0(hash_directive).parse(input)
 }
 
 fn symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
     map(token(positioned(raw_symbol)), |(input, position)| {
         Expression::Symbol(&input, position)
-    })(input)
+    })
+    .parse(input)
 }
 
 fn raw_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
-    recognize(tuple((head_symbol_character, many0(tail_symbol_character))))(input)
+    recognize(tuple((head_symbol_character, many0(tail_symbol_character)))).parse(input)
 }
 
 fn quoted_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
     map(token(positioned(raw_quoted_symbol)), |(input, position)| {
         Expression::QuotedSymbol(&input, position)
-    })(input)
+    })
+    .parse(input)
 }
 
 fn raw_quoted_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
@@ -83,7 +87,8 @@ fn raw_quoted_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>,
             escaped_character,
         )))),
         char('|'),
-    )(input)
+    )
+    .parse(input)
 }
 
 fn escaped_character<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
@@ -109,7 +114,8 @@ fn escaped_character<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>,
             hexadecimal_digit,
             hexadecimal_digit,
         ))),
-    ))(input)
+    ))
+    .parse(input)
 }
 
 fn head_symbol_character<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
@@ -119,11 +125,12 @@ fn head_symbol_character<A: Allocator + Clone>(input: Input<A>) -> IResult<Input
             satisfy(|character| character.is_alphanumeric() || SYMBOL_SIGNS.contains(character)),
         ),
         value((), tuple((char('\\'), anychar))),
-    )))(input)
+    )))
+    .parse(input)
 }
 
 fn tail_symbol_character<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
-    alt((head_symbol_character, recognize(char('#'))))(input)
+    alt((head_symbol_character, recognize(char('#')))).parse(input)
 }
 
 fn expression<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
@@ -145,7 +152,8 @@ fn expression<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A
         context("symbol", symbol),
         context("vector", list_like("[", "]")),
         context("map", list_like("{", "}")),
-    ))(input)
+    ))
+    .parse(input)
 }
 
 fn quote<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
@@ -157,7 +165,8 @@ fn quote<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
         tag("#;"),
         tag("#"),
         terminated(raw_symbol, peek(not(alt((multispace1, eof))))),
-    ))(input)
+    ))
+    .parse(input)
 }
 
 fn list_like<A: Allocator + Clone>(
@@ -173,14 +182,16 @@ fn list_like<A: Allocator + Clone>(
             |((left, (expressions, right)), position)| {
                 Expression::List(&left, &right, expressions, position)
             },
-        )(input)
+        )
+        .parse(input)
     }
 }
 
 fn string<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
     map(token(positioned(raw_string)), |(input, position)| {
         Expression::String(*input, position)
-    })(input)
+    })
+    .parse(input)
 }
 
 fn raw_string<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
@@ -192,21 +203,22 @@ fn raw_string<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
             escaped_character,
         )))),
         char('"'),
-    )(input)
+    )
+    .parse(input)
 }
 
 fn hexadecimal_digit<A: Allocator + Clone>(input: Input<A>) -> IResult<char, A> {
-    satisfy(|character| character.is_ascii_hexdigit())(input)
+    satisfy(|character| character.is_ascii_hexdigit()).parse(input)
 }
 
 fn sign<A: Allocator + Clone>(sign: &'static str) -> impl Fn(Input<A>) -> IResult<Input<A>, A> {
-    move |input| token(tag(sign))(input)
+    move |input| token(tag(sign)).parse(input)
 }
 
 fn token<'a, T, A: Allocator + Clone>(
     mut parser: impl Parser<Input<'a, A>, Output = T, Error = NomError<'a, A>>,
 ) -> impl FnMut(Input<'a, A>) -> IResult<'a, T, A> {
-    move |input| preceded(blank, |input| parser.parse(input))(input)
+    move |input| preceded(blank, |input| parser.parse(input)).parse(input)
 }
 
 fn positioned<'a, T, A: Allocator + Clone>(
@@ -225,7 +237,8 @@ fn positioned<'a, T, A: Allocator + Clone>(
                     Position::new(start.location_offset(), end.location_offset()),
                 )
             },
-        )(input)
+        )
+        .parse(input)
     }
 }
 
@@ -245,7 +258,8 @@ fn positioned_meta<'a, T, A: Allocator + Clone>(
                     Position::new(start.location_offset(), end.location_offset()),
                 )
             },
-        )(input)
+        )
+        .parse(input)
     }
 }
 
@@ -253,14 +267,16 @@ fn blank<A: Allocator + Clone>(input: Input<A>) -> IResult<(), A> {
     value(
         (),
         many0_count(alt((value((), multispace1), value((), comment)))),
-    )(input)
+    )
+    .parse(input)
 }
 
 fn comment<A: Allocator + Clone>(input: Input<A>) -> IResult<Comment, A> {
     alt((
         map(line_comment, From::from),
         map(block_comment, From::from),
-    ))(input)
+    ))
+    .parse(input)
 }
 
 fn line_comment<A: Allocator + Clone>(input: Input<A>) -> IResult<LineComment, A> {
@@ -270,7 +286,8 @@ fn line_comment<A: Allocator + Clone>(input: Input<A>) -> IResult<LineComment, A
             newline,
         ),
         |(input, position)| LineComment::new(&input, position),
-    )(input)
+    )
+    .parse(input)
 }
 
 fn block_comment<A: Allocator + Clone>(input: Input<A>) -> IResult<BlockComment, A> {
@@ -281,7 +298,8 @@ fn block_comment<A: Allocator + Clone>(input: Input<A>) -> IResult<BlockComment,
             tag("|#"),
         )),
         |(input, position)| BlockComment::new(&input, position),
-    )(input)
+    )
+    .parse(input)
 }
 
 fn hash_directive<A: Allocator + Clone>(input: Input<A>) -> IResult<HashDirective, A> {
@@ -294,14 +312,16 @@ fn hash_directive<A: Allocator + Clone>(input: Input<A>) -> IResult<HashDirectiv
             newline,
         ),
         |(input, position)| HashDirective::new(&input, position),
-    )(input)
+    )
+    .parse(input)
 }
 
 fn newline<A: Allocator + Clone>(input: Input<A>) -> IResult<(), A> {
     value(
         (),
         many1_count(delimited(space0, nom::character::complete::newline, space0)),
-    )(input)
+    )
+    .parse(input)
 }
 
 fn many0<'a, T, A: Allocator + Clone>(
@@ -317,7 +337,8 @@ fn many0<'a, T, A: Allocator + Clone>(
                 all.push(value);
                 all
             },
-        )(input)
+        )
+        .parse(input)
     }
 }
 
