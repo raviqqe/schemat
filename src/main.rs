@@ -69,10 +69,10 @@ async fn check_paths(paths: &[String], verbose: bool) -> Result<(), Box<dyn Erro
     let mut count = 0;
     let mut error_count = 0;
 
-    for result in try_join_all(read_paths(paths)?.map(|path| {
+    for (path, result) in try_join_all(read_paths(paths)?.map(|path| {
         spawn(async {
-            let success = check_path(&path).await?;
-            Ok::<_, ApplicationError>((path, success))
+            let result = check_path(&path).await;
+            (path, result)
         })
     }))
     .await?
@@ -80,16 +80,16 @@ async fn check_paths(paths: &[String], verbose: bool) -> Result<(), Box<dyn Erro
         count += 1;
 
         match result {
-            Ok((path, path_success)) => {
-                if !path_success {
+            Ok(success) => {
+                if success {
+                    eprintln!("{}\t{}", "OK".green(), path.display());
+                } else if verbose {
                     eprintln!("{}\t{}", "FAIL".yellow(), path.display());
                     error_count += 1;
-                } else if verbose {
-                    eprintln!("{}\t{}", "OK".green(), path.display());
                 }
             }
             Err(error) => {
-                eprintln!("{}\t{}", "ERROR".red(), error);
+                eprintln!("{}\t{}\t{}", "ERROR".red(), path.display(), error);
                 error_count += 1;
             }
         }
@@ -106,10 +106,10 @@ async fn format_paths(paths: &[String], verbose: bool) -> Result<(), Box<dyn Err
     let mut count = 0;
     let mut error_count = 0;
 
-    for result in try_join_all(read_paths(paths)?.map(|path| {
+    for (path, result) in try_join_all(read_paths(paths)?.map(|path| {
         spawn(async {
-            format_path(&path).await?;
-            Ok::<_, ApplicationError>(path)
+            let result = format_path(&path).await;
+            (path, result)
         })
     }))
     .await?
@@ -117,13 +117,13 @@ async fn format_paths(paths: &[String], verbose: bool) -> Result<(), Box<dyn Err
         count += 1;
 
         match result {
-            Ok(path) => {
+            Ok(_) => {
                 if verbose {
                     eprintln!("{}\t{}", "FORMAT".blue(), path.display());
                 }
             }
             Err(error) => {
-                eprintln!("{}\t{}", "ERROR".red(), error);
+                eprintln!("{}\t{}\t{}", "ERROR".red(), path.display(), error);
                 error_count += 1;
             }
         }
