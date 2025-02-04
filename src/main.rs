@@ -143,8 +143,7 @@ async fn format_stdin() -> Result<(), Box<dyn Error>> {
     let mut source = Default::default();
     stdin().read_to_string(&mut source).await?;
     let position_map = PositionMap::new(&source);
-    let convert_error =
-        |error: ParseError| convert_parse_error(error, "<stdin>", &source, &position_map);
+    let convert_error = |error| convert_parse_error(error, &source, &position_map);
     let allocator = Bump::new();
 
     stdout()
@@ -166,12 +165,12 @@ async fn format_stdin() -> Result<(), Box<dyn Error>> {
 async fn check_path(path: &Path) -> Result<bool, ApplicationError> {
     let source = read_to_string(path).await?;
 
-    Ok(source == format_string(&source, &path.display().to_string())?)
+    Ok(source == format_string(&source)?)
 }
 
 async fn format_path(path: &Path) -> Result<(), ApplicationError> {
     let source = read_to_string(path).await?;
-    let formatted = format_string(&source, &path.display().to_string())?;
+    let formatted = format_string(&source)?;
 
     // Skip write to a file to improve performance and reduce workload to a file
     // system if the file is formatted already.
@@ -182,9 +181,9 @@ async fn format_path(path: &Path) -> Result<(), ApplicationError> {
     Ok(())
 }
 
-fn format_string(source: &str, name: &str) -> Result<String, ApplicationError> {
+fn format_string(source: &str) -> Result<String, ApplicationError> {
     let position_map = PositionMap::new(source);
-    let convert_error = |error: ParseError| convert_parse_error(error, name, source, &position_map);
+    let convert_error = |error: ParseError| convert_parse_error(error, source, &position_map);
     let allocator = Bump::new();
 
     let source = format(
@@ -200,9 +199,8 @@ fn format_string(source: &str, name: &str) -> Result<String, ApplicationError> {
 
 fn convert_parse_error(
     error: ParseError,
-    name: &str,
     source: &str,
     position_map: &PositionMap,
 ) -> ApplicationError {
-    ApplicationError::Parse(error.to_string(name, source, position_map))
+    ApplicationError::Parse(error.to_string(source, position_map))
 }

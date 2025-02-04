@@ -28,13 +28,12 @@ impl ParseError {
         }
     }
 
-    pub fn to_string(&self, name: &str, source: &str, position_map: &PositionMap) -> String {
+    pub fn to_string(&self, source: &str, position_map: &PositionMap) -> String {
         let bytes = &source.as_bytes()[position_map.line_range(self.offset).expect("valid offset")];
 
         format!(
-            "{} {}:{}:{}: {}",
+            "{} at line {} and column {}: {}",
             &self.message,
-            name,
             &position_map.line_index(self.offset).expect("valid offset") + 1,
             &position_map
                 .column_index(self.offset)
@@ -66,8 +65,8 @@ mod tests {
         );
 
         assert_eq!(
-            error.to_string("foo.scm", source, &position_map),
-            "failed to parse foo.scm:1:1: foo"
+            error.to_string(source, &position_map),
+            "failed to parse at line 1 and column 1: foo"
         );
     }
 }
