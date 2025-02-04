@@ -204,13 +204,13 @@ fn sign<A: Allocator + Clone>(sign: &'static str) -> impl Fn(Input<A>) -> IResul
 }
 
 fn token<'a, T, A: Allocator + Clone>(
-    mut parser: impl Parser<Input<'a, A>, T, NomError<'a, A>>,
+    mut parser: impl Parser<Input<'a, A>, Output = T, Error = NomError<'a, A>>,
 ) -> impl FnMut(Input<'a, A>) -> IResult<'a, T, A> {
     move |input| preceded(blank, |input| parser.parse(input))(input)
 }
 
 fn positioned<'a, T, A: Allocator + Clone>(
-    mut parser: impl Parser<Input<'a, A>, T, NomError<'a, A>>,
+    mut parser: impl Parser<Input<'a, A>, Output = T, Error = NomError<'a, A>>,
 ) -> impl FnMut(Input<'a, A>) -> IResult<'a, (T, Position), A> {
     move |input| {
         map(
@@ -230,7 +230,7 @@ fn positioned<'a, T, A: Allocator + Clone>(
 }
 
 fn positioned_meta<'a, T, A: Allocator + Clone>(
-    mut parser: impl Parser<Input<'a, A>, T, NomError<'a, A>>,
+    mut parser: impl Parser<Input<'a, A>, Output = T, Error = NomError<'a, A>>,
 ) -> impl FnMut(Input<'a, A>) -> IResult<'a, (T, Position), A> {
     move |input| {
         map(
@@ -305,7 +305,7 @@ fn newline<A: Allocator + Clone>(input: Input<A>) -> IResult<(), A> {
 }
 
 fn many0<'a, T, A: Allocator + Clone>(
-    mut parser: impl Parser<Input<'a, A>, T, NomError<'a, A>>,
+    mut parser: impl Parser<Input<'a, A>, Output = T, Error = NomError<'a, A>>,
 ) -> impl FnMut(Input<'a, A>) -> IResult<'a, Vec<T, A>, A> {
     move |input| {
         let allocator = input.extra.clone();
