@@ -78,11 +78,11 @@ async fn check_paths(paths: &[String], verbose: bool) -> Result<(), Box<dyn Erro
 
         match result {
             Ok(success) => {
-                if success {
-                    eprintln!("{}\t{}", "OK".green(), path.display());
-                } else if verbose {
+                if !success {
                     eprintln!("{}\t{}", "FAIL".yellow(), path.display());
                     error_count += 1;
+                } else if verbose {
+                    eprintln!("{}\t{}", "OK".green(), path.display());
                 }
             }
             Err(error) => {
