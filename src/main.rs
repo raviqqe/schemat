@@ -69,19 +69,16 @@ async fn check_paths(paths: &[String], verbose: bool) -> Result<(), Box<dyn Erro
     let mut count = 0;
     let mut error_count = 0;
 
-    for result in try_join_all(read_paths(paths)?.map(|path| {
-        spawn(async {
-            let success = check_path(&path).await?;
-            Ok::<_, ApplicationError>((path, success))
-        })
-    }))
+    for (result, path) in try_join_all(
+        read_paths(paths)?.map(|path| spawn(async { (check_path(&path).await, path) })),
+    )
     .await?
     {
         count += 1;
 
         match result {
-            Ok((path, path_success)) => {
-                if !path_success {
+            Ok(success) => {
+                if !success {
                     eprintln!("{}\t{}", "FAIL".yellow(), path.display());
                     error_count += 1;
                 } else if verbose {
@@ -89,7 +86,7 @@ async fn check_paths(paths: &[String], verbose: bool) -> Result<(), Box<dyn Erro
                 }
             }
             Err(error) => {
-                eprintln!("{}\t{}", "ERROR".red(), error);
+                eprintln!("{}\t{}\t{}", "ERROR".red(), path.display(), error);
                 error_count += 1;
             }
         }
@@ -106,24 +103,21 @@ async fn format_paths(paths: &[String], verbose: bool) -> Result<(), Box<dyn Err
     let mut count = 0;
     let mut error_count = 0;
 
-    for result in try_join_all(read_paths(paths)?.map(|path| {
-        spawn(async {
-            format_path(&path).await?;
-            Ok::<_, ApplicationError>(path)
-        })
-    }))
+    for (result, path) in try_join_all(
+        read_paths(paths)?.map(|path| spawn(async { (format_path(&path).await, path) })),
+    )
     .await?
     {
         count += 1;
 
         match result {
-            Ok(path) => {
+            Ok(_) => {
                 if verbose {
                     eprintln!("{}\t{}", "FORMAT".blue(), path.display());
                 }
             }
             Err(error) => {
-                eprintln!("{}\t{}", "ERROR".red(), error);
+                eprintln!("{}\t{}\t{}", "ERROR".red(), path.display(), error);
                 error_count += 1;
             }
         }
@@ -149,8 +143,7 @@ async fn format_stdin() -> Result<(), Box<dyn Error>> {
     let mut source = Default::default();
     stdin().read_to_string(&mut source).await?;
     let position_map = PositionMap::new(&source);
-    let convert_error =
-        |error: ParseError| convert_parse_error(error, "<stdin>", &source, &position_map);
+    let convert_error = |error| convert_parse_error(error, &source, &position_map);
     let allocator = Bump::new();
 
     stdout()
@@ -172,12 +165,12 @@ async fn format_stdin() -> Result<(), Box<dyn Error>> {
 async fn check_path(path: &Path) -> Result<bool, ApplicationError> {
     let source = read_to_string(path).await?;
 
-    Ok(source == format_string(&source, &path.display().to_string())?)
+    Ok(source == format_string(&source)?)
 }
 
 async fn format_path(path: &Path) -> Result<(), ApplicationError> {
     let source = read_to_string(path).await?;
-    let formatted = format_string(&source, &path.display().to_string())?;
+    let formatted = format_string(&source)?;
 
     // Skip write to a file to improve performance and reduce workload to a file
     // system if the file is formatted already.
@@ -188,9 +181,9 @@ async fn format_path(path: &Path) -> Result<(), ApplicationError> {
     Ok(())
 }
 
-fn format_string(source: &str, name: &str) -> Result<String, ApplicationError> {
+fn format_string(source: &str) -> Result<String, ApplicationError> {
     let position_map = PositionMap::new(source);
-    let convert_error = |error: ParseError| convert_parse_error(error, name, source, &position_map);
+    let convert_error = |error: ParseError| convert_parse_error(error, source, &position_map);
     let allocator = Bump::new();
 
     let source = format(
@@ -206,9 +199,8 @@ fn format_string(source: &str, name: &str) -> Result<String, ApplicationError> {
 
 fn convert_parse_error(
     error: ParseError,
-    name: &str,
     source: &str,
     position_map: &PositionMap,
 ) -> ApplicationError {
-    ApplicationError::Parse(error.to_string(name, source, position_map))
+    ApplicationError::Parse(error.to_string(source, position_map))
 }
