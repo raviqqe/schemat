@@ -4,6 +4,7 @@ use crate::{
     position::Position,
 };
 use nom::{
+    Parser,
     branch::alt,
     bytes::complete::{tag, take_until},
     character::complete::{
@@ -13,7 +14,6 @@ use nom::{
     error::context,
     multi::{fold_many0, many0_count, many1, many1_count},
     sequence::{delimited, preceded, terminated},
-    Parser,
 };
 use std::alloc::Allocator;
 

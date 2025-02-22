@@ -5,7 +5,7 @@ mod parser;
 pub use self::error::ParseError;
 use self::{
     input::Input,
-    parser::{comments, hash_directives, module, IResult},
+    parser::{IResult, comments, hash_directives, module},
 };
 use crate::ast::{Comment, Expression, HashDirective};
 use std::alloc::Allocator;

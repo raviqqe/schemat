@@ -10,7 +10,7 @@ mod position_map;
 
 use crate::{
     format::format,
-    parse::{parse, parse_comments, parse_hash_directives, ParseError},
+    parse::{ParseError, parse, parse_comments, parse_hash_directives},
     position_map::PositionMap,
 };
 use bumpalo::Bump;
@@ -25,7 +25,7 @@ use std::{
 };
 use tokio::{
     fs::{read_to_string, write},
-    io::{stdin, stdout, AsyncReadExt, AsyncWriteExt},
+    io::{AsyncReadExt, AsyncWriteExt, stdin, stdout},
     spawn,
 };
 

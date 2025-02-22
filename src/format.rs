@@ -5,7 +5,7 @@ use crate::{
     position_map::PositionMap,
 };
 use core::fmt;
-use mfmt::{empty, line, sequence, utility::is_empty, Builder, Document, FormatOptions};
+use mfmt::{Builder, Document, FormatOptions, empty, line, sequence, utility::is_empty};
 use std::alloc::Allocator;
 
 const COMMENT_PREFIX: &str = ";";
