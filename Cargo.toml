@@ -2,7 +2,7 @@
 name = "schemat"
 description = "A code formatter for Scheme, Lisp, and any S-expressions"
 version = "0.3.0"
-edition = "2021"
+edition = "2024"
 license = "Unlicense"
 repository = "https://github.com/raviqqe/schemat"
 readme = "./README.md"
