@@ -17,7 +17,7 @@ glob = "0.3.2"
 mfmt = "0.3"
 nom = "8.0.0"
 nom_locate = "5.0.0"
-tokio = { version = "1.43.0", features = ["full"] }
+tokio = { version = "1.44.0", features = ["full"] }
 
 [dev-dependencies]
 indoc = "2.0.6"
