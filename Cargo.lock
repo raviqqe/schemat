@@ -329,9 +329,9 @@ checksum = "523dc4f511e55ab87b694dc30d0f820d60906ef06413f93d4d7a1385599cc149"
 
 [[package]]
 name = "mfmt"
-version = "0.3.9"
+version = "0.3.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fea2d140fabb4de5aef31d7f72ac7f47c1ed2047f8dc35bc058481298b66b9d0"
+checksum = "5801f38e2b671b99bd8bf694d6335a13c4b3fc18992581b7b0d3a3f92590e97d"
 
 [[package]]
 name = "miniz_oxide"
