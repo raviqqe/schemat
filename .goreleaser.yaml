@@ -3,4 +3,5 @@ builds:
   - id: schemat
     binary: schemat
     builder: rust
+    command: build
     flags: --release
