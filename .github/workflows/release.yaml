@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: ./.github/actions/setup
+      - uses: raviqqe/cargo-cache@v1
       - uses: mlugg/setup-zig@v1
       - run: cargo install --locked cargo-zigbuild
       - id: version
