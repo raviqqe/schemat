@@ -8,7 +8,7 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 jobs:
-  release:
+  cargo:
     runs-on: ubuntu-latest
     environment: ${{ github.ref == 'refs/heads/main' && 'release' || 'test' }}
     steps:
@@ -19,3 +19,30 @@ jobs:
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         if: github.ref == 'refs/heads/main'
+  goreleaser:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      - uses: mlugg/setup-zig@v1
+      - run: cargo install --locked cargo-zigbuild
+      - id: version
+        run: echo version=v$(cargo run -- --version | grep -o '[0-9.]*') > ${{ github.output }}
+      - uses: raviqqe/goreleaser-action@v1
+        with:
+          version: ${{ steps.version.outputs.version }}
+          snapshot: ${{ github.ref != 'refs/heads/main' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  release:
+    needs:
+      - cargo
+      - goreleaser
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: for result in ${{ join(needs.*.result, ' ') }}; do [ $result = success ]; done

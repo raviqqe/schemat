@@ -1,0 +1,6 @@
+version: 2
+builds:
+  - id: schemat
+    binary: schemat
+    builder: rust
+    flags: --release
