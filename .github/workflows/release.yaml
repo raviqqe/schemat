@@ -28,8 +28,6 @@ jobs:
         with:
           fetch-depth: 0
       - uses: raviqqe/cargo-cache@v1
-      - uses: mlugg/setup-zig@v1
-      - run: cargo install --locked cargo-zigbuild
       - id: version
         run: echo version=v$(cargo run -- --version | grep -o '[0-9.]*') > ${{ github.output }}
       - uses: raviqqe/goreleaser-action@v1
