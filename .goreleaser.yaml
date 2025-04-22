@@ -1,0 +1,9 @@
+version: 2
+builds:
+  - id: schemat
+    binary: schemat
+    builder: rust
+    command: build
+    flags: --release
+    targets:
+      - x86_64-unknown-linux-gnu
