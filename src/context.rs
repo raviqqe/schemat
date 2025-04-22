@@ -1,6 +1,7 @@
 use crate::{ast::Comment, position::Position, position_map::PositionMap};
+use allocator_api2::alloc::Allocator;
 use mfmt::Builder;
-use std::{alloc::Allocator, collections::VecDeque};
+use std::collections::VecDeque;
 
 pub struct Context<'a, A: Allocator + Clone> {
     comments: VecDeque<&'a Comment<'a>>,

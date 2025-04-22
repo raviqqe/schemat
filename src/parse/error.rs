@@ -1,8 +1,8 @@
 use super::input::Input;
 use crate::position_map::PositionMap;
+use allocator_api2::alloc::Allocator;
 use core::str;
 use nom::error::Error;
-use std::alloc::Allocator;
 
 pub type NomError<'a, A> = Error<Input<'a, A>>;
 
@@ -47,9 +47,9 @@ impl ParseError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use allocator_api2::alloc::Global;
     use nom::error::ErrorKind;
     use pretty_assertions::assert_eq;
-    use std::alloc::Global;
 
     #[test]
     fn to_string() {

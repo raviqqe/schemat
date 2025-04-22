@@ -4,9 +4,9 @@ use crate::{
     position::Position,
     position_map::PositionMap,
 };
+use allocator_api2::alloc::Allocator;
 use core::fmt;
 use mfmt::{Builder, Document, FormatOptions, empty, line, sequence, utility::is_empty};
-use std::alloc::Allocator;
 
 const COMMENT_PREFIX: &str = ";";
 const QUOTE_SIGNS: &[&str] = &["'", "`", "#"];
@@ -359,9 +359,9 @@ mod tests {
         position::Position,
         position_map::PositionMap,
     };
+    use allocator_api2::{alloc::Global, vec};
     use indoc::indoc;
     use pretty_assertions::assert_eq;
-    use std::alloc::Global;
 
     #[test]
     fn format_empty() {
@@ -1457,6 +1457,7 @@ mod tests {
 
     mod data {
         use super::*;
+        use allocator_api2::vec;
         use pretty_assertions::assert_eq;
 
         #[test]

@@ -3,6 +3,7 @@ use crate::{
     ast::{BlockComment, Comment, Expression, HashDirective, LineComment},
     position::Position,
 };
+use allocator_api2::{alloc::Allocator, boxed::Box, vec::Vec};
 use nom::{
     Parser,
     branch::alt,
@@ -15,7 +16,6 @@ use nom::{
     multi::{fold_many0, many0_count, many1, many1_count},
     sequence::{delimited, preceded, terminated},
 };
-use std::alloc::Allocator;
 
 const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&~^.:";
 const SPECIAL_SIGNS: &str = ";";
@@ -345,8 +345,8 @@ fn many0<'a, T, A: Allocator + Clone>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use allocator_api2::{alloc::Global, vec};
     use pretty_assertions::assert_eq;
-    use std::alloc::Global;
 
     #[test]
     fn parse_symbol() {
