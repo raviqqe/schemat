@@ -657,6 +657,7 @@ mod tests {
 
     mod quote {
         use super::*;
+        use allocator_api2::vec;
         use pretty_assertions::assert_eq;
 
         #[test]
@@ -781,6 +782,7 @@ mod tests {
 
     mod hash_directive {
         use super::*;
+        use allocator_api2::vec;
         use pretty_assertions::assert_eq;
 
         #[test]
@@ -900,6 +902,7 @@ mod tests {
 
     mod comment {
         use super::*;
+        use allocator_api2::vec;
         use pretty_assertions::assert_eq;
 
         #[test]
@@ -989,6 +992,7 @@ mod tests {
 
         mod block {
             use super::*;
+            use allocator_api2::vec;
             use pretty_assertions::assert_eq;
 
             #[test]
