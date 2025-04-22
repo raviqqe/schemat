@@ -8,7 +8,7 @@ use self::{
     parser::{IResult, comments, hash_directives, module},
 };
 use crate::ast::{Comment, Expression, HashDirective};
-use std::alloc::Allocator;
+use allocator_api2::{alloc::Allocator, vec::Vec};
 
 pub fn parse<A: Allocator + Clone>(
     source: &str,
@@ -44,8 +44,8 @@ fn convert_result<T, A: Allocator + Clone>(
 mod tests {
     use super::*;
     use crate::position::Position;
+    use allocator_api2::{alloc::Global, vec};
     use pretty_assertions::assert_eq;
-    use std::alloc::Global;
 
     #[test]
     fn parse_nothing() {

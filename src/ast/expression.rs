@@ -1,5 +1,5 @@
 use crate::position::Position;
-use std::alloc::Allocator;
+use allocator_api2::{alloc::Allocator, boxed::Box, vec::Vec};
 
 #[derive(Debug)]
 pub enum Expression<'a, A: Allocator> {
@@ -57,7 +57,7 @@ impl<A: Allocator> Eq for Expression<'_, A> {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::alloc::Global;
+    use allocator_api2::alloc::Global;
 
     #[test]
     fn equal() {

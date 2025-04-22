@@ -1,5 +1,3 @@
-#![feature(allocator_api, iter_intersperse)]
-
 mod ast;
 mod context;
 mod error;

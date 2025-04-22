@@ -21,7 +21,7 @@ It supports:
 ## Install
 
 ```sh
-cargo +nightly install schemat
+cargo install schemat
 ```
 
 ## Usage
