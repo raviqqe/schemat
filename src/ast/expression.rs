@@ -57,13 +57,13 @@ impl<A: Allocator> Eq for Expression<'_, A> {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bumpalo::Bump;
+    use allocator_api2::alloc::Global;
 
     #[test]
     fn equal() {
         assert_eq!(
-            Expression::<&Bump>::Symbol("foo", Position::new(0, 0)),
-            Expression::<&Bump>::Symbol("foo", Position::new(0, 0))
+            Expression::<Global>::Symbol("foo", Position::new(0, 0)),
+            Expression::<Global>::Symbol("foo", Position::new(0, 0))
         );
     }
 }
