@@ -4,15 +4,25 @@
 [![Crate](https://img.shields.io/crates/v/schemat.svg?style=flat-square)](https://crates.io/crates/schemat)
 [![License](https://img.shields.io/github/license/raviqqe/schemat.svg?style=flat-square)](https://github.com/raviqqe/schemat/blob/main/UNLICENSE)
 
-Scheme formatter written in Rust
+A code formatter for Scheme, Lisp, and any S-expressions.
 
 It supports:
 
 - S-expressions
-- Comments
+  - Parenthesis: `(` and `)`
+  - Brackets: `[` and `]`
+  - Braces: `{` and `}`
+- Comments: Lines starting with `;`
+- Quotes: `'`, `` ` ``, and `,`
 - Hash directives
-  - Shebang `#!/usr/bin/env gambit`
+  - Shebang (e.g. `#!/usr/bin/env gsi`)
   - Language shorthand in Racket (e.g. `#lang racket`)
+
+## Install
+
+```sh
+cargo install schemat
+```
 
 ## Usage
 

@@ -1,11 +1,16 @@
 {
   "words": [
+    "anychar",
     "bumpalo",
+    "clippy",
+    "deque",
+    "hexdigit",
     "indoc",
     "itertools",
     "lcov",
     "mfmt",
     "multispace",
+    "rustfmt",
     "rustup",
     "schemat",
     "smallvec"

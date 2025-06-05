@@ -1,68 +1,30 @@
 use super::input::Input;
 use crate::position_map::PositionMap;
+use allocator_api2::alloc::Allocator;
 use core::str;
-use nom::error::{VerboseError, VerboseErrorKind};
+use nom::error::Error;
 
-pub type NomError<'a> = VerboseError<Input<'a>>;
+pub type NomError<'a, A> = Error<Input<'a, A>>;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParseError {
-    message: String,
+    message: &'static str,
     offset: usize,
 }
 
 impl ParseError {
-    pub fn new(source: &str, error: nom::Err<NomError<'_>>) -> Self {
+    pub fn new<A: Allocator>(source: &str, error: nom::Err<NomError<'_, A>>) -> Self {
+        let end_offset = source.len() - 1;
+
         match error {
-            nom::Err::Incomplete(_) => Self::unexpected_end(source),
-            nom::Err::Error(error) | nom::Err::Failure(error) => {
-                let context = error
-                    .errors
-                    .iter()
-                    .find_map(|(_, kind)| {
-                        if let VerboseErrorKind::Context(context) = kind {
-                            Some(context)
-                        } else {
-                            None
-                        }
-                    })
-                    .copied();
-
-                if let Some(&(input, _)) = error.errors.first() {
-                    Self {
-                        message: if let Some(character) =
-                            error.errors.iter().find_map(|(_, kind)| {
-                                if let VerboseErrorKind::Char(character) = kind {
-                                    Some(character)
-                                } else {
-                                    None
-                                }
-                            }) {
-                            [format!("'{character}' expected")]
-                                .into_iter()
-                                .chain(context.map(|context| format!("in {context}")))
-                                .collect::<Vec<_>>()
-                                .join(" ")
-                        } else {
-                            ["failed to parse"]
-                                .into_iter()
-                                .chain(context)
-                                .collect::<Vec<_>>()
-                                .join(" ")
-                        },
-                        offset: input.location_offset(),
-                    }
-                } else {
-                    Self::unexpected_end(source)
-                }
-            }
-        }
-    }
-
-    fn unexpected_end(source: &str) -> Self {
-        Self {
-            message: "unexpected end of source".into(),
-            offset: source.as_bytes().len() - 1,
+            nom::Err::Incomplete(_) => Self {
+                message: "parsing requires more data",
+                offset: end_offset,
+            },
+            nom::Err::Error(error) | nom::Err::Failure(error) => Self {
+                message: "failed to parse",
+                offset: error.input.location_offset().min(end_offset),
+            },
         }
     }
 
@@ -70,7 +32,7 @@ impl ParseError {
         let bytes = &source.as_bytes()[position_map.line_range(self.offset).expect("valid offset")];
 
         format!(
-            "{}\n{}:{}: {}",
+            "{} at line {} and column {}: {}",
             &self.message,
             &position_map.line_index(self.offset).expect("valid offset") + 1,
             &position_map
@@ -85,7 +47,8 @@ impl ParseError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use indoc::indoc;
+    use allocator_api2::alloc::Global;
+    use nom::error::ErrorKind;
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -95,20 +58,15 @@ mod tests {
 
         let error = ParseError::new(
             "foo",
-            nom::Err::Error(VerboseError {
-                errors: vec![(Input::new("foo"), VerboseErrorKind::Context("bar"))],
+            nom::Err::Error(Error {
+                input: Input::new_extra("foo", Global),
+                code: ErrorKind::Tag,
             }),
         );
 
         assert_eq!(
             error.to_string(source, &position_map),
-            indoc!(
-                "
-                    failed to parse bar
-                    1:1: foo
-                "
-            )
-            .trim()
+            "failed to parse at line 1 and column 1: foo"
         );
     }
 }

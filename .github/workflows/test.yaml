@@ -8,21 +8,38 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: Swatinem/rust-cache@v2
+      - uses: actions/checkout@v4
+      - uses: raviqqe/cargo-cache@v1
       - run: cargo build
-  test:
+  unit_test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: Swatinem/rust-cache@v2
+      - uses: actions/checkout@v4
+      - uses: raviqqe/cargo-cache@v1
       - run: cargo test
+  integration_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+      - uses: raviqqe/cargo-cache@v1
+      - run: tools/integration_test.sh
   coverage:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: Swatinem/rust-cache@v2
+      - uses: actions/checkout@v4
+      - uses: raviqqe/cargo-cache@v1
       - run: tools/coverage.sh
-      - uses: codecov/codecov-action@v3
+      - uses: codecov/codecov-action@v5
         with:
           files: lcov.info
+  test:
+    needs:
+      - build
+      - unit_test
+      - integration_test
+      - coverage
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: for result in ${{ join(needs.*.result, ' ') }}; do [ $result = success ]; done
