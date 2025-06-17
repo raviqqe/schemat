@@ -2,4 +2,4 @@
 
 source "https://rubygems.org"
 
-gem "aruba", "~> 2.2"
+gem "aruba", "~> 2.3"
