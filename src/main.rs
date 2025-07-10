@@ -44,7 +44,7 @@ struct Arguments {
 #[tokio::main]
 async fn main() -> ExitCode {
     if let Err(error) = run(Arguments::parse()).await {
-        eprintln!("{}", error);
+        eprintln!("{error}");
         ExitCode::FAILURE
     } else {
         ExitCode::SUCCESS
@@ -93,7 +93,7 @@ async fn check_paths(paths: &[String], verbose: bool) -> Result<(), Box<dyn Erro
     if error_count == 0 {
         Ok(())
     } else {
-        Err(format!("{} / {} file(s) failed", error_count, count).into())
+        Err(format!("{error_count} / {count} file(s) failed").into())
     }
 }
 
@@ -124,7 +124,7 @@ async fn format_paths(paths: &[String], verbose: bool) -> Result<(), Box<dyn Err
     if error_count == 0 {
         Ok(())
     } else {
-        Err(format!("{} / {} file(s) failed to format", error_count, count).into())
+        Err(format!("{error_count} / {count} file(s) failed to format").into())
     }
 }
 
