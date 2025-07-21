@@ -144,7 +144,8 @@ async fn format_stdin() -> Result<(), Box<dyn Error>> {
     let convert_error = |error| convert_parse_error(error, &source, &position_map);
     let allocator = Bump::new();
 
-    stdout()
+    let mut stdout = stdout();
+    stdout
         .write_all(
             format(
                 &parse(&source, &allocator).map_err(convert_error)?,
@@ -156,6 +157,7 @@ async fn format_stdin() -> Result<(), Box<dyn Error>> {
             .as_bytes(),
         )
         .await?;
+    stdout.flush().await?;
 
     Ok(())
 }
