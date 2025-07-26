@@ -1,4 +1,5 @@
 Feature: Check
+
   Scenario: Check a file
     Given a file named "foo.scm" with:
       """

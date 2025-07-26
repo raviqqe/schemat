@@ -1,4 +1,5 @@
 Feature: Format
+
   Scenario: Format stdin
     Given a file named "foo.scm" with:
       """
