@@ -177,10 +177,7 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
                                 block_comment,
                                 if block_comment_empty
                                     && !is_empty(&inline_comment)
-                                    && Some(line_index(context, position.start()))
-                                        == expressions.last().map(|expression| {
-                                            line_index(context, expression.position().end())
-                                        })
+                                    && !expressions.is_empty()
                                 {
                                     " ".into()
                                 } else {
@@ -1297,6 +1294,123 @@ mod tests {
                     "
                 )
             );
+        }
+
+        mod suffix {
+            use super::*;
+            use allocator_api2::vec;
+            use pretty_assertions::assert_eq;
+
+            #[test]
+            fn format_same_line() {
+                assert_eq!(
+                    format(
+                        &[Expression::List(
+                            "(",
+                            ")",
+                            vec![
+                                Expression::Symbol("foo", Position::new(0, 1)),
+                                Expression::Symbol("bar", Position::new(0, 1))
+                            ],
+                            Position::new(0, 1)
+                        )],
+                        &[LineComment::new("baz", Position::new(0, 1)).into()],
+                        &[],
+                        &PositionMap::new("\n"),
+                        Global,
+                    )
+                    .unwrap(),
+                    indoc!(
+                        "
+                        (foo bar) ;baz
+                        "
+                    )
+                );
+            }
+
+            #[test]
+            fn format_next_line() {
+                assert_eq!(
+                    format(
+                        &[Expression::List(
+                            "(",
+                            ")",
+                            vec![
+                                Expression::Symbol("foo", Position::new(0, 1)),
+                                Expression::Symbol("bar", Position::new(1, 2))
+                            ],
+                            Position::new(0, 2)
+                        )],
+                        &[LineComment::new("baz", Position::new(1, 2)).into()],
+                        &[],
+                        &PositionMap::new("\n\n"),
+                        Global,
+                    )
+                    .unwrap(),
+                    indoc!(
+                        "
+                        (foo
+                          bar) ;baz
+                        "
+                    )
+                );
+            }
+
+            #[test]
+            fn format_next_next_line() {
+                assert_eq!(
+                    format(
+                        &[Expression::List(
+                            "(",
+                            ")",
+                            vec![
+                                Expression::Symbol("foo", Position::new(0, 1)),
+                                Expression::Symbol("bar", Position::new(2, 3))
+                            ],
+                            Position::new(0, 3)
+                        )],
+                        &[LineComment::new("baz", Position::new(2, 3)).into()],
+                        &[],
+                        &PositionMap::new("\n\n\n"),
+                        Global,
+                    )
+                    .unwrap(),
+                    indoc!(
+                        "
+                        (foo
+
+                          bar) ;baz
+                        "
+                    )
+                );
+            }
+
+            #[test]
+            fn format_next_next_line_with_inline_comment() {
+                assert_eq!(
+                    format(
+                        &[Expression::List(
+                            "(",
+                            ")",
+                            vec![Expression::Symbol("foo", Position::new(0, 1))],
+                            Position::new(0, 4)
+                        )],
+                        &[
+                            BlockComment::new("bar", Position::new(2, 3)).into(),
+                            LineComment::new("baz", Position::new(4, 5)).into()
+                        ],
+                        &[],
+                        &PositionMap::new("\n\na)b\n"),
+                        Global,
+                    )
+                    .unwrap(),
+                    indoc!(
+                        "
+                        (foo #|bar|#) ;baz
+                        "
+                    )
+                );
+            }
         }
 
         mod block {
