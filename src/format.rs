@@ -166,13 +166,13 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
                                 ),
                             )
                         })
-                        .chain([{
+                        .chain({
                             let position = position.set_start(position.end() - right.len());
                             let block_comment = compile_block_comment(context, &position);
                             let inline_comment = compile_inline_comment(context, &position);
                             let block_comment_empty = is_empty(&block_comment);
 
-                            builder.r#break(builder.sequence([
+                            [builder.r#break(builder.sequence([
                                 if block_comment_empty { empty() } else { line() },
                                 block_comment,
                                 if block_comment_empty
@@ -188,8 +188,8 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
                                 },
                                 inline_comment,
                                 right.into(),
-                            ]))
-                        }]),
+                            ]))]
+                        }),
                 ),
                 !data,
             ),
