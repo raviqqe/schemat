@@ -126,11 +126,11 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
     right: &'a str,
     data: bool,
 ) -> Document<'a> {
-    let index = line_index(context, position.start());
+    let start_index = line_index(context, position.start());
 
     let index = expressions
         .iter()
-        .position(|expression| line_index(context, expression.position().start()) > index)
+        .position(|expression| line_index(context, expression.position().start()) > start_index)
         .unwrap_or(expressions.len());
     let first = &expressions[..index];
     let last = &expressions[index..];
@@ -165,25 +165,35 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
                                     ]),
                                 ),
                             )
+                        })
+                        .chain({
+                            let position = position.set_start(position.end() - right.len());
+                            let block_comment = compile_block_comment(context, &position);
+                            let inline_comment = compile_inline_comment(context, &position);
+                            let block_comment_empty = is_empty(&block_comment);
+
+                            [
+                                if block_comment_empty { empty() } else { line() },
+                                block_comment,
+                                if block_comment_empty
+                                    && !is_empty(&inline_comment)
+                                    && Some(line_index(context, position.start()))
+                                        == expressions.last().map(|expression| {
+                                            line_index(context, expression.position().end())
+                                        })
+                                {
+                                    " ".into()
+                                } else {
+                                    empty()
+                                },
+                                inline_comment,
+                                right.into(),
+                            ]
                         }),
                 ),
                 !data,
             ),
         ),
-        {
-            let inline_comment =
-                compile_inline_comment(context, &position.set_start(position.end() - right.len()));
-
-            builder.sequence([
-                if is_empty(&inline_comment) || expressions.is_empty() {
-                    empty()
-                } else {
-                    " ".into()
-                },
-                inline_comment,
-                right.into(),
-            ])
-        },
     ])
 }
 
