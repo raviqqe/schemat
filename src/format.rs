@@ -266,7 +266,7 @@ fn compile_suffix_comment<'a, A: Allocator + Clone + 'a>(
 
     builder.sequence(
         context
-            .drain_current_line_comment(line_index(context, position.start()))
+            .drain_current_line_comment(line_index(context, position.end() - 1))
             .map(|comment| {
                 builder.line_suffixes([" ", COMMENT_PREFIX, comment.content().trim_end()])
             }),
@@ -1437,8 +1437,7 @@ mod tests {
                     indoc!(
                         "
                         (foo
-                          bar
-                          #|bar|#) ;baz
+                          bar #|bar|#) ;baz
                         "
                     )
                 );
