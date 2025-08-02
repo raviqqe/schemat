@@ -126,11 +126,11 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
     right: &'a str,
     data: bool,
 ) -> Document<'a> {
-    let start_index = line_index(context, position.start());
+    let index = line_index(context, position.start());
 
     let index = expressions
         .iter()
-        .position(|expression| line_index(context, expression.position().start()) > start_index)
+        .position(|expression| line_index(context, expression.position().start()) > index)
         .unwrap_or(expressions.len());
     let first = &expressions[..index];
     let last = &expressions[index..];
