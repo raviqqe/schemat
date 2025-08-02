@@ -177,10 +177,7 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
                                 block_comment,
                                 if block_comment_empty
                                     && !is_empty(&inline_comment)
-                                    && Some(line_index(context, position.start()))
-                                        == expressions.last().map(|expression| {
-                                            line_index(context, expression.position().end())
-                                        })
+                                    && !expressions.is_empty()
                                 {
                                     " ".into()
                                 } else {
@@ -269,7 +266,7 @@ fn compile_suffix_comment<'a, A: Allocator + Clone + 'a>(
 
     builder.sequence(
         context
-            .drain_current_line_comment(line_index(context, position.start()))
+            .drain_current_line_comment(line_index(context, position.end() - 1))
             .map(|comment| {
                 builder.line_suffixes([" ", COMMENT_PREFIX, comment.content().trim_end()])
             }),
@@ -1299,6 +1296,154 @@ mod tests {
             );
         }
 
+        mod suffix {
+            use super::*;
+            use allocator_api2::vec;
+            use pretty_assertions::assert_eq;
+
+            #[test]
+            fn format_same_line() {
+                assert_eq!(
+                    format(
+                        &[Expression::List(
+                            "(",
+                            ")",
+                            vec![
+                                Expression::Symbol("foo", Position::new(0, 1)),
+                                Expression::Symbol("bar", Position::new(0, 1))
+                            ],
+                            Position::new(0, 1)
+                        )],
+                        &[LineComment::new("baz", Position::new(0, 1)).into()],
+                        &[],
+                        &PositionMap::new("\n"),
+                        Global,
+                    )
+                    .unwrap(),
+                    indoc!(
+                        "
+                        (foo bar) ;baz
+                        "
+                    )
+                );
+            }
+
+            #[test]
+            fn format_next_line() {
+                assert_eq!(
+                    format(
+                        &[Expression::List(
+                            "(",
+                            ")",
+                            vec![
+                                Expression::Symbol("foo", Position::new(0, 1)),
+                                Expression::Symbol("bar", Position::new(1, 2))
+                            ],
+                            Position::new(0, 2)
+                        )],
+                        &[LineComment::new("baz", Position::new(1, 2)).into()],
+                        &[],
+                        &PositionMap::new("\n\n"),
+                        Global,
+                    )
+                    .unwrap(),
+                    indoc!(
+                        "
+                        (foo
+                          bar) ;baz
+                        "
+                    )
+                );
+            }
+
+            #[test]
+            fn format_next_next_line() {
+                assert_eq!(
+                    format(
+                        &[Expression::List(
+                            "(",
+                            ")",
+                            vec![
+                                Expression::Symbol("foo", Position::new(0, 1)),
+                                Expression::Symbol("bar", Position::new(2, 3))
+                            ],
+                            Position::new(0, 3)
+                        )],
+                        &[LineComment::new("baz", Position::new(2, 3)).into()],
+                        &[],
+                        &PositionMap::new("\n\n\n"),
+                        Global,
+                    )
+                    .unwrap(),
+                    indoc!(
+                        "
+                        (foo
+
+                          bar) ;baz
+                        "
+                    )
+                );
+            }
+
+            #[test]
+            fn format_next_next_line_with_inline_comment() {
+                assert_eq!(
+                    format(
+                        &[Expression::List(
+                            "(",
+                            ")",
+                            vec![Expression::Symbol("foo", Position::new(0, 1))],
+                            Position::new(0, 4)
+                        )],
+                        &[
+                            BlockComment::new("bar", Position::new(2, 3)).into(),
+                            LineComment::new("baz", Position::new(4, 5)).into()
+                        ],
+                        &[],
+                        &PositionMap::new("\n\na)b"),
+                        Global,
+                    )
+                    .unwrap(),
+                    indoc!(
+                        "
+                        (foo #|bar|#) ;baz
+                        "
+                    )
+                );
+            }
+
+            #[test]
+            fn format_next_next_line_with_expression_and_inline_comment() {
+                assert_eq!(
+                    format(
+                        &[Expression::List(
+                            "(",
+                            ")",
+                            vec![
+                                Expression::Symbol("foo", Position::new(0, 1)),
+                                Expression::Symbol("bar", Position::new(1, 2))
+                            ],
+                            Position::new(0, 4)
+                        )],
+                        &[
+                            BlockComment::new("bar", Position::new(2, 3)).into(),
+                            LineComment::new("baz", Position::new(4, 5)).into()
+                        ],
+                        &[],
+                        &PositionMap::new("\n\na)b"),
+                        Global,
+                    )
+                    .unwrap(),
+                    indoc!(
+                        "
+                        (foo
+                          bar #|bar|#) ;baz
+                        "
+                    )
+                );
+            }
+        }
+
         mod block {
             use super::*;
 
@@ -1311,8 +1456,8 @@ mod tests {
                 fn format_in_front() {
                     assert_eq!(
                         format(
-                            &[Expression::Symbol("bar", Position::new(8, 11))],
-                            &[BlockComment::new("foo", Position::new(0, 8)).into(),],
+                            &[Expression::Symbol("bar", Position::new(7, 10))],
+                            &[BlockComment::new("foo", Position::new(0, 7)).into(),],
                             &[],
                             &PositionMap::new("#|foo|#bar"),
                             Global,
@@ -1591,10 +1736,10 @@ mod tests {
         fn format_hash_directive_with_expression() {
             assert_eq!(
                 format(
-                    &[Expression::Symbol("bar", Position::new(0, 0))],
+                    &[Expression::Symbol("bar", Position::new(0, 1))],
                     &[],
-                    &[HashDirective::new("foo", Position::new(0, 0))],
-                    &PositionMap::new("\n"),
+                    &[HashDirective::new("foo", Position::new(1, 2))],
+                    &PositionMap::new("\n\n"),
                     Global,
                 )
                 .unwrap(),
