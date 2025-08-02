@@ -1219,6 +1219,42 @@ mod tests {
             );
         }
 
+        #[test]
+        fn format_line_and_inline_comments_before_closing_parenthesis() {
+            assert_eq!(
+                format(
+                    &[Expression::List(
+                        "(",
+                        ")",
+                        vec![
+                            Expression::Symbol("foo", Position::new(0, 1)),
+                            Expression::Symbol("bar", Position::new(1, 2))
+                        ],
+                        Position::new(0, 6)
+                    )],
+                    &[
+                        LineComment::new("baz", Position::new(2, 3)).into(),
+                        LineComment::new("qux", Position::new(3, 4)).into(),
+                        BlockComment::new("quux", Position::new(4, 5)).into(),
+                        BlockComment::new("blah", Position::new(4, 5)).into(),
+                    ],
+                    &[],
+                    &PositionMap::new("\n\n\n\n)\n"),
+                    Global,
+                )
+                .unwrap(),
+                indoc!(
+                    "
+                    (foo
+                      bar
+                      ;baz
+                      ;qux
+                      #|quux|# #|blah|#)
+                    "
+                )
+            );
+        }
+
         mod block {
             use super::*;
 
