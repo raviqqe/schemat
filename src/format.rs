@@ -1456,8 +1456,8 @@ mod tests {
                 fn format_in_front() {
                     assert_eq!(
                         format(
-                            &[Expression::Symbol("bar", Position::new(8, 11))],
-                            &[BlockComment::new("foo", Position::new(0, 8)).into(),],
+                            &[Expression::Symbol("bar", Position::new(7, 10))],
+                            &[BlockComment::new("foo", Position::new(0, 7)).into(),],
                             &[],
                             &PositionMap::new("#|foo|#bar"),
                             Global,
@@ -1736,10 +1736,10 @@ mod tests {
         fn format_hash_directive_with_expression() {
             assert_eq!(
                 format(
-                    &[Expression::Symbol("bar", Position::new(0, 0))],
+                    &[Expression::Symbol("bar", Position::new(0, 1))],
                     &[],
-                    &[HashDirective::new("foo", Position::new(0, 0))],
-                    &PositionMap::new("\n"),
+                    &[HashDirective::new("foo", Position::new(1, 2))],
+                    &PositionMap::new("\n\n"),
                     Global,
                 )
                 .unwrap(),
