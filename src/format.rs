@@ -1411,6 +1411,33 @@ mod tests {
                     )
                 );
             }
+
+            #[test]
+            fn format_next_next_line_with_expression_and_inline_comment() {
+                assert_eq!(
+                    format(
+                        &[Expression::List(
+                            "(",
+                            ")",
+                            vec![Expression::Symbol("foo", Position::new(0, 1))],
+                            Position::new(0, 4)
+                        )],
+                        &[
+                            BlockComment::new("bar", Position::new(2, 3)).into(),
+                            LineComment::new("baz", Position::new(4, 5)).into()
+                        ],
+                        &[],
+                        &PositionMap::new("\n\na)b\n"),
+                        Global,
+                    )
+                    .unwrap(),
+                    indoc!(
+                        "
+                        (foo #|bar|#) ;baz
+                        "
+                    )
+                );
+            }
         }
 
         mod block {
