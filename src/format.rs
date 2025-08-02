@@ -1430,7 +1430,7 @@ mod tests {
                             LineComment::new("baz", Position::new(4, 5)).into()
                         ],
                         &[],
-                        &PositionMap::new("\n\na)b\n"),
+                        &PositionMap::new("\n\na)b"),
                         Global,
                     )
                     .unwrap(),
