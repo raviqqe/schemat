@@ -1400,7 +1400,7 @@ mod tests {
                             LineComment::new("baz", Position::new(4, 5)).into()
                         ],
                         &[],
-                        &PositionMap::new("\n\na)b\n"),
+                        &PositionMap::new("\n\na)b"),
                         Global,
                     )
                     .unwrap(),
@@ -1419,7 +1419,10 @@ mod tests {
                         &[Expression::List(
                             "(",
                             ")",
-                            vec![Expression::Symbol("foo", Position::new(0, 1))],
+                            vec![
+                                Expression::Symbol("foo", Position::new(0, 1)),
+                                Expression::Symbol("bar", Position::new(1, 2))
+                            ],
                             Position::new(0, 4)
                         )],
                         &[
@@ -1433,7 +1436,9 @@ mod tests {
                     .unwrap(),
                     indoc!(
                         "
-                        (foo #|bar|#) ;baz
+                        (foo
+                          bar
+                          #|bar|#) ;baz
                         "
                     )
                 );
