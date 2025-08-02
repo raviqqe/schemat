@@ -1299,6 +1299,29 @@ mod tests {
                         )
                     );
                 }
+
+                #[test]
+                fn format_many() {
+                    assert_eq!(
+                        format(
+                            &[Expression::List("(", ")", vec![], Position::new(0, 2))],
+                            &[
+                                BlockComment::new("foo", Position::new(0, 1)).into(),
+                                BlockComment::new("bar", Position::new(0, 1)).into(),
+                                BlockComment::new("baz", Position::new(0, 1)).into(),
+                            ],
+                            &[],
+                            &PositionMap::new("a\n"),
+                            Global,
+                        )
+                        .unwrap(),
+                        indoc!(
+                            "
+                            (#|foo|# #|bar|# #|baz|#)
+                            "
+                        )
+                    );
+                }
             }
 
             mod multi_line {
