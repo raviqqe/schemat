@@ -1,3 +1,5 @@
+#![expect(unstable_name_collisions)]
+
 use crate::{
     ast::{Comment, Expression, HashDirective},
     context::Context,
@@ -6,6 +8,7 @@ use crate::{
 };
 use allocator_api2::{alloc::Allocator, vec::Vec};
 use core::fmt;
+use itertools::Itertools;
 use mfmt::{Builder, Document, FormatOptions, empty, line, sequence, utility::is_empty};
 
 const COMMENT_PREFIX: &str = ";";
@@ -243,7 +246,8 @@ fn compile_inline_comment<'a, A: Allocator + Clone + 'a>(
     builder.sequence(
         context
             .drain_inline_comments(position)
-            .map(|comment| builder.sequence(["#|", comment.content(), "|#"])),
+            .map(|comment| builder.sequence(["#|", comment.content(), "|#"]))
+            .intersperse(" ".into()),
     )
 }
 
@@ -1329,6 +1333,29 @@ mod tests {
                         indoc!(
                             "
                             (#|foo|#)
+                            "
+                        )
+                    );
+                }
+
+                #[test]
+                fn format_many() {
+                    assert_eq!(
+                        format(
+                            &[Expression::List("(", ")", vec![], Position::new(0, 2))],
+                            &[
+                                BlockComment::new("foo", Position::new(0, 1)).into(),
+                                BlockComment::new("bar", Position::new(0, 1)).into(),
+                                BlockComment::new("baz", Position::new(0, 1)).into(),
+                            ],
+                            &[],
+                            &PositionMap::new("a\n"),
+                            Global,
+                        )
+                        .unwrap(),
+                        indoc!(
+                            "
+                            (#|foo|# #|bar|# #|baz|#)
                             "
                         )
                     );
