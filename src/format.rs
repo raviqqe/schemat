@@ -207,7 +207,7 @@ fn compile_expressions<'a, A: Allocator + Clone + 'a>(
         if let Some(last_expression) = last_expression {
             documents.push(line());
 
-            if line_gap(context, last_expression, expression) > 1 {
+            if line_gap(context, last_expression.position(), expression.position()) > 1 {
                 documents.push(line());
             }
         }
@@ -342,17 +342,17 @@ fn compile_all_comments<'a, A: Allocator + Clone + 'a>(
 
 fn line_gap<A: Allocator + Clone>(
     context: &Context<A>,
-    last_expression: &Expression<A>,
-    expression: &Expression<A>,
+    previous_position: &Position,
+    position: &Position,
 ) -> usize {
-    let index = line_index(context, expression.position().start());
+    let index = line_index(context, position.start());
 
     context
         .peek_comments(index)
         .next()
         .map(|comment| line_index(context, comment.position().start()))
         .unwrap_or(index)
-        .saturating_sub(line_index(context, last_expression.position().end() - 1))
+        .saturating_sub(line_index(context, previous_position.end() - 1))
 }
 
 fn line_index<A: Allocator + Clone>(context: &Context<A>, offset: usize) -> usize {
@@ -1294,6 +1294,39 @@ mod tests {
                     "
                 )
             );
+        }
+
+        #[test]
+        fn format_blank_lines_before_terminal_line_comments() {
+            for end in [3, 4] {
+                assert_eq!(
+                    format(
+                        &[Expression::List(
+                            "(",
+                            ")",
+                            vec![
+                                Expression::Symbol("foo", Position::new(0, 1)),
+                                Expression::Symbol("bar", Position::new(1, 2)),
+                            ],
+                            Position::new(0, end + 2)
+                        )],
+                        &[LineComment::new("baz", Position::new(end, end + 1)).into()],
+                        &[],
+                        &PositionMap::new("\n\n\n\n\n"),
+                        Global,
+                    )
+                    .unwrap(),
+                    indoc!(
+                        "
+                    (foo
+                      bar
+
+                      ;baz
+                      )
+                    "
+                    )
+                );
+            }
         }
 
         mod suffix {
