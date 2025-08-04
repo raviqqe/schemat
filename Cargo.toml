@@ -7,6 +7,7 @@ readme = "./README.md"
 repository = "https://github.com/raviqqe/schemat"
 license = "Unlicense"
 keywords = ["format", "scheme"]
+categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
 allocator-api2 = "0.2.21"
