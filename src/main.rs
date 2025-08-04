@@ -1,4 +1,4 @@
-//! A Scheme code formatter.
+//! The Scheme code formatter.
 
 mod ast;
 mod context;
