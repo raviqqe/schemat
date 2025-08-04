@@ -7,7 +7,6 @@ pub struct Context<'a, A: Allocator + Clone> {
     builder: Builder<A>,
     comments: VecDeque<&'a Comment<'a>>,
     position_map: &'a PositionMap,
-    size: usize,
 }
 
 impl<'a, A: Allocator + Clone> Context<'a, A> {
@@ -15,22 +14,16 @@ impl<'a, A: Allocator + Clone> Context<'a, A> {
         builder: Builder<A>,
         comments: &'a [Comment<'a>],
         position_map: &'a PositionMap,
-        size: usize,
     ) -> Self {
         Self {
             builder,
             comments: comments.iter().collect(),
             position_map,
-            size,
         }
     }
 
     pub fn position_map(&self) -> &'a PositionMap {
         self.position_map
-    }
-
-    pub fn last_position(&self) -> Position {
-        Position::new(self.size - 1, self.size)
     }
 
     pub fn builder(&self) -> &Builder<A> {
