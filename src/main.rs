@@ -1,3 +1,5 @@
+//! A Scheme code formatter.
+
 mod ast;
 mod context;
 mod error;
