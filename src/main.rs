@@ -1,4 +1,4 @@
-//! The Scheme code formatter.
+#![doc = include_str!("../README.md")]
 
 extern crate alloc;
 
