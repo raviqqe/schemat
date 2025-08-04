@@ -149,7 +149,9 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
                     [builder.flatten(compile_expressions(context, first, data))]
                         .into_iter()
                         .chain(match (first.last(), last.first()) {
-                            (Some(first), Some(last)) if line_gap(context, first, last) > 1 => {
+                            (Some(first), Some(last))
+                                if line_gap(context, first.position(), last.position()) > 1 =>
+                            {
                                 Some(line())
                             }
                             _ => None,
@@ -201,7 +203,7 @@ fn compile_expressions<'a, A: Allocator + Clone + 'a>(
 ) -> Document<'a> {
     let mut documents =
         Vec::with_capacity_in(2 * expressions.len(), context.builder().allocator().clone());
-    let mut last_expression = None;
+    let mut last_expression = None::<&Expression<A>>;
 
     for expression in expressions {
         if let Some(last_expression) = last_expression {
