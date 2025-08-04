@@ -152,6 +152,7 @@ async fn format_stdin() -> Result<(), Box<dyn Error>> {
                 &parse_comments(&source, &allocator).map_err(convert_error)?,
                 &parse_hash_directives(&source, &allocator).map_err(convert_error)?,
                 &position_map,
+                source.len(),
                 &allocator,
             )?
             .as_bytes(),
@@ -191,6 +192,7 @@ fn format_string(source: &str) -> Result<String, ApplicationError> {
         &parse_comments(source, &allocator).map_err(convert_error)?,
         &parse_hash_directives(source, &allocator).map_err(convert_error)?,
         &position_map,
+        source.len(),
         &allocator,
     )?;
 

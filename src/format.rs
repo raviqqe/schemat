@@ -20,11 +20,12 @@ pub fn format<A: Allocator + Clone>(
     comments: &[Comment],
     hash_directives: &[HashDirective],
     position_map: &PositionMap,
+    size: usize,
     allocator: A,
 ) -> Result<String, fmt::Error> {
     let mut string = Default::default();
     let document = compile_module(
-        &mut Context::new(comments, position_map, Builder::new(allocator)),
+        &mut Context::new(Builder::new(allocator), comments, position_map, size),
         module,
         hash_directives,
     );
@@ -295,11 +296,7 @@ fn compile_block_comment<'a, A: Allocator + Clone + 'a>(
     let comments = builder
         .allocate_slice(context.drain_multi_line_comments(line_index(context, position.start())));
 
-    compile_all_comments(
-        context,
-        comments,
-        Some(line_index(context, position.start())),
-    )
+    compile_all_comments(context, comments, position)
 }
 
 fn compile_remaining_block_comment<'a, A: Allocator + Clone + 'a>(
@@ -308,13 +305,13 @@ fn compile_remaining_block_comment<'a, A: Allocator + Clone + 'a>(
     let builder = context.builder().clone();
     let comments = builder.allocate_slice(context.drain_multi_line_comments(usize::MAX));
 
-    compile_all_comments(context, comments, None)
+    compile_all_comments(context, comments, &context.last_position())
 }
 
 fn compile_all_comments<'a, A: Allocator + Clone + 'a>(
     context: &Context<A>,
     comments: &'a [&'a Comment<'a>],
-    last_line_index: Option<usize>,
+    last_position: &Position,
 ) -> Document<'a> {
     context.builder().sequence(
         comments
@@ -323,33 +320,34 @@ fn compile_all_comments<'a, A: Allocator + Clone + 'a>(
                 comments
                     .iter()
                     .skip(1)
-                    .map(|comment| line_index(context, comment.position().start()))
-                    .chain([last_line_index.unwrap_or(0)]),
+                    .map(|comment| comment.position())
+                    .chain([last_position]),
             )
-            .map(|(comment, next_line_index)| match comment {
-                Comment::Block(comment) => context.builder().sequence([
-                    "#|".into(),
-                    line(),
-                    comment.content().trim().into(),
-                    line(),
-                    "|#".into(),
-                    line(),
-                    if line_index(context, comment.position().end() - 1) + 1 < next_line_index {
+            .map(|(comment, next_position)| {
+                let builder = context.builder();
+
+                builder.sequence([
+                    match comment {
+                        Comment::Block(comment) => builder.sequence([
+                            "#|".into(),
+                            line(),
+                            comment.content().trim().into(),
+                            line(),
+                            "|#".into(),
+                            line(),
+                        ]),
+                        Comment::Line(comment) => builder.sequence([
+                            COMMENT_PREFIX.into(),
+                            comment.content().trim_end().into(),
+                            context.builder().r#break(line()),
+                        ]),
+                    },
+                    if line_gap(context, comment.position(), next_position) > 1 {
                         line()
                     } else {
                         empty()
                     },
-                ]),
-                Comment::Line(comment) => context.builder().sequence([
-                    COMMENT_PREFIX.into(),
-                    comment.content().trim_end().into(),
-                    context.builder().r#break(line()),
-                    if line_index(context, comment.position().end() - 1) + 1 < next_line_index {
-                        line()
-                    } else {
-                        empty()
-                    },
-                ]),
+                ])
             }),
     )
 }
@@ -388,12 +386,25 @@ mod tests {
     use indoc::indoc;
     use pretty_assertions::assert_eq;
 
+    fn format(
+        module: &[Expression<Global>],
+        comments: &[Comment],
+        hash_directives: &[HashDirective],
+        source: &str,
+    ) -> Result<String, fmt::Error> {
+        super::format(
+            module,
+            comments,
+            hash_directives,
+            &PositionMap::new(source),
+            source.len(),
+            Global,
+        )
+    }
+
     #[test]
     fn format_empty() {
-        assert_eq!(
-            format(&[], &[], &[], &PositionMap::new("\n"), Global).unwrap(),
-            "\n"
-        );
+        assert_eq!(format(&[], &[], &[], "\n").unwrap(), "\n");
     }
 
     #[test]
@@ -411,8 +422,7 @@ mod tests {
                 )],
                 &[],
                 &[],
-                &PositionMap::new("(foo bar)"),
-                Global,
+                "(foo bar)",
             )
             .unwrap(),
             "(foo bar)\n"
@@ -434,8 +444,7 @@ mod tests {
                 )],
                 &[],
                 &[],
-                &PositionMap::new("(foo\nbar)"),
-                Global,
+                "(foo\nbar)",
             )
             .unwrap(),
             indoc!(
@@ -464,8 +473,7 @@ mod tests {
                 )],
                 &[],
                 &[],
-                &PositionMap::new("a\nb"),
-                Global,
+                "a\nb",
             )
             .unwrap(),
             indoc!(
@@ -489,8 +497,7 @@ mod tests {
                 )],
                 &[],
                 &[],
-                &PositionMap::new("'foo"),
-                Global,
+                "'foo",
             )
             .unwrap(),
             "'foo\n"
@@ -508,8 +515,7 @@ mod tests {
                 )],
                 &[],
                 &[],
-                &PositionMap::new("'foo"),
-                Global,
+                "'foo",
             )
             .unwrap(),
             ",foo\n"
@@ -523,8 +529,7 @@ mod tests {
                 &[Expression::String("foo", Position::new(0, 3))],
                 &[],
                 &[],
-                &PositionMap::new("\"foo\""),
-                Global,
+                "\"foo\"",
             )
             .unwrap(),
             "\"foo\"\n"
@@ -538,8 +543,7 @@ mod tests {
                 &[Expression::String("a\\\nb", Position::new(0, 6))],
                 &[],
                 &[],
-                &PositionMap::new("\"a\\\nb\""),
-                Global,
+                "\"a\\\nb\"",
             )
             .unwrap(),
             "\"a\\\nb\"\n"
@@ -553,8 +557,7 @@ mod tests {
                 &[Expression::Symbol("foo", Position::new(0, 3))],
                 &[],
                 &[],
-                &PositionMap::new("foo"),
-                Global,
+                "foo",
             )
             .unwrap(),
             "foo\n"
@@ -568,8 +571,7 @@ mod tests {
                 &[Expression::QuotedSymbol("foo", Position::new(0, 3))],
                 &[],
                 &[],
-                &PositionMap::new("foo"),
-                Global,
+                "foo",
             )
             .unwrap(),
             "|foo|\n"
@@ -591,8 +593,7 @@ mod tests {
                 )],
                 &[],
                 &[],
-                &PositionMap::new("[foo bar]"),
-                Global,
+                "[foo bar]",
             )
             .unwrap(),
             "[foo bar]\n"
@@ -624,8 +625,7 @@ mod tests {
                     )],
                     &[],
                     &[],
-                    &PositionMap::new("\n\n\na"),
-                    Global,
+                    "\n\n\na",
                 )
                 .unwrap(),
                 indoc!(
@@ -652,8 +652,7 @@ mod tests {
                     )],
                     &[],
                     &[],
-                    &PositionMap::new("\na"),
-                    Global,
+                    "\na",
                 )
                 .unwrap(),
                 indoc!(
@@ -680,8 +679,7 @@ mod tests {
                     )],
                     &[],
                     &[],
-                    &PositionMap::new("(foo\n\nbar)"),
-                    Global,
+                    "(foo\n\nbar)",
                 )
                 .unwrap(),
                 indoc!(
@@ -717,8 +715,7 @@ mod tests {
                     )],
                     &[],
                     &[],
-                    &PositionMap::new("((foo\nbar)\n\nbaz)"),
-                    Global,
+                    "((foo\nbar)\n\nbaz)",
                 )
                 .unwrap(),
                 indoc!(
@@ -744,8 +741,7 @@ mod tests {
                     )],
                     &[],
                     &[],
-                    &PositionMap::new("(\nfoo)"),
-                    Global,
+                    "(\nfoo)",
                 )
                 .unwrap(),
                 indoc!(
@@ -777,8 +773,7 @@ mod tests {
                     )],
                     &[],
                     &[],
-                    &PositionMap::new("((foo\nbar))"),
-                    Global,
+                    "((foo\nbar))",
                 )
                 .unwrap(),
                 indoc!(
@@ -813,8 +808,7 @@ mod tests {
                     )],
                     &[],
                     &[],
-                    &PositionMap::new("((foo bar\nbaz))"),
-                    Global,
+                    "((foo bar\nbaz))",
                 )
                 .unwrap(),
                 indoc!(
@@ -841,8 +835,7 @@ mod tests {
                     ],
                     &[],
                     &[],
-                    &PositionMap::new("\na"),
-                    Global,
+                    "\na",
                 )
                 .unwrap(),
                 indoc!(
@@ -864,8 +857,7 @@ mod tests {
                     ],
                     &[],
                     &[],
-                    &PositionMap::new("\n\na"),
-                    Global,
+                    "\n\na",
                 )
                 .unwrap(),
                 indoc!(
@@ -891,8 +883,7 @@ mod tests {
                     &[Expression::Symbol("foo", Position::new(1, 2))],
                     &[LineComment::new("bar", Position::new(0, 1)).into()],
                     &[],
-                    &PositionMap::new("\na"),
-                    Global,
+                    "\na",
                 )
                 .unwrap(),
                 indoc!(
@@ -911,8 +902,7 @@ mod tests {
                     &[Expression::Symbol("foo", Position::new(2, 3))],
                     &[LineComment::new("bar", Position::new(0, 1)).into()],
                     &[],
-                    &PositionMap::new("\n\na"),
-                    Global,
+                    "\n\na",
                 )
                 .unwrap(),
                 indoc!(
@@ -935,8 +925,7 @@ mod tests {
                         LineComment::new("baz", Position::new(1, 2)).into()
                     ],
                     &[],
-                    &PositionMap::new("\n\n\na"),
-                    Global,
+                    "\n\n\na",
                 )
                 .unwrap(),
                 indoc!(
@@ -960,8 +949,7 @@ mod tests {
                         LineComment::new("baz", Position::new(2, 3)).into()
                     ],
                     &[],
-                    &PositionMap::new("\n\n\n\na"),
-                    Global,
+                    "\n\n\n\na",
                 )
                 .unwrap(),
                 indoc!(
@@ -986,8 +974,7 @@ mod tests {
                     ],
                     &[LineComment::new("bar", Position::new(1, 2)).into()],
                     &[],
-                    &PositionMap::new("\n\n\n"),
-                    Global,
+                    "\n\n\n",
                 )
                 .unwrap(),
                 indoc!(
@@ -1015,8 +1002,7 @@ mod tests {
                     )],
                     &[LineComment::new("bar", Position::new(1, 2)).into()],
                     &[],
-                    &PositionMap::new("\n\n\n"),
-                    Global,
+                    "\n\n\n",
                 )
                 .unwrap(),
                 indoc!(
@@ -1036,8 +1022,7 @@ mod tests {
                     &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[LineComment::new("bar", Position::new(0, 1)).into()],
                     &[],
-                    &PositionMap::new("\na"),
-                    Global,
+                    "\na",
                 )
                 .unwrap(),
                 indoc!(
@@ -1058,8 +1043,7 @@ mod tests {
                         LineComment::new("baz", Position::new(0, 1)).into()
                     ],
                     &[],
-                    &PositionMap::new("\na"),
-                    Global,
+                    "\na",
                 )
                 .unwrap(),
                 indoc!(
@@ -1082,8 +1066,7 @@ mod tests {
                     )],
                     &[LineComment::new("bar", Position::new(1, 5)).into()],
                     &[],
-                    &PositionMap::new("(;bar\nfoo)"),
-                    Global,
+                    "(;bar\nfoo)",
                 )
                 .unwrap(),
                 indoc!(
@@ -1110,8 +1093,7 @@ mod tests {
                     )],
                     &[LineComment::new("foo", Position::new(1, 2)).into()],
                     &[],
-                    &PositionMap::new("\n\n\n"),
-                    Global,
+                    "\n\n\n",
                 )
                 .unwrap(),
                 indoc!(
@@ -1131,8 +1113,7 @@ mod tests {
                     &[Expression::Symbol("foo", Position::new(0, 1))],
                     &[LineComment::new("bar", Position::new(1, 2)).into()],
                     &[],
-                    &PositionMap::new("\n\n"),
-                    Global,
+                    "\n\n",
                 )
                 .unwrap(),
                 indoc!(
@@ -1155,8 +1136,7 @@ mod tests {
                         LineComment::new("baz", Position::new(2, 3)).into()
                     ],
                     &[],
-                    &PositionMap::new("\n\n\n"),
-                    Global,
+                    "\n\n\n",
                 )
                 .unwrap(),
                 indoc!(
@@ -1180,8 +1160,7 @@ mod tests {
                         LineComment::new("baz", Position::new(3, 4)).into()
                     ],
                     &[],
-                    &PositionMap::new("\n\n\n\n"),
-                    Global,
+                    "\n\n\n\n",
                 )
                 .unwrap(),
                 indoc!(
@@ -1214,8 +1193,7 @@ mod tests {
                         LineComment::new("qux", Position::new(3, 4)).into()
                     ],
                     &[],
-                    &PositionMap::new("\n\n\n\n\n"),
-                    Global,
+                    "\n\n\n\n\n",
                 )
                 .unwrap(),
                 indoc!(
@@ -1250,8 +1228,7 @@ mod tests {
                         BlockComment::new("blah", Position::new(4, 5)).into(),
                     ],
                     &[],
-                    &PositionMap::new("\n\n\n\n)\n"),
-                    Global,
+                    "\n\n\n\n)\n",
                 )
                 .unwrap(),
                 indoc!(
@@ -1294,8 +1271,7 @@ mod tests {
                         BlockComment::new("blah", Position::new(4, 5)).into(),
                     ],
                     &[],
-                    &PositionMap::new("\n\n\n\n)\n"),
-                    Global,
+                    "\n\n\n\n)\n",
                 )
                 .unwrap(),
                 indoc!(
@@ -1326,8 +1302,7 @@ mod tests {
                         )],
                         &[LineComment::new("baz", Position::new(end, end + 1)).into()],
                         &[],
-                        &PositionMap::new("\n\n\n\n\n\n"),
-                        Global,
+                        "\n\n\n\n\n\n",
                     )
                     .unwrap(),
                     indoc!(
@@ -1363,8 +1338,7 @@ mod tests {
                         )],
                         &[LineComment::new("baz", Position::new(0, 1)).into()],
                         &[],
-                        &PositionMap::new("\n"),
-                        Global,
+                        "\n",
                     )
                     .unwrap(),
                     indoc!(
@@ -1390,8 +1364,7 @@ mod tests {
                         )],
                         &[LineComment::new("baz", Position::new(1, 2)).into()],
                         &[],
-                        &PositionMap::new("\n\n"),
-                        Global,
+                        "\n\n",
                     )
                     .unwrap(),
                     indoc!(
@@ -1418,8 +1391,7 @@ mod tests {
                         )],
                         &[LineComment::new("baz", Position::new(2, 3)).into()],
                         &[],
-                        &PositionMap::new("\n\n\n"),
-                        Global,
+                        "\n\n\n",
                     )
                     .unwrap(),
                     indoc!(
@@ -1447,8 +1419,7 @@ mod tests {
                             LineComment::new("baz", Position::new(4, 5)).into()
                         ],
                         &[],
-                        &PositionMap::new("\n\na)b"),
-                        Global,
+                        "\n\na)b",
                     )
                     .unwrap(),
                     indoc!(
@@ -1477,8 +1448,7 @@ mod tests {
                             LineComment::new("baz", Position::new(4, 5)).into()
                         ],
                         &[],
-                        &PositionMap::new("\n\na)b"),
-                        Global,
+                        "\n\na)b",
                     )
                     .unwrap(),
                     indoc!(
@@ -1506,8 +1476,7 @@ mod tests {
                             &[Expression::Symbol("bar", Position::new(7, 10))],
                             &[BlockComment::new("foo", Position::new(0, 7)).into(),],
                             &[],
-                            &PositionMap::new("#|foo|#bar"),
-                            Global,
+                            "#|foo|#bar",
                         )
                         .unwrap(),
                         indoc!(
@@ -1533,8 +1502,7 @@ mod tests {
                             ),],
                             &[BlockComment::new("bar", Position::new(4, 11)).into(),],
                             &[],
-                            &PositionMap::new("(foo#|bar|#baz)"),
-                            Global,
+                            "(foo#|bar|#baz)",
                         )
                         .unwrap(),
                         indoc!(
@@ -1561,8 +1529,7 @@ mod tests {
                             ),],
                             &[BlockComment::new("baz", Position::new(8, 15)).into(),],
                             &[],
-                            &PositionMap::new("(foo bar#|baz|#qux)"),
-                            Global,
+                            "(foo bar#|baz|#qux)",
                         )
                         .unwrap(),
                         indoc!(
@@ -1589,8 +1556,7 @@ mod tests {
                             ),],
                             &[BlockComment::new("baz", Position::new(12, 19)).into(),],
                             &[],
-                            &PositionMap::new("(foo bar qux#|baz|#)"),
-                            Global,
+                            "(foo bar qux#|baz|#)",
                         )
                         .unwrap(),
                         indoc!(
@@ -1608,8 +1574,7 @@ mod tests {
                             &[Expression::List("(", ")", vec![], Position::new(0, 9))],
                             &[BlockComment::new("foo", Position::new(1, 8)).into(),],
                             &[],
-                            &PositionMap::new("(#|foo|#)"),
-                            Global,
+                            "(#|foo|#)",
                         )
                         .unwrap(),
                         indoc!(
@@ -1631,8 +1596,7 @@ mod tests {
                                 BlockComment::new("baz", Position::new(0, 1)).into(),
                             ],
                             &[],
-                            &PositionMap::new("a\n"),
-                            Global,
+                            "a\n",
                         )
                         .unwrap(),
                         indoc!(
@@ -1658,8 +1622,7 @@ mod tests {
                             ],
                             &[BlockComment::new("foo", Position::new(4, 5)).into(),],
                             &[],
-                            &PositionMap::new("foo\n#|foo|#\nbar"),
-                            Global,
+                            "foo\n#|foo|#\nbar",
                         )
                         .unwrap(),
                         indoc!(
@@ -1684,8 +1647,7 @@ mod tests {
                             ],
                             &[BlockComment::new("foo", Position::new(5, 6)).into(),],
                             &[],
-                            &PositionMap::new("foo\n\n#|foo|#\n\nbar"),
-                            Global,
+                            "foo\n\n#|foo|#\n\nbar",
                         )
                         .unwrap(),
                         indoc!(
@@ -1712,8 +1674,7 @@ mod tests {
                             ],
                             &[BlockComment::new("foo", Position::new(6, 7)).into(),],
                             &[],
-                            &PositionMap::new("foo\n\n\n#|foo|#\n\n\nbar"),
-                            Global,
+                            "foo\n\n\n#|foo|#\n\n\nbar",
                         )
                         .unwrap(),
                         indoc!(
@@ -1744,8 +1705,7 @@ mod tests {
                     &[],
                     &[],
                     &[HashDirective::new("foo", Position::new(0, 0))],
-                    &PositionMap::new("\n"),
-                    Global,
+                    "\n",
                 )
                 .unwrap(),
                 indoc!(
@@ -1766,8 +1726,7 @@ mod tests {
                         HashDirective::new("foo", Position::new(0, 0)),
                         HashDirective::new("bar", Position::new(2, 2))
                     ],
-                    &PositionMap::new("\n\n\n"),
-                    Global,
+                    "\n\n\n",
                 )
                 .unwrap(),
                 indoc!(
@@ -1786,8 +1745,7 @@ mod tests {
                     &[Expression::Symbol("bar", Position::new(0, 1))],
                     &[],
                     &[HashDirective::new("foo", Position::new(1, 2))],
-                    &PositionMap::new("\n\n"),
-                    Global,
+                    "\n\n",
                 )
                 .unwrap(),
                 indoc!(
@@ -1826,8 +1784,7 @@ mod tests {
                     )],
                     &[],
                     &[],
-                    &PositionMap::new("(foo bar)"),
-                    Global,
+                    "(foo bar)",
                 )
                 .unwrap(),
                 "'(foo bar)\n"
@@ -1854,8 +1811,7 @@ mod tests {
                     )],
                     &[],
                     &[],
-                    &PositionMap::new("'(foo\nbar)"),
-                    Global,
+                    "'(foo\nbar)",
                 )
                 .unwrap(),
                 indoc!(
@@ -1887,8 +1843,7 @@ mod tests {
                     )],
                     &[],
                     &[],
-                    &PositionMap::new("'(\nfoo\nbar)"),
-                    Global,
+                    "'(\nfoo\nbar)",
                 )
                 .unwrap(),
                 indoc!(
@@ -1918,8 +1873,7 @@ mod tests {
                     )],
                     &[LineComment::new("bar", Position::new(2, 6)).into()],
                     &[],
-                    &PositionMap::new("'(;bar\nfoo)"),
-                    Global,
+                    "'(;bar\nfoo)",
                 )
                 .unwrap(),
                 indoc!(
@@ -1948,8 +1902,7 @@ mod tests {
                     )],
                     &[],
                     &[],
-                    &PositionMap::new("'(\nfoo)"),
-                    Global,
+                    "'(\nfoo)",
                 )
                 .unwrap(),
                 indoc!(
@@ -1991,8 +1944,7 @@ mod tests {
                         )],
                         &[],
                         &[],
-                        &PositionMap::new("'((foo bar))"),
-                        Global,
+                        "'((foo bar))",
                     )
                     .unwrap(),
                     indoc!(
@@ -2028,8 +1980,7 @@ mod tests {
                         )],
                         &[],
                         &[],
-                        &PositionMap::new("'((foo\nbar))"),
-                        Global,
+                        "'((foo\nbar))",
                     )
                     .unwrap(),
                     indoc!(
@@ -2066,8 +2017,7 @@ mod tests {
                         )],
                         &[],
                         &[],
-                        &PositionMap::new(",((foo\nbar))"),
-                        Global,
+                        ",((foo\nbar))",
                     )
                     .unwrap(),
                     indoc!(
@@ -2112,8 +2062,7 @@ mod tests {
                         )],
                         &[],
                         &[],
-                        &PositionMap::new(",@(foo\n(bar\nbaz))"),
-                        Global,
+                        ",@(foo\n(bar\nbaz))",
                     )
                     .unwrap(),
                     indoc!(

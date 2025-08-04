@@ -4,26 +4,33 @@ use mfmt::Builder;
 use std::collections::VecDeque;
 
 pub struct Context<'a, A: Allocator + Clone> {
+    builder: Builder<A>,
     comments: VecDeque<&'a Comment<'a>>,
     position_map: &'a PositionMap,
-    builder: Builder<A>,
+    size: usize,
 }
 
 impl<'a, A: Allocator + Clone> Context<'a, A> {
     pub fn new(
+        builder: Builder<A>,
         comments: &'a [Comment<'a>],
         position_map: &'a PositionMap,
-        builder: Builder<A>,
+        size: usize,
     ) -> Self {
         Self {
+            builder,
             comments: comments.iter().collect(),
             position_map,
-            builder,
+            size,
         }
     }
 
     pub fn position_map(&self) -> &'a PositionMap {
         self.position_map
+    }
+
+    pub fn last_position(&self) -> Position {
+        Position::new(self.size - 1, self.size)
     }
 
     pub fn builder(&self) -> &Builder<A> {
