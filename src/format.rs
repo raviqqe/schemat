@@ -169,13 +169,25 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
                             )
                         })
                         .chain({
-                            let position = position.set_start(position.end() - right.len());
-                            let block_comment = compile_block_comment(context, &position);
-                            let inline_comment = compile_inline_comment(context, &position);
+                            let right_position = position.set_start(position.end() - right.len());
+                            let gap = line_gap(
+                                context,
+                                expressions
+                                    .last()
+                                    .map(Expression::position)
+                                    .unwrap_or(position),
+                                &right_position,
+                            ) > 1;
+                            let block_comment = compile_block_comment(context, &right_position);
+                            let inline_comment = compile_inline_comment(context, &right_position);
                             let block_comment_empty = is_empty(&block_comment);
 
                             [builder.r#break(builder.sequence([
-                                if block_comment_empty { empty() } else { line() },
+                                if block_comment_empty {
+                                    empty()
+                                } else {
+                                    builder.sequence([if gap { line() } else { empty() }, line()])
+                                },
                                 block_comment,
                                 if block_comment_empty
                                     && !is_empty(&inline_comment)
@@ -1314,7 +1326,7 @@ mod tests {
                         )],
                         &[LineComment::new("baz", Position::new(end, end + 1)).into()],
                         &[],
-                        &PositionMap::new("\n\n\n\n\n"),
+                        &PositionMap::new("\n\n\n\n\n\n"),
                         Global,
                     )
                     .unwrap(),
