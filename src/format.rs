@@ -295,11 +295,7 @@ fn compile_block_comment<'a, A: Allocator + Clone + 'a>(
     let comments = builder
         .allocate_slice(context.drain_multi_line_comments(line_index(context, position.start())));
 
-    compile_all_comments(
-        context,
-        comments,
-        Some(line_index(context, position.start())),
-    )
+    compile_all_comments(context, comments, position)
 }
 
 fn compile_remaining_block_comment<'a, A: Allocator + Clone + 'a>(
@@ -308,13 +304,13 @@ fn compile_remaining_block_comment<'a, A: Allocator + Clone + 'a>(
     let builder = context.builder().clone();
     let comments = builder.allocate_slice(context.drain_multi_line_comments(usize::MAX));
 
-    compile_all_comments(context, comments, None)
+    compile_all_comments(context, comments, todo!())
 }
 
 fn compile_all_comments<'a, A: Allocator + Clone + 'a>(
     context: &Context<A>,
     comments: &'a [&'a Comment<'a>],
-    last_line_index: Option<usize>,
+    last_position: &Position,
 ) -> Document<'a> {
     context.builder().sequence(
         comments
@@ -323,33 +319,34 @@ fn compile_all_comments<'a, A: Allocator + Clone + 'a>(
                 comments
                     .iter()
                     .skip(1)
-                    .map(|comment| line_index(context, comment.position().start()))
-                    .chain([last_line_index.unwrap_or(0)]),
+                    .map(|comment| comment.position())
+                    .chain([last_position]),
             )
-            .map(|(comment, next_line_index)| match comment {
-                Comment::Block(comment) => context.builder().sequence([
-                    "#|".into(),
-                    line(),
-                    comment.content().trim().into(),
-                    line(),
-                    "|#".into(),
-                    line(),
-                    if line_index(context, comment.position().end() - 1) + 1 < next_line_index {
+            .map(|(comment, next_position)| {
+                let builder = context.builder();
+
+                builder.sequence([
+                    match comment {
+                        Comment::Block(comment) => builder.sequence([
+                            "#|".into(),
+                            line(),
+                            comment.content().trim().into(),
+                            line(),
+                            "|#".into(),
+                            line(),
+                        ]),
+                        Comment::Line(comment) => builder.sequence([
+                            COMMENT_PREFIX.into(),
+                            comment.content().trim_end().into(),
+                            context.builder().r#break(line()),
+                        ]),
+                    },
+                    if line_gap(context, comment.position(), next_position) > 1 {
                         line()
                     } else {
                         empty()
                     },
-                ]),
-                Comment::Line(comment) => context.builder().sequence([
-                    COMMENT_PREFIX.into(),
-                    comment.content().trim_end().into(),
-                    context.builder().r#break(line()),
-                    if line_index(context, comment.position().end() - 1) + 1 < next_line_index {
-                        line()
-                    } else {
-                        empty()
-                    },
-                ]),
+                ])
             }),
     )
 }
