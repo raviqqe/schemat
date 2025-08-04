@@ -20,12 +20,11 @@ pub fn format<A: Allocator + Clone>(
     comments: &[Comment],
     hash_directives: &[HashDirective],
     position_map: &PositionMap,
-    size: usize,
     allocator: A,
 ) -> Result<String, fmt::Error> {
     let mut string = Default::default();
     let document = compile_module(
-        &mut Context::new(Builder::new(allocator), comments, position_map, size),
+        &mut Context::new(Builder::new(allocator), comments, position_map),
         module,
         hash_directives,
     );
@@ -296,7 +295,7 @@ fn compile_block_comment<'a, A: Allocator + Clone + 'a>(
     let comments = builder
         .allocate_slice(context.drain_multi_line_comments(line_index(context, position.start())));
 
-    compile_all_comments(context, comments, position)
+    compile_all_comments(context, comments, Some(position))
 }
 
 fn compile_remaining_block_comment<'a, A: Allocator + Clone + 'a>(
@@ -305,13 +304,13 @@ fn compile_remaining_block_comment<'a, A: Allocator + Clone + 'a>(
     let builder = context.builder().clone();
     let comments = builder.allocate_slice(context.drain_multi_line_comments(usize::MAX));
 
-    compile_all_comments(context, comments, &context.last_position())
+    compile_all_comments(context, comments, None)
 }
 
 fn compile_all_comments<'a, A: Allocator + Clone + 'a>(
     context: &Context<A>,
     comments: &'a [&'a Comment<'a>],
-    last_position: &Position,
+    last_position: Option<&Position>,
 ) -> Document<'a> {
     context.builder().sequence(
         comments
@@ -321,7 +320,7 @@ fn compile_all_comments<'a, A: Allocator + Clone + 'a>(
                     .iter()
                     .skip(1)
                     .map(|comment| comment.position())
-                    .chain([last_position]),
+                    .chain([last_position.unwrap_or(&Position::new(0, 0))]),
             )
             .map(|(comment, next_position)| {
                 let builder = context.builder();
@@ -397,7 +396,6 @@ mod tests {
             comments,
             hash_directives,
             &PositionMap::new(source),
-            source.len(),
             Global,
         )
     }
