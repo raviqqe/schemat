@@ -7,11 +7,11 @@ pub struct HashDirective<'a> {
 }
 
 impl<'a> HashDirective<'a> {
-    pub fn new(value: &'a str, position: Position) -> Self {
+    pub const fn new(value: &'a str, position: Position) -> Self {
         Self { value, position }
     }
 
-    pub fn value(&self) -> &'a str {
+    pub const fn value(&self) -> &'a str {
         self.value
     }
 }

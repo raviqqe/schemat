@@ -7,15 +7,15 @@ pub struct BlockComment<'a> {
 }
 
 impl<'a> BlockComment<'a> {
-    pub fn new(content: &'a str, position: Position) -> Self {
+    pub const fn new(content: &'a str, position: Position) -> Self {
         Self { content, position }
     }
 
-    pub fn content(&self) -> &'a str {
+    pub const fn content(&self) -> &'a str {
         self.content
     }
 
-    pub fn position(&self) -> &Position {
+    pub const fn position(&self) -> &Position {
         &self.position
     }
 }

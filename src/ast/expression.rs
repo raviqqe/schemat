@@ -11,7 +11,7 @@ pub enum Expression<'a, A: Allocator> {
 }
 
 impl<A: Allocator> Expression<'_, A> {
-    pub fn position(&self) -> &Position {
+    pub const fn position(&self) -> &Position {
         match self {
             Self::List(_, _, _, position) => position,
             Self::Quote(_, _, position) => position,

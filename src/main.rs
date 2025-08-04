@@ -1,5 +1,7 @@
 //! The Scheme code formatter.
 
+extern crate alloc;
+
 mod ast;
 mod context;
 mod error;

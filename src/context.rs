@@ -1,7 +1,7 @@
 use crate::{ast::Comment, position::Position, position_map::PositionMap};
+use alloc::collections::VecDeque;
 use allocator_api2::alloc::Allocator;
 use mfmt::Builder;
-use std::collections::VecDeque;
 
 pub struct Context<'a, A: Allocator + Clone> {
     builder: Builder<A>,
@@ -22,11 +22,11 @@ impl<'a, A: Allocator + Clone> Context<'a, A> {
         }
     }
 
-    pub fn position_map(&self) -> &'a PositionMap {
+    pub const fn position_map(&self) -> &'a PositionMap {
         self.position_map
     }
 
-    pub fn builder(&self) -> &Builder<A> {
+    pub const fn builder(&self) -> &Builder<A> {
         &self.builder
     }
 

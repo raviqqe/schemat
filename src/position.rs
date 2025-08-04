@@ -17,14 +17,14 @@ impl Position {
         self.end
     }
 
-    pub fn set_start(&self, start: usize) -> Self {
+    pub const fn set_start(&self, start: usize) -> Self {
         Self {
             start,
             end: self.end,
         }
     }
 
-    pub fn set_end(&self, end: usize) -> Self {
+    pub const fn set_end(&self, end: usize) -> Self {
         Self {
             start: self.start,
             end,
