@@ -11,14 +11,14 @@ pub enum Comment<'a> {
 }
 
 impl Comment<'_> {
-    pub fn content(&self) -> &str {
+    pub const fn content(&self) -> &str {
         match self {
             Self::Block(comment) => comment.content(),
             Self::Line(comment) => comment.content(),
         }
     }
 
-    pub fn position(&self) -> &Position {
+    pub const fn position(&self) -> &Position {
         match self {
             Self::Block(comment) => comment.position(),
             Self::Line(comment) => comment.position(),

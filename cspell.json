@@ -13,6 +13,7 @@
     "rustfmt",
     "rustup",
     "schemat",
-    "smallvec"
+    "smallvec",
+    "uninlined"
   ]
 }

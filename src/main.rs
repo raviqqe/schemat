@@ -1,3 +1,7 @@
+//! The Scheme code formatter.
+
+extern crate alloc;
+
 mod ast;
 mod context;
 mod error;
@@ -14,10 +18,10 @@ use crate::{
 use bumpalo::Bump;
 use clap::Parser;
 use colored::Colorize;
+use core::error::Error;
 use error::ApplicationError;
 use futures::future::try_join_all;
 use std::{
-    error::Error,
     path::{Path, PathBuf},
     process::ExitCode,
 };
