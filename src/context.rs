@@ -72,7 +72,7 @@ impl<'a, A: Allocator + Clone> Context<'a, A> {
         )
     }
 
-    pub fn peek_comments(&self, line_index: usize) -> impl Iterator<Item = &Comment> {
+    pub fn peek_comments(&self, line_index: usize) -> impl Iterator<Item = &Comment<'a>> {
         self.comments
             .range(
                 ..self
