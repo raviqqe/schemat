@@ -13,21 +13,21 @@ use allocator_api2::{alloc::Allocator, vec::Vec};
 pub fn parse<A: Allocator + Clone>(
     source: &str,
     allocator: A,
-) -> Result<Vec<Expression<A>, A>, ParseError> {
+) -> Result<Vec<Expression<'_, A>, A>, ParseError> {
     convert_result(module(Input::new_extra(source, allocator)), source)
 }
 
 pub fn parse_comments<A: Allocator + Clone>(
     source: &str,
     allocator: A,
-) -> Result<Vec<Comment, A>, ParseError> {
+) -> Result<Vec<Comment<'_>, A>, ParseError> {
     convert_result(comments(Input::new_extra(source, allocator)), source)
 }
 
 pub fn parse_hash_directives<A: Allocator + Clone>(
     source: &str,
     allocator: A,
-) -> Result<Vec<HashDirective, A>, ParseError> {
+) -> Result<Vec<HashDirective<'_>, A>, ParseError> {
     convert_result(hash_directives(Input::new_extra(source, allocator)), source)
 }
 
