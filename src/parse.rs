@@ -13,7 +13,7 @@ use allocator_api2::{alloc::Allocator, vec::Vec};
 pub fn parse<A: Allocator + Clone>(
     source: &str,
     allocator: A,
-) -> Result<Vec<Expression<A>, A>, ParseError> {
+) -> Result<Vec<Expression<'_, A>, A>, ParseError> {
     convert_result(module(Input::new_extra(source, allocator)), source)
 }
 
