@@ -8,26 +8,26 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: raviqqe/cargo-cache@v1
       - run: cargo build
   unit_test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: raviqqe/cargo-cache@v1
       - run: cargo test
   integration_test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ruby/setup-ruby@v1
       - uses: raviqqe/cargo-cache@v1
       - run: tools/integration_test.sh
   coverage:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: raviqqe/cargo-cache@v1
       - run: tools/coverage.sh
       - uses: codecov/codecov-action@v5
