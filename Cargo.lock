@@ -348,9 +348,9 @@ checksum = "523dc4f511e55ab87b694dc30d0f820d60906ef06413f93d4d7a1385599cc149"
 
 [[package]]
 name = "mfmt"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3da171528a4b5e357a8dbe521ddadb71493bcf5819b6bec4c7a986a3d3e24b9a"
+checksum = "72d612435f6de6d991c4bf63370b9839a18b60e22bf5b1d21618fb03147a733c"
 dependencies = [
  "allocator-api2",
 ]
