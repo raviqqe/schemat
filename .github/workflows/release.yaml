@@ -15,8 +15,6 @@ jobs:
     environment: ${{ github.ref == 'refs/heads/main' && 'release' || '' }}
     steps:
       - uses: actions/checkout@v5
-        with:
-          submodules: true
       - uses: raviqqe/cargo-cache@v1
       - run: cargo install cargo-workspaces
       - uses: rust-lang/crates-io-auth-action@v1
