@@ -10,7 +10,7 @@ keywords = ["format", "scheme"]
 categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
-allocator-api2 = "0.2.21"
+allocator-api2 = "0.4.0"
 bumpalo = { version = "3.19.0", features = ["allocator-api2"] }
 clap = { version = "4.5.53", features = ["derive"] }
 colored = "3.0.0"
