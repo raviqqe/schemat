@@ -2032,6 +2032,47 @@ mod tests {
                 assert_eq!(
                     format(
                         &[Expression::Quote(
+                            ",@",
+                            Expression::List(
+                                "(",
+                                ")",
+                                vec![
+                                    Expression::Symbol("foo", Position::new(3, 6)),
+                                    Expression::List(
+                                        "(",
+                                        ")",
+                                        vec![
+                                            Expression::Symbol("bar", Position::new(8, 11)),
+                                            Expression::Symbol("baz", Position::new(12, 15)),
+                                        ],
+                                        Position::new(7, 16)
+                                    ),
+                                ],
+                                Position::new(2, 17)
+                            )
+                            .into(),
+                            Position::new(0, 17)
+                        )],
+                        &[],
+                        &[],
+                        ",@(foo\n(bar\nbaz))",
+                    )
+                    .unwrap(),
+                    indoc!(
+                        "
+                        ,@(foo
+                           (bar
+                             baz))
+                        "
+                    )
+                );
+            }
+
+            #[test]
+            fn format_split_splicing_unquote() {
+                assert_eq!(
+                    format(
+                        &[Expression::Quote(
                             ",",
                             Expression::Quote(
                                 "@",
