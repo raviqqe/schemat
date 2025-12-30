@@ -30,7 +30,7 @@ cargo install schemat
 schemat < in.scm > out.scm
 ```
 
-For more usage information, see `schemat --help`.
+For more information, see `schemat --help`.
 
 ## License
 
