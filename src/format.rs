@@ -13,7 +13,7 @@ use mfmt::{Builder, Document, FormatOptions, empty, line, sequence, utility::is_
 
 const COMMENT_PREFIX: &str = ";";
 const QUOTE_SIGNS: &[&str] = &["'", "`", "#"];
-const UNQUOTE_SIGNS: &[&str] = &[","];
+const UNQUOTE_SIGNS: &[&str] = &[",", "@", ",@"];
 
 pub fn format<A: Allocator + Clone>(
     module: &[Expression<A>],
@@ -2032,42 +2032,96 @@ mod tests {
                 assert_eq!(
                     format(
                         &[Expression::Quote(
-                            ",",
+                            "'",
                             Expression::Quote(
-                                "@",
+                                ",@",
                                 Expression::List(
                                     "(",
                                     ")",
                                     vec![
-                                        Expression::Symbol("foo", Position::new(3, 6)),
+                                        Expression::Symbol("foo", Position::new(4, 7)),
                                         Expression::List(
                                             "(",
                                             ")",
                                             vec![
-                                                Expression::Symbol("bar", Position::new(8, 11)),
-                                                Expression::Symbol("baz", Position::new(12, 15)),
+                                                Expression::Symbol("bar", Position::new(9, 12)),
+                                                Expression::Symbol("baz", Position::new(13, 16)),
                                             ],
-                                            Position::new(7, 16)
+                                            Position::new(8, 17)
                                         ),
                                     ],
-                                    Position::new(2, 17)
+                                    Position::new(3, 18)
                                 )
                                 .into(),
-                                Position::new(1, 17)
+                                Position::new(1, 18)
                             )
                             .into(),
-                            Position::new(0, 17)
+                            Position::new(0, 18)
                         )],
                         &[],
                         &[],
-                        ",@(foo\n(bar\nbaz))",
+                        "',@(foo\n(bar\nbaz))",
                     )
                     .unwrap(),
                     indoc!(
                         "
-                        ,@(foo
-                           (bar
-                             baz))
+                        ',@(foo
+                            (bar
+                              baz))
+                        "
+                    )
+                );
+            }
+
+            #[test]
+            fn format_split_splicing_unquote() {
+                assert_eq!(
+                    format(
+                        &[Expression::Quote(
+                            "'",
+                            Expression::Quote(
+                                ",",
+                                Expression::Quote(
+                                    "@",
+                                    Expression::List(
+                                        "(",
+                                        ")",
+                                        vec![
+                                            Expression::Symbol("foo", Position::new(4, 7)),
+                                            Expression::List(
+                                                "(",
+                                                ")",
+                                                vec![
+                                                    Expression::Symbol("bar", Position::new(9, 12)),
+                                                    Expression::Symbol(
+                                                        "baz",
+                                                        Position::new(13, 16)
+                                                    ),
+                                                ],
+                                                Position::new(8, 17)
+                                            ),
+                                        ],
+                                        Position::new(3, 18)
+                                    )
+                                    .into(),
+                                    Position::new(2, 18)
+                                )
+                                .into(),
+                                Position::new(1, 18)
+                            )
+                            .into(),
+                            Position::new(0, 18)
+                        )],
+                        &[],
+                        &[],
+                        "',@(foo\n(bar\nbaz))",
+                    )
+                    .unwrap(),
+                    indoc!(
+                        "
+                        ',@(foo
+                            (bar
+                              baz))
                         "
                     )
                 );
