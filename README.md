@@ -30,6 +30,8 @@ cargo install schemat
 schemat < in.scm > out.scm
 ```
 
+For more information, see `schemat --help`.
+
 ## License
 
 [The Unlicense](UNLICENSE)
