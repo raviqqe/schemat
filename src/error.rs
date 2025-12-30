@@ -3,16 +3,14 @@ use core::{
     fmt,
     fmt::{Display, Formatter},
 };
-use glob::{GlobError, PatternError};
 use std::io;
 
 #[derive(Debug)]
 pub enum ApplicationError {
     Format(fmt::Error),
-    Glob(GlobError),
+    Glob(ignore::Error),
     Io(io::Error),
     Parse(String),
-    Pattern(PatternError),
 }
 
 impl Error for ApplicationError {}
@@ -24,7 +22,6 @@ impl Display for ApplicationError {
             Self::Glob(error) => error.fmt(formatter),
             Self::Io(error) => error.fmt(formatter),
             Self::Parse(error) => error.fmt(formatter),
-            Self::Pattern(error) => error.fmt(formatter),
         }
     }
 }
@@ -35,8 +32,8 @@ impl From<fmt::Error> for ApplicationError {
     }
 }
 
-impl From<GlobError> for ApplicationError {
-    fn from(error: GlobError) -> Self {
+impl From<ignore::Error> for ApplicationError {
+    fn from(error: ignore::Error) -> Self {
         Self::Glob(error)
     }
 }
@@ -44,11 +41,5 @@ impl From<GlobError> for ApplicationError {
 impl From<io::Error> for ApplicationError {
     fn from(error: io::Error) -> Self {
         Self::Io(error)
-    }
-}
-
-impl From<PatternError> for ApplicationError {
-    fn from(error: PatternError) -> Self {
-        Self::Pattern(error)
     }
 }

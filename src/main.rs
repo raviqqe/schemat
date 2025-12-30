@@ -21,6 +21,7 @@ use colored::Colorize;
 use core::error::Error;
 use error::ApplicationError;
 use futures::future::try_join_all;
+use ignore::Walk;
 use std::{
     path::{Path, PathBuf},
     process::ExitCode,
@@ -135,10 +136,20 @@ async fn format_paths(paths: &[String], verbose: bool) -> Result<(), Box<dyn Err
 fn read_paths(paths: &[String]) -> Result<impl Iterator<Item = PathBuf>, ApplicationError> {
     Ok(paths
         .iter()
-        .map(|path| Ok::<_, ApplicationError>(glob::glob(path)?.collect::<Result<Vec<_>, _>>()?))
+        .map(|path| Ok::<_, ApplicationError>(Walk::new(path).collect::<Result<Vec<_>, _>>()?))
         .collect::<Result<Vec<_>, _>>()?
         .into_iter()
-        .flatten())
+        .flatten()
+        .filter_map(|entry| {
+            if entry
+                .file_type()
+                .map_or_else(Default::default, |entry| entry.is_file())
+            {
+                Some(entry.into_path())
+            } else {
+                None
+            }
+        }))
 }
 
 async fn format_stdin() -> Result<(), Box<dyn Error>> {
