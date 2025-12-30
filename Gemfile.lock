@@ -10,7 +10,7 @@ GEM
     base64 (0.3.0)
     bigdecimal (3.3.1)
     builder (3.3.0)
-    contracts (0.17.2)
+    contracts (0.17.3)
     cucumber (10.1.1)
       base64 (~> 0.2)
       builder (~> 3.2)
