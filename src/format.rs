@@ -2032,23 +2032,28 @@ mod tests {
                 assert_eq!(
                     format(
                         &[Expression::Quote(
-                            ",@",
-                            Expression::List(
-                                "(",
-                                ")",
-                                vec![
-                                    Expression::Symbol("foo", Position::new(3, 6)),
-                                    Expression::List(
-                                        "(",
-                                        ")",
-                                        vec![
-                                            Expression::Symbol("bar", Position::new(8, 11)),
-                                            Expression::Symbol("baz", Position::new(12, 15)),
-                                        ],
-                                        Position::new(7, 16)
-                                    ),
-                                ],
-                                Position::new(2, 17)
+                            "'",
+                            Expression::Quote(
+                                ",@",
+                                Expression::List(
+                                    "(",
+                                    ")",
+                                    vec![
+                                        Expression::Symbol("foo", Position::new(3, 6)),
+                                        Expression::List(
+                                            "(",
+                                            ")",
+                                            vec![
+                                                Expression::Symbol("bar", Position::new(8, 11)),
+                                                Expression::Symbol("baz", Position::new(12, 15)),
+                                            ],
+                                            Position::new(7, 16)
+                                        ),
+                                    ],
+                                    Position::new(2, 17)
+                                )
+                                .into(),
+                                Position::new(0, 17)
                             )
                             .into(),
                             Position::new(0, 17)
@@ -2060,9 +2065,9 @@ mod tests {
                     .unwrap(),
                     indoc!(
                         "
-                        ,@(foo
-                           (bar
-                             baz))
+                        '(,@(foo
+                             (bar
+                               baz)))
                         "
                     )
                 );
@@ -2106,9 +2111,9 @@ mod tests {
                     .unwrap(),
                     indoc!(
                         "
-                        ,@(foo
-                           (bar
-                             baz))
+                        '(,@(foo
+                             (bar
+                               baz)))
                         "
                     )
                 );
