@@ -160,8 +160,8 @@ fn quote<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
     alt((
         tag("'"),
         tag("`"),
+        tag(",@"),
         tag(","),
-        tag("@"),
         tag("#;"),
         tag("#"),
         terminated(raw_symbol, peek(not(alt((multispace1, eof))))),
@@ -586,6 +586,38 @@ mod tests {
         );
     }
 
+    #[test]
+    fn parse_single_at_mark() {
+        assert_eq!(
+            expression(Input::new_extra("(@ foo)", Global)).unwrap().1,
+            Expression::List(
+                "(",
+                ")",
+                vec![
+                    Expression::Symbol("@", Position::new(1, 2)).into(),
+                    Expression::Symbol("foo", Position::new(3, 6)).into(),
+                ],
+                Position::new(0, 7)
+            )
+        );
+    }
+
+    #[test]
+    fn parse_double_at_marks() {
+        assert_eq!(
+            expression(Input::new_extra("(@@ foo)", Global)).unwrap().1,
+            Expression::List(
+                "(",
+                ")",
+                vec![
+                    Expression::Symbol("@@", Position::new(1, 3)).into(),
+                    Expression::Symbol("foo", Position::new(4, 7)).into(),
+                ],
+                Position::new(0, 8)
+            )
+        );
+    }
+
     mod boolean {
         use super::*;
         use pretty_assertions::assert_eq;
@@ -737,14 +769,21 @@ mod tests {
             assert_eq!(
                 expression(Input::new_extra(",@foo", Global)).unwrap().1,
                 Expression::Quote(
-                    ",",
-                    Expression::Quote(
-                        "@",
-                        Expression::Symbol("foo", Position::new(2, 5)).into(),
-                        Position::new(1, 5)
-                    )
-                    .into(),
+                    ",@",
+                    Expression::Symbol("foo", Position::new(2, 5)).into(),
                     Position::new(0, 5)
+                )
+            );
+        }
+
+        #[test]
+        fn parse_splicing_unquote_with_space() {
+            assert_eq!(
+                expression(Input::new_extra(",@ foo", Global)).unwrap().1,
+                Expression::Quote(
+                    ",@",
+                    Expression::Symbol("foo", Position::new(3, 6)).into(),
+                    Position::new(0, 6)
                 )
             );
         }
