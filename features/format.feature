@@ -62,7 +62,7 @@ Feature: Format
       bar
       """
 
-  Scenario: Format files with a glob
+  Scenario: Format files with a recursive glob
     Given a file named "foo.scm" with:
       """
         foo
