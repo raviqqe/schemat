@@ -2060,7 +2060,7 @@ mod tests {
                         )],
                         &[],
                         &[],
-                        ",@(foo\n(bar\nbaz))",
+                        "',@(foo\n(bar\nbaz))",
                     )
                     .unwrap(),
                     indoc!(
