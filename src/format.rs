@@ -2039,24 +2039,24 @@ mod tests {
                                     "(",
                                     ")",
                                     vec![
-                                        Expression::Symbol("foo", Position::new(3, 6)),
+                                        Expression::Symbol("foo", Position::new(4, 7)),
                                         Expression::List(
                                             "(",
                                             ")",
                                             vec![
-                                                Expression::Symbol("bar", Position::new(8, 11)),
-                                                Expression::Symbol("baz", Position::new(12, 15)),
+                                                Expression::Symbol("bar", Position::new(9, 12)),
+                                                Expression::Symbol("baz", Position::new(13, 16)),
                                             ],
-                                            Position::new(7, 16)
+                                            Position::new(8, 17)
                                         ),
                                     ],
-                                    Position::new(2, 17)
+                                    Position::new(3, 18)
                                 )
                                 .into(),
-                                Position::new(0, 17)
+                                Position::new(1, 18)
                             )
                             .into(),
-                            Position::new(0, 17)
+                            Position::new(0, 18)
                         )],
                         &[],
                         &[],
