@@ -3,8 +3,8 @@ use allocator_api2::{alloc::Allocator, boxed::Box, vec::Vec};
 
 #[derive(Debug)]
 pub enum Expression<'a, A: Allocator> {
-    List(&'a str, &'a str, Vec<Expression<'a, A>, A>, Position),
-    Quote(&'a str, Box<Expression<'a, A>, A>, Position),
+    List(&'a str, &'a str, Vec<Self, A>, Position),
+    Quote(&'a str, Box<Self, A>, Position),
     QuotedSymbol(&'a str, Position),
     String(&'a str, Position),
     Symbol(&'a str, Position),
