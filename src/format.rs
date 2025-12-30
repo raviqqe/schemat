@@ -13,7 +13,7 @@ use mfmt::{Builder, Document, FormatOptions, empty, line, sequence, utility::is_
 
 const COMMENT_PREFIX: &str = ";";
 const QUOTE_SIGNS: &[&str] = &["'", "`", "#"];
-const UNQUOTE_SIGNS: &[&str] = &[",", "@", ",@"];
+const UNQUOTE_SIGNS: &[&str] = &[",", ",@"];
 
 pub fn format<A: Allocator + Clone>(
     module: &[Expression<A>],
