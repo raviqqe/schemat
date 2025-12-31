@@ -22,7 +22,7 @@ use colored::Colorize;
 use core::error::Error;
 use error::ApplicationError;
 use futures::future::try_join_all;
-use ignore::gitignore::Gitignore;
+use ignore::gitignore::GitignoreBuilder;
 use std::{
     path::{Path, PathBuf},
     process::ExitCode,
@@ -42,8 +42,11 @@ struct Arguments {
     /// Check if files are formatted correctly.
     #[arg(short, long)]
     check: bool,
-    /// Use a custom ignore file.
+    /// Ignore a pattern.
     #[arg(short, long)]
+    ignore: Vec<String>,
+    /// Use a custom ignore file.
+    #[arg(long)]
     ignore_file: Option<PathBuf>,
     /// Be verbose.
     #[arg(short, long)]
@@ -63,8 +66,9 @@ async fn main() -> ExitCode {
 async fn run(
     Arguments {
         paths,
-        ignore_file,
         check,
+        ignore,
+        ignore_file,
         verbose,
         ..
     }: Arguments,
@@ -74,14 +78,15 @@ async fn run(
     } else if paths.is_empty() {
         format_stdin().await
     } else if check {
-        check_paths(&paths, ignore_file.as_deref(), verbose).await
+        check_paths(&paths, &ignore, ignore_file.as_deref(), verbose).await
     } else {
-        format_paths(&paths, ignore_file.as_deref(), verbose).await
+        format_paths(&paths, &ignore, ignore_file.as_deref(), verbose).await
     }
 }
 
 async fn check_paths(
     paths: &[String],
+    ignore: &[String],
     ignore_file: Option<&Path>,
     verbose: bool,
 ) -> Result<(), Box<dyn Error>> {
@@ -89,7 +94,7 @@ async fn check_paths(
     let mut error_count = 0;
 
     for (result, path) in try_join_all(
-        read_paths(paths, ignore_file)?
+        read_paths(paths, ignore, ignore_file)?
             .map(|path| spawn(async { (check_path(&path).await, path) })),
     )
     .await?
@@ -121,6 +126,7 @@ async fn check_paths(
 
 async fn format_paths(
     paths: &[String],
+    ignore: &[String],
     ignore_file: Option<&Path>,
     verbose: bool,
 ) -> Result<(), Box<dyn Error>> {
@@ -128,7 +134,7 @@ async fn format_paths(
     let mut error_count = 0;
 
     for (result, path) in try_join_all(
-        read_paths(paths, ignore_file)?
+        read_paths(paths, ignore, ignore_file)?
             .map(|path| spawn(async { (format_path(&path).await, path) })),
     )
     .await?
@@ -157,10 +163,22 @@ async fn format_paths(
 
 fn read_paths(
     paths: &[String],
+    ignore: &[String],
     ignore_file: Option<&Path>,
 ) -> Result<impl Iterator<Item = PathBuf>, ApplicationError> {
-    let ignore =
-        Rc::new(ignore_file.map_or_else(|| Gitignore::global().0, |file| Gitignore::new(file).0));
+    let ignore = {
+        let mut builder = GitignoreBuilder::new(".");
+
+        if let Some(file) = ignore_file {
+            builder.add(file);
+        }
+
+        for pattern in ignore {
+            builder.add_line(None, pattern)?;
+        }
+
+        Rc::new(builder.build_global().0)
+    };
 
     Ok(paths
         .iter()
