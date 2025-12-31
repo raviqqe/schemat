@@ -102,16 +102,14 @@ Feature: Check
       cannot check stdin
       """
 
-  # TODO Test a `.gitignore` file.
-  # Scenario: Respect .gitignore file
-  #   Given a file named "foo.scm" with:
-  #     """
-  #       foo
-  #     """
-  #   And a mocked home directory
-  #   And a file named "~/.config/git/ignore" with:
-  #     """
-  #     *.scm
-  #     """
-  #   When I successfully run `schemat -c *.scm`
-  #   Then the exit status should be 0
+  Scenario: Respect .gitignore file
+    Given a file named "foo.scm" with:
+      """
+        foo
+      """
+    And a file named ".gitignore" with:
+      """
+      *.scm
+      """
+    When I successfully run `schemat -ci .gitignore *.scm`
+    Then the exit status should be 0
