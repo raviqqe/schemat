@@ -62,6 +62,25 @@ Feature: Format
       bar
       """
 
+  Scenario: Format files with a recursive glob
+    Given a file named "foo.scm" with:
+      """
+        foo
+      """
+    And a file named "bar/baz.scm" with:
+      """
+        bar
+      """
+    When I successfully run `schemat **/*.scm`
+    Then a file named "foo.scm" should contain exactly:
+      """
+      foo
+      """
+    And a file named "bar/baz.scm" should contain exactly:
+      """
+      bar
+      """
+
   Scenario: Format files with a verbose option
     Given a file named "foo.scm" with:
       """
@@ -104,3 +123,20 @@ Feature: Format
     And the stderr should contain "FORMAT\tfoo.scm"
     And the stderr should contain "ERROR"
     And the stderr should contain "bar.scm"
+
+  # TODO Test a `.gitignore` file.
+  # Scenario: Respect .gitignore file
+  #   Given a file named "foo.scm" with:
+  #     """
+  #       foo
+  #     """
+  #   And a mocked home directory
+  #   And a file named "~/.config/git/ignore" with:
+  #     """
+  #     *.scm
+  #     """
+  #   When I successfully run `schemat *.scm`
+  #   Then a file named "foo.scm" should contain exactly:
+  #     """
+  #       foo
+  #     """
