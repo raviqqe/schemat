@@ -2,6 +2,7 @@
 
 extern crate alloc;
 
+use alloc::rc::Rc;
 mod ast;
 mod context;
 mod error;
@@ -21,6 +22,7 @@ use colored::Colorize;
 use core::error::Error;
 use error::ApplicationError;
 use futures::future::try_join_all;
+use ignore::gitignore::Gitignore;
 use std::{
     path::{Path, PathBuf},
     process::ExitCode,
@@ -133,12 +135,18 @@ async fn format_paths(paths: &[String], verbose: bool) -> Result<(), Box<dyn Err
 }
 
 fn read_paths(paths: &[String]) -> Result<impl Iterator<Item = PathBuf>, ApplicationError> {
+    let ignore = Rc::new(Gitignore::global().0);
+
     Ok(paths
         .iter()
         .map(|path| Ok::<_, ApplicationError>(glob::glob(path)?.collect::<Result<Vec<_>, _>>()?))
         .collect::<Result<Vec<_>, _>>()?
         .into_iter()
-        .flatten())
+        .flatten()
+        .filter({
+            let ignore = ignore.clone();
+            move |path| !ignore.matched_path_or_any_parents(path, false).is_ignore()
+        }))
 }
 
 async fn format_stdin() -> Result<(), Box<dyn Error>> {
