@@ -101,3 +101,16 @@ Feature: Check
       """
       cannot check stdin
       """
+
+  Scenario: Respect .gitignore file
+    Given a file named "foo.scm" with:
+      """
+        foo
+      """
+    And a file named ".config/git/ignore" with:
+      """
+      *.scm
+      """
+    And I set the environment variable "HOME" to "."
+    When I successfully run `schemat -c *.scm`
+    Then the exit status should be 0
