@@ -159,11 +159,8 @@ fn read_paths(
     paths: &[String],
     ignore_file: Option<&Path>,
 ) -> Result<impl Iterator<Item = PathBuf>, ApplicationError> {
-    let ignore = Rc::new(if let Some(file) = ignore_file {
-        Gitignore::new(file).0
-    } else {
-        Gitignore::global().0
-    });
+    let ignore =
+        Rc::new(ignore_file.map_or_else(|| Gitignore::global().0, |file| Gitignore::new(file).0));
 
     Ok(paths
         .iter()
