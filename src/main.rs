@@ -46,7 +46,7 @@ struct Arguments {
     #[arg(short, long)]
     ignore: Vec<String>,
     /// Use a custom ignore file.
-    #[arg(long)]
+    #[arg(short = 'I', long)]
     ignore_file: Option<PathBuf>,
     /// Be verbose.
     #[arg(short, long)]
