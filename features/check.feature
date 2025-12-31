@@ -102,6 +102,14 @@ Feature: Check
       cannot check stdin
       """
 
+  Scenario: Respect an ignore option
+    Given a file named "foo.scm" with:
+      """
+        foo
+      """
+    When I successfully run `schemat -ci *.scm *.scm`
+    Then the exit status should be 0
+
   Scenario: Respect .gitignore file
     Given a file named "foo.scm" with:
       """
@@ -111,5 +119,5 @@ Feature: Check
       """
       *.scm
       """
-    When I successfully run `schemat -ci .gitignore *.scm`
+    When I successfully run `schemat -c --ignore-file .gitignore *.scm`
     Then the exit status should be 0
