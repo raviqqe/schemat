@@ -22,7 +22,7 @@ use colored::Colorize;
 use core::error::Error;
 use error::ApplicationError;
 use futures::future::try_join_all;
-use ignore::gitignore::GitignoreBuilder;
+use ignore::gitignore::{Gitignore, GitignoreBuilder};
 use std::{
     path::{Path, PathBuf},
     process::ExitCode,
@@ -166,7 +166,9 @@ fn read_paths(
     ignore: &[String],
     ignore_file: Option<&Path>,
 ) -> Result<impl Iterator<Item = PathBuf>, ApplicationError> {
-    let ignore = {
+    let ignore = Rc::new(if ignore.is_empty() && ignore_file.is_none() {
+        Gitignore::global().0
+    } else {
         let mut builder = GitignoreBuilder::new(".");
 
         if let Some(file) = ignore_file {
@@ -177,12 +179,8 @@ fn read_paths(
             builder.add_line(None, pattern)?;
         }
 
-        Rc::new(if ignore.is_empty() && ignore_file.is_none() {
-            builder.build_global().0
-        } else {
-            builder.build()?
-        })
-    };
+        builder.build()?
+    });
 
     Ok(paths
         .iter()
