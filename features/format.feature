@@ -124,6 +124,17 @@ Feature: Format
     And the stderr should contain "ERROR"
     And the stderr should contain "bar.scm"
 
+  Scenario: Respect an ignore option
+    Given a file named "foo.scm" with:
+      """
+        foo
+      """
+    When I successfully run `schemat -i *.scm *.scm`
+    Then a file named "foo.scm" should contain exactly:
+      """
+        foo
+      """
+
   Scenario: Respect .gitignore file
     Given a file named "foo.scm" with:
       """
@@ -133,7 +144,7 @@ Feature: Format
       """
       *.scm
       """
-    When I successfully run `schemat -i .gitignore *.scm`
+    When I successfully run `schemat --ignore-file .gitignore *.scm`
     Then a file named "foo.scm" should contain exactly:
       """
         foo
