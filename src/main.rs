@@ -177,10 +177,10 @@ fn read_paths(
             builder.add_line(None, pattern)?;
         }
 
-        Rc::new(if ignore_file.is_some() {
-            builder.build()?
-        } else {
+        Rc::new(if ignore.is_empty() && ignore_file.is_none() {
             builder.build_global().0
+        } else {
+            builder.build()?
         })
     };
 
