@@ -2,7 +2,6 @@
 
 extern crate alloc;
 
-use alloc::rc::Rc;
 mod ast;
 mod context;
 mod error;
@@ -16,6 +15,7 @@ use crate::{
     parse::{ParseError, parse, parse_comments, parse_hash_directives},
     position_map::PositionMap,
 };
+use alloc::rc::Rc;
 use bumpalo::Bump;
 use clap::Parser;
 use colored::Colorize;
