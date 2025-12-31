@@ -129,11 +129,11 @@ Feature: Format
       """
         foo
       """
-    And a file named ".config/git/ignore" with:
+    And a mocked home directory
+    And a file named "~/.config/git/ignore" with:
       """
       *.scm
       """
-    And I set the environment variable "HOME" to "."
     When I successfully run `schemat *.scm`
     Then a file named "foo.scm" should contain exactly:
       """
