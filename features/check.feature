@@ -107,7 +107,6 @@ Feature: Check
       """
         foo
       """
-    And a mocked home directory
     And a file named "~/.config/git/ignore" with:
       """
       *.scm
