@@ -177,7 +177,11 @@ fn read_paths(
             builder.add_line(None, pattern)?;
         }
 
-        Rc::new(builder.build_global().0)
+        Rc::new(if ignore_file.is_some() {
+            builder.build()?
+        } else {
+            builder.build_global().0
+        })
     };
 
     Ok(paths
