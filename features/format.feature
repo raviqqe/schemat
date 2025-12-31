@@ -124,19 +124,17 @@ Feature: Format
     And the stderr should contain "ERROR"
     And the stderr should contain "bar.scm"
 
-  # TODO Test a `.gitignore` file.
-  # Scenario: Respect .gitignore file
-  #   Given a file named "foo.scm" with:
-  #     """
-  #       foo
-  #     """
-  #   And a mocked home directory
-  #   And a file named "~/.config/git/ignore" with:
-  #     """
-  #     *.scm
-  #     """
-  #   When I successfully run `schemat *.scm`
-  #   Then a file named "foo.scm" should contain exactly:
-  #     """
-  #       foo
-  #     """
+  Scenario: Respect .gitignore file
+    Given a file named "foo.scm" with:
+      """
+        foo
+      """
+    And a file named ".gitignore" with:
+      """
+      *.scm
+      """
+    When I successfully run `schemat -i .gitignore *.scm`
+    Then a file named "foo.scm" should contain exactly:
+      """
+        foo
+      """
