@@ -23,6 +23,7 @@ use error::ApplicationError;
 use futures::future::try_join_all;
 use ignore::gitignore::GitignoreBuilder;
 use std::{
+    ffi::OsStr,
     path::{Path, PathBuf},
     process::ExitCode,
 };
@@ -165,7 +166,7 @@ fn read_paths(
             index
                 .entries()
                 .iter()
-                .map(|entry| PathBuf::from(&*entry.path(&index))),
+                .map(|entry| PathBuf::from(OsStr::new(entry.path(&index)))),
         )
     } else {
         let mut builder = GitignoreBuilder::new(".");

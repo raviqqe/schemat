@@ -9,6 +9,7 @@ use std::io;
 #[derive(Debug)]
 pub enum ApplicationError {
     Format(fmt::Error),
+    GixOpenIndex(gix::worktree::open_index::Error),
     Glob(GlobError),
     Ignore(ignore::Error),
     Io(io::Error),
@@ -22,6 +23,7 @@ impl Display for ApplicationError {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::Format(error) => error.fmt(formatter),
+            Self::GixOpenIndex(error) => error.fmt(formatter),
             Self::Glob(error) => error.fmt(formatter),
             Self::Ignore(error) => error.fmt(formatter),
             Self::Io(error) => error.fmt(formatter),
@@ -34,6 +36,12 @@ impl Display for ApplicationError {
 impl From<fmt::Error> for ApplicationError {
     fn from(error: fmt::Error) -> Self {
         Self::Format(error)
+    }
+}
+
+impl From<gix::worktree::open_index::Error> for ApplicationError {
+    fn from(error: gix::worktree::open_index::Error) -> Self {
+        Self::GixOpenIndex(error)
     }
 }
 
