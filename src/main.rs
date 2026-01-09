@@ -19,6 +19,7 @@ use bumpalo::Bump;
 use clap::Parser;
 use colored::Colorize;
 use core::error::Error;
+use core::str::Utf8Error;
 use error::ApplicationError;
 use futures::future::try_join_all;
 use ignore::gitignore::GitignoreBuilder;
@@ -167,9 +168,9 @@ fn read_paths(
                 .iter()
                 .map(|entry| {
                     let path: &[u8] = entry.path(&index).as_ref();
-                    PathBuf::from(str::from_utf8(path).unwrap())
+                    Ok(PathBuf::from(str::from_utf8(path)?))
                 })
-                .collect::<Vec<_>>()
+                .collect::<Result<Vec<_>, Utf8Error>>()?
                 .into_iter(),
         )
     } else {

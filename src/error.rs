@@ -4,7 +4,7 @@ use core::{
     fmt::{Display, Formatter},
 };
 use glob::{GlobError, PatternError};
-use std::io;
+use std::{io, str::Utf8Error};
 
 #[derive(Debug)]
 pub enum ApplicationError {
@@ -15,6 +15,7 @@ pub enum ApplicationError {
     Io(io::Error),
     Parse(String),
     Pattern(PatternError),
+    Utf8(Utf8Error),
 }
 
 impl Error for ApplicationError {}
@@ -29,6 +30,7 @@ impl Display for ApplicationError {
             Self::Io(error) => error.fmt(formatter),
             Self::Parse(error) => error.fmt(formatter),
             Self::Pattern(error) => error.fmt(formatter),
+            Self::Utf8(error) => error.fmt(formatter),
         }
     }
 }
@@ -66,5 +68,11 @@ impl From<io::Error> for ApplicationError {
 impl From<PatternError> for ApplicationError {
     fn from(error: PatternError) -> Self {
         Self::Pattern(error)
+    }
+}
+
+impl From<Utf8Error> for ApplicationError {
+    fn from(error: Utf8Error) -> Self {
+        Self::Utf8(error)
     }
 }
