@@ -16,6 +16,7 @@
     "rustup",
     "schemat",
     "smallvec",
-    "uninlined"
+    "uninlined",
+    "worktree"
   ]
 }
