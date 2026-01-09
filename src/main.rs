@@ -134,7 +134,7 @@ async fn format_paths(
     let mut error_count = 0;
 
     for (result, path) in try_join_all(
-        read_paths(paths, ignore, ignore_file)?
+        read_paths(paths, ignored_patterns)?
             .map(|path| spawn(async { (format_path(&path).await, path) })),
     )
     .await?
@@ -163,35 +163,29 @@ async fn format_paths(
 
 fn read_paths(
     paths: &[String],
-    ignore: &[String],
-    ignore_file: Option<&Path>,
+    ignored_patterns: &[String],
 ) -> Result<impl Iterator<Item = PathBuf>, ApplicationError> {
-    let ignore = Rc::new(if ignore.is_empty() && ignore_file.is_none() {
-        Gitignore::global().0
+    Ok(if let Some(repository) = gix::discover(".").ok() {
+        todo!()
     } else {
         let mut builder = GitignoreBuilder::new(".");
 
-        if let Some(file) = ignore_file {
-            builder.add(file);
-        }
-
-        for pattern in ignore {
+        for pattern in ignored_patterns {
             builder.add_line(None, pattern)?;
         }
 
-        builder.build()?
-    });
+        let ignore = builder.build()?;
 
-    Ok(paths
-        .iter()
-        .map(|path| Ok::<_, ApplicationError>(glob::glob(path)?.collect::<Result<Vec<_>, _>>()?))
-        .collect::<Result<Vec<_>, _>>()?
-        .into_iter()
-        .flatten()
-        .filter({
-            let ignore = ignore.clone();
-            move |path| !ignore.matched_path_or_any_parents(path, false).is_ignore()
-        }))
+        paths
+            .iter()
+            .map(|path| {
+                Ok::<_, ApplicationError>(glob::glob(path)?.collect::<Result<Vec<_>, _>>()?)
+            })
+            .collect::<Result<Vec<_>, _>>()?
+            .into_iter()
+            .flatten()
+            .filter(move |path| !ignore.matched_path_or_any_parents(path, false).is_ignore())
+    })
 }
 
 async fn format_stdin() -> Result<(), Box<dyn Error>> {
