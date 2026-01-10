@@ -150,3 +150,18 @@ Feature: Format
       """
       foo
       """
+
+  Scenario: Respect .gitignore file
+    Given a file named "foo.scm" with:
+      """
+        foo
+      """
+    And a file named ".gitignore" with:
+      """
+      *.scm
+      """
+    When I successfully run `schemat --ignore-file .gitignore *.scm`
+    Then a file named "foo.scm" should contain exactly:
+      """
+        foo
+      """

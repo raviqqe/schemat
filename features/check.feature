@@ -109,3 +109,15 @@ Feature: Check
       """
     When I successfully run `schemat -ci *.scm *.scm`
     Then the exit status should be 0
+
+  Scenario: Respect .gitignore file
+    Given a file named "foo.scm" with:
+      """
+        foo
+      """
+    And a file named ".gitignore" with:
+      """
+      *.scm
+      """
+    When I successfully run `schemat -c --ignore-file .gitignore *.scm`
+    Then the exit status should be 0
