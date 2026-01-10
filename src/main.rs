@@ -177,7 +177,7 @@ fn read_paths(
         .transpose()?;
 
     Ok(paths
-        .into_iter()
+        .iter()
         .map(|path| Ok((path, path::absolute(path)?)))
         .collect::<Result<Vec<_>, io::Error>>()?
         .iter()
