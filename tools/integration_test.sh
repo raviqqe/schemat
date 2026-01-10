@@ -2,9 +2,8 @@
 
 set -e
 
-bundler install
-cargo build --release
+cargo build
 
-export PATH=$PWD/target/release:$PATH
+export PATH=$PWD/target/debug:$PATH
 
-bundler exec cucumber --publish-quiet
+go tool agoa
