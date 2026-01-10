@@ -146,5 +146,5 @@ Feature: Format
     When I successfully run `schemat ../foo.scm`
     Then a file named "foo.scm" should contain exactly:
       """
-        foo
+      foo
       """
