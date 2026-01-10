@@ -90,7 +90,6 @@ async fn check_paths(
 
     for (result, path) in try_join_all(
         read_paths(paths, ignored_patterns)?
-            .into_iter()
             .map(|path| spawn(async { (check_path(&path).await, path) })),
     )
     .await?
@@ -130,7 +129,6 @@ async fn format_paths(
 
     for (result, path) in try_join_all(
         read_paths(paths, ignored_patterns)?
-            .into_iter()
             .map(|path| spawn(async { (format_path(&path).await, path) })),
     )
     .await?
@@ -160,7 +158,7 @@ async fn format_paths(
 fn read_paths(
     paths: &[String],
     ignored_patterns: &[String],
-) -> Result<Vec<PathBuf>, ApplicationError> {
+) -> Result<Box<dyn Iterator<Item = PathBuf>>, ApplicationError> {
     let mut builder = GitignoreBuilder::new(".");
 
     for pattern in ignored_patterns {
@@ -176,26 +174,28 @@ fn read_paths(
             .map(|path| glob::Pattern::new(path))
             .collect::<Result<Vec<_>, _>>()?;
 
-        index
-            .entries()
-            .iter()
-            .map(|entry| Ok(PathBuf::from(str::from_utf8(entry.path(&index).as_ref())?)))
-            .collect::<Result<Vec<_>, Utf8Error>>()?
-            .into_iter()
-            .filter(move |path| {
-                patterns.iter().any(|pattern| pattern.matches_path(path))
-                    && !ignore.matched_path_or_any_parents(&path, false).is_ignore()
-            })
-            .collect()
+        Box::new(
+            index
+                .entries()
+                .iter()
+                .map(|entry| Ok(PathBuf::from(str::from_utf8(entry.path(&index).as_ref())?)))
+                .collect::<Result<Vec<_>, Utf8Error>>()?
+                .into_iter()
+                .filter(move |path| {
+                    patterns.iter().any(|pattern| pattern.matches_path(path))
+                        && !ignore.matched_path_or_any_parents(&path, false).is_ignore()
+                }),
+        )
     } else {
-        paths
-            .iter()
-            .map(|path| Ok(glob::glob(path)?.collect::<Result<Vec<_>, _>>()?))
-            .collect::<Result<Vec<_>, ApplicationError>>()?
-            .into_iter()
-            .flatten()
-            .filter(move |path| !ignore.matched_path_or_any_parents(&path, false).is_ignore())
-            .collect()
+        Box::new(
+            paths
+                .iter()
+                .map(|path| Ok(glob::glob(path)?.collect::<Result<Vec<_>, _>>()?))
+                .collect::<Result<Vec<_>, ApplicationError>>()?
+                .into_iter()
+                .flatten()
+                .filter(move |path| !ignore.matched_path_or_any_parents(&path, false).is_ignore()),
+        )
     })
 }
 
