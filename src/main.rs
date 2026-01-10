@@ -185,10 +185,8 @@ fn read_paths(
         Box::new(
             paths
                 .iter()
-                .map(|path| {
-                    Ok::<_, ApplicationError>(glob::glob(path)?.collect::<Result<Vec<_>, _>>()?)
-                })
-                .collect::<Result<Vec<_>, _>>()?
+                .map(|path| Ok(glob::glob(path)?.collect::<Result<Vec<_>, _>>()?))
+                .collect::<Result<Vec<_>, ApplicationError>>()?
                 .into_iter()
                 .flatten()
                 .filter(move |path| !ignore.matched_path_or_any_parents(path, false).is_ignore()),
