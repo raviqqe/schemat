@@ -134,3 +134,16 @@ Feature: Format
       """
         foo
       """
+
+  Scenario: Respect an ignore option
+    Given a file named "foo.scm" with:
+      """
+        foo
+      """
+    And I successfully run `git init bar`
+    And I cd to `bar`
+    When I successfully run `schemat ../foo.scm`
+    Then a file named "foo.scm" should contain exactly:
+      """
+        foo
+      """
