@@ -179,10 +179,7 @@ fn read_paths(
         index
             .entries()
             .iter()
-            .map(|entry| {
-                let path: &[u8] = entry.path(&index).as_ref();
-                Ok(PathBuf::from(str::from_utf8(path)?))
-            })
+            .map(|entry| Ok(PathBuf::from(str::from_utf8(entry.path(&index).as_ref())?)))
             .collect::<Result<Vec<_>, Utf8Error>>()?
             .into_iter()
             .filter(move |path| {
