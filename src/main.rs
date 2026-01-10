@@ -168,9 +168,21 @@ fn read_paths(
 
     let ignore = Rc::new(builder.build()?);
     let repository = gix::discover(".").ok();
+    let repository_path = repository
+        .as_ref()
+        .map(|repository| repository.path().parent())
+        .flatten()
+        .map(ToOwned::to_owned);
 
     Ok(paths
         .iter()
+        .filter(move |path| {
+            if let Some(parent) = &repository_path {
+                Path::new(path).starts_with(&parent)
+            } else {
+                true
+            }
+        })
         .map(|path| Ok(glob::glob(path)?.collect::<Result<Vec<_>, _>>()?))
         .collect::<Result<Vec<_>, ApplicationError>>()?
         .into_iter()
