@@ -7,4 +7,4 @@ cargo build --release
 
 export PATH=$PWD/target/release:$PATH
 
-bundler exec cucumber --publish-quiet
+go tool agoa
