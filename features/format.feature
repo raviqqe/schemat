@@ -135,13 +135,14 @@ Feature: Format
         foo
       """
 
-  Scenario: Respect an ignore option
+  Scenario: Format a file outside a Git repository
     Given a file named "foo.scm" with:
       """
         foo
       """
     And I successfully run `git init bar`
-    And I cd to `bar`
+    And I successfully run `git commit --allow-empty -m initial`
+    And I cd to "bar"
     When I successfully run `schemat ../foo.scm`
     Then a file named "foo.scm" should contain exactly:
       """
