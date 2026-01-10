@@ -24,6 +24,8 @@ use core::str::Utf8Error;
 use error::ApplicationError;
 use futures::future::try_join_all;
 use ignore::gitignore::GitignoreBuilder;
+use std::io;
+use std::path;
 use std::{
     path::{Path, PathBuf},
     process::ExitCode,
@@ -171,17 +173,21 @@ fn read_paths(
     let repository_path = repository
         .as_ref()
         .and_then(|repository| repository.path().parent())
-        .map(ToOwned::to_owned);
+        .map(path::absolute)
+        .transpose()?;
 
     Ok(paths
+        .into_iter()
+        .map(|path| Ok((path, path::absolute(path)?)))
+        .collect::<Result<Vec<_>, io::Error>>()?
         .iter()
-        .filter(|path| {
+        .filter(|(_, absolute_path)| {
             repository_path
                 .as_ref()
-                .map(|parent| !Path::new(path).starts_with(parent))
+                .map(|parent| !absolute_path.starts_with(parent))
                 .unwrap_or(true)
         })
-        .map(|path| Ok(glob::glob(path)?.collect::<Result<Vec<_>, _>>()?))
+        .map(|(path, _)| Ok(glob::glob(path)?.collect::<Result<Vec<_>, _>>()?))
         .collect::<Result<Vec<_>, ApplicationError>>()?
         .into_iter()
         .flatten()
