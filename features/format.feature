@@ -144,6 +144,7 @@ Feature: Format
     And I cd to "bar"
     And I successfully run `git commit --allow-empty -m commit`
     When I successfully run `schemat ../foo.scm`
+    And I cd to ".."
     Then a file named "foo.scm" should contain exactly:
       """
       foo
