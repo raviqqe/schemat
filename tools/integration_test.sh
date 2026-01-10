@@ -2,8 +2,8 @@
 
 set -e
 
-cargo build --release
+cargo build
 
-export PATH=$PWD/target/release:$PATH
+export PATH=$PWD/target/debug:$PATH
 
 go tool agoa
