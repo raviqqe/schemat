@@ -150,3 +150,22 @@ Feature: Format
       """
       foo
       """
+
+  Scenario: Respect .gitignore file
+    Given a file named "foo.scm" with:
+      """
+        foo
+      """
+    And a file named ".gitignore" with:
+      """
+      *.scm
+      """
+    And I successfully run `git init`
+    And I successfully run `git config user.name test`
+    And I successfully run `git add .`
+    And I successfully run `git commit -m commit`
+    When I successfully run `schemat *.scm`
+    Then a file named "foo.scm" should contain exactly:
+      """
+        foo
+      """

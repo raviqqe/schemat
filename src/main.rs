@@ -19,13 +19,13 @@ use alloc::rc::Rc;
 use bumpalo::Bump;
 use clap::Parser;
 use colored::Colorize;
-use core::error::Error;
-use core::str::Utf8Error;
+use core::{error::Error, str::Utf8Error};
 use error::ApplicationError;
 use futures::future::try_join_all;
 use ignore::gitignore::GitignoreBuilder;
 use std::{
-    path::{Path, PathBuf},
+    io,
+    path::{Path, PathBuf, absolute},
     process::ExitCode,
 };
 use tokio::{
@@ -171,17 +171,21 @@ fn read_paths(
     let repository_path = repository
         .as_ref()
         .and_then(|repository| repository.path().parent())
-        .map(ToOwned::to_owned);
+        .map(resolve_path)
+        .transpose()?;
 
     Ok(paths
         .iter()
-        .filter(|path| {
+        .map(|path| Ok((path, resolve_path(path)?)))
+        .collect::<Result<Vec<_>, io::Error>>()?
+        .iter()
+        .filter(|(_, absolute_path)| {
             repository_path
                 .as_ref()
-                .map(|parent| !Path::new(path).starts_with(parent))
+                .map(|parent| !absolute_path.starts_with(parent))
                 .unwrap_or(true)
         })
-        .map(|path| Ok(glob::glob(path)?.collect::<Result<Vec<_>, _>>()?))
+        .map(|(path, _)| Ok(glob::glob(path)?.collect::<Result<Vec<_>, _>>()?))
         .collect::<Result<Vec<_>, ApplicationError>>()?
         .into_iter()
         .flatten()
@@ -285,4 +289,8 @@ fn convert_parse_error(
     position_map: &PositionMap,
 ) -> ApplicationError {
     ApplicationError::Parse(error.to_string(source, position_map))
+}
+
+fn resolve_path(path: impl AsRef<Path>) -> Result<PathBuf, io::Error> {
+    Ok(path_clean::clean(absolute(path.as_ref())?))
 }
