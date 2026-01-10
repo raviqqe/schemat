@@ -158,7 +158,7 @@ async fn format_paths(
 fn read_paths(
     paths: &[String],
     ignored_patterns: &[String],
-) -> Result<Box<dyn Iterator<Item = PathBuf>>, ApplicationError> {
+) -> Result<impl Iterator<Item = PathBuf>, ApplicationError> {
     let mut builder = GitignoreBuilder::new(".");
 
     for pattern in ignored_patterns {
@@ -166,15 +166,16 @@ fn read_paths(
     }
 
     let ignore = builder.build()?;
+    let repository = gix::discover(".").ok();
 
-    Ok(if let Ok(repository) = gix::discover(".") {
+    Ok(if let Some(repository) = repository {
         let index = repository.index()?;
         let patterns = paths
             .iter()
             .map(|path| glob::Pattern::new(path))
             .collect::<Result<Vec<_>, _>>()?;
 
-        Box::new(
+        Some(
             index
                 .entries()
                 .iter()
@@ -187,16 +188,19 @@ fn read_paths(
                 }),
         )
     } else {
-        Box::new(
-            paths
-                .iter()
-                .map(|path| Ok(glob::glob(path)?.collect::<Result<Vec<_>, _>>()?))
-                .collect::<Result<Vec<_>, ApplicationError>>()?
-                .into_iter()
-                .flatten()
-                .filter(move |path| !ignore.matched_path_or_any_parents(path, false).is_ignore()),
-        )
+        None
     })
+    .into_iter()
+    .flatten()
+    .chain(
+        paths
+            .iter()
+            .map(|path| Ok(glob::glob(path)?.collect::<Result<Vec<_>, _>>()?))
+            .collect::<Result<Vec<_>, ApplicationError>>()?
+            .into_iter()
+            .flatten()
+            .filter(move |path| !ignore.matched_path_or_any_parents(path, false).is_ignore()),
+    )
 }
 
 async fn format_stdin() -> Result<(), Box<dyn Error>> {
