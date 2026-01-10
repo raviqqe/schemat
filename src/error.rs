@@ -2,14 +2,15 @@ use core::{
     error::Error,
     fmt,
     fmt::{Display, Formatter},
+    str::Utf8Error,
 };
 use glob::{GlobError, PatternError};
-use std::{io, str::Utf8Error};
+use std::io;
 
 #[derive(Debug)]
 pub enum ApplicationError {
     Format(fmt::Error),
-    GixOpenIndex(gix::worktree::open_index::Error),
+    GixOpenIndex(Box<gix::worktree::open_index::Error>),
     Glob(GlobError),
     Ignore(ignore::Error),
     Io(io::Error),
@@ -43,7 +44,7 @@ impl From<fmt::Error> for ApplicationError {
 
 impl From<gix::worktree::open_index::Error> for ApplicationError {
     fn from(error: gix::worktree::open_index::Error) -> Self {
-        Self::GixOpenIndex(error)
+        Self::GixOpenIndex(error.into())
     }
 }
 

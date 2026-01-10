@@ -167,7 +167,7 @@ fn read_paths(
 
     let ignore = builder.build()?;
 
-    Ok(if let Some(repository) = gix::discover(".").ok() {
+    Ok(if let Ok(repository) = gix::discover(".") {
         let index = repository.index()?;
         let patterns = paths
             .iter()
@@ -183,7 +183,7 @@ fn read_paths(
                 .into_iter()
                 .filter(move |path| {
                     patterns.iter().any(|pattern| pattern.matches_path(path))
-                        && !ignore.matched_path_or_any_parents(&path, false).is_ignore()
+                        && !ignore.matched_path_or_any_parents(path, false).is_ignore()
                 }),
         )
     } else {
@@ -194,7 +194,7 @@ fn read_paths(
                 .collect::<Result<Vec<_>, ApplicationError>>()?
                 .into_iter()
                 .flatten()
-                .filter(move |path| !ignore.matched_path_or_any_parents(&path, false).is_ignore()),
+                .filter(move |path| !ignore.matched_path_or_any_parents(path, false).is_ignore()),
         )
     })
 }
