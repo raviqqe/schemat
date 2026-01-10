@@ -168,7 +168,7 @@ fn read_paths(
             builder.add_line(None, pattern)?;
         }
 
-        builder.build_global().0
+        builder.build()?
     };
 
     Ok(if let Some(repository) = gix::discover(".").ok() {
