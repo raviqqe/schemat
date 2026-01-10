@@ -15,6 +15,7 @@ use crate::{
     parse::{ParseError, parse, parse_comments, parse_hash_directives},
     position_map::PositionMap,
 };
+use alloc::rc::Rc;
 use bumpalo::Bump;
 use clap::Parser;
 use colored::Colorize;
@@ -165,42 +166,47 @@ fn read_paths(
         builder.add_line(None, pattern)?;
     }
 
-    let ignore = builder.build()?;
+    let ignore = Rc::new(builder.build()?);
     let repository = gix::discover(".").ok();
 
-    Ok(if let Some(repository) = repository {
-        let index = repository.index()?;
-        let patterns = paths
-            .iter()
-            .map(|path| glob::Pattern::new(path))
-            .collect::<Result<Vec<_>, _>>()?;
+    Ok(paths
+        .iter()
+        .map(|path| Ok(glob::glob(path)?.collect::<Result<Vec<_>, _>>()?))
+        .collect::<Result<Vec<_>, ApplicationError>>()?
+        .into_iter()
+        .flatten()
+        .filter({
+            let ignore = ignore.clone();
+            move |path| !ignore.matched_path_or_any_parents(path, false).is_ignore()
+        })
+        .chain(
+            (if let Some(repository) = repository {
+                let index = repository.index()?;
+                let patterns = paths
+                    .iter()
+                    .map(|path| glob::Pattern::new(path))
+                    .collect::<Result<Vec<_>, _>>()?;
 
-        Some(
-            index
-                .entries()
-                .iter()
-                .map(|entry| Ok(PathBuf::from(str::from_utf8(entry.path(&index).as_ref())?)))
-                .collect::<Result<Vec<_>, Utf8Error>>()?
-                .into_iter()
-                .filter(move |path| {
-                    patterns.iter().any(|pattern| pattern.matches_path(path))
-                        && !ignore.matched_path_or_any_parents(path, false).is_ignore()
-                }),
-        )
-    } else {
-        None
-    })
-    .into_iter()
-    .flatten()
-    .chain(
-        paths
-            .iter()
-            .map(|path| Ok(glob::glob(path)?.collect::<Result<Vec<_>, _>>()?))
-            .collect::<Result<Vec<_>, ApplicationError>>()?
+                Some(
+                    index
+                        .entries()
+                        .iter()
+                        .map(|entry| {
+                            Ok(PathBuf::from(str::from_utf8(entry.path(&index).as_ref())?))
+                        })
+                        .collect::<Result<Vec<_>, Utf8Error>>()?
+                        .into_iter()
+                        .filter(move |path| {
+                            patterns.iter().any(|pattern| pattern.matches_path(path))
+                                && !ignore.matched_path_or_any_parents(path, false).is_ignore()
+                        }),
+                )
+            } else {
+                None
+            })
             .into_iter()
-            .flatten()
-            .filter(move |path| !ignore.matched_path_or_any_parents(path, false).is_ignore()),
-    )
+            .flatten(),
+        ))
 }
 
 async fn format_stdin() -> Result<(), Box<dyn Error>> {
