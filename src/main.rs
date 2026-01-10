@@ -161,15 +161,13 @@ fn read_paths(
     paths: &[String],
     ignored_patterns: &[String],
 ) -> Result<Vec<PathBuf>, ApplicationError> {
-    let custom_ignore = {
-        let mut builder = GitignoreBuilder::new(".");
+    let mut builder = GitignoreBuilder::new(".");
 
-        for pattern in ignored_patterns {
-            builder.add_line(None, pattern)?;
-        }
+    for pattern in ignored_patterns {
+        builder.add_line(None, pattern)?;
+    }
 
-        builder.build()?
-    };
+    let ignore = builder.build()?;
 
     Ok(if let Some(repository) = gix::discover(".").ok() {
         let index = repository.index()?;
@@ -189,9 +187,7 @@ fn read_paths(
             .into_iter()
             .filter(move |path| {
                 patterns.iter().any(|pattern| pattern.matches_path(path))
-                    && !custom_ignore
-                        .matched_path_or_any_parents(&path, false)
-                        .is_ignore()
+                    && !ignore.matched_path_or_any_parents(&path, false).is_ignore()
             })
             .collect()
     } else {
@@ -201,11 +197,7 @@ fn read_paths(
             .collect::<Result<Vec<_>, ApplicationError>>()?
             .into_iter()
             .flatten()
-            .filter(move |path| {
-                !custom_ignore
-                    .matched_path_or_any_parents(&path, false)
-                    .is_ignore()
-            })
+            .filter(move |path| !ignore.matched_path_or_any_parents(&path, false).is_ignore())
             .collect()
     })
 }
