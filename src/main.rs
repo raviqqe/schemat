@@ -90,6 +90,7 @@ async fn check_paths(
 
     for (result, path) in try_join_all(
         read_paths(paths, ignored_patterns)?
+            .into_iter()
             .map(|path| spawn(async { (check_path(&path).await, path) })),
     )
     .await?
@@ -129,6 +130,7 @@ async fn format_paths(
 
     for (result, path) in try_join_all(
         read_paths(paths, ignored_patterns)?
+            .into_iter()
             .map(|path| spawn(async { (format_path(&path).await, path) })),
     )
     .await?
@@ -158,39 +160,53 @@ async fn format_paths(
 fn read_paths(
     paths: &[String],
     ignored_patterns: &[String],
-) -> Result<Box<dyn Iterator<Item = PathBuf>>, ApplicationError> {
-    Ok(if let Some(repository) = gix::discover(".").ok() {
-        let index = repository.index()?;
-
-        Box::new(
-            index
-                .entries()
-                .iter()
-                .map(|entry| {
-                    let path: &[u8] = entry.path(&index).as_ref();
-                    Ok(PathBuf::from(str::from_utf8(path)?))
-                })
-                .collect::<Result<Vec<_>, Utf8Error>>()?
-                .into_iter(),
-        )
-    } else {
+) -> Result<Vec<PathBuf>, ApplicationError> {
+    let custom_ignore = {
         let mut builder = GitignoreBuilder::new(".");
 
         for pattern in ignored_patterns {
             builder.add_line(None, pattern)?;
         }
 
-        let ignore = builder.build_global().0;
+        builder.build_global().0
+    };
 
-        Box::new(
-            paths
-                .iter()
-                .map(|path| Ok(glob::glob(path)?.collect::<Result<Vec<_>, _>>()?))
-                .collect::<Result<Vec<_>, ApplicationError>>()?
-                .into_iter()
-                .flatten()
-                .filter(move |path| !ignore.matched_path_or_any_parents(path, false).is_ignore()),
-        )
+    Ok(if let Some(repository) = gix::discover(".").ok() {
+        let index = repository.index()?;
+        let patterns = paths
+            .iter()
+            .map(|path| glob::Pattern::new(path))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        index
+            .entries()
+            .iter()
+            .map(|entry| {
+                let path: &[u8] = entry.path(&index).as_ref();
+                Ok(PathBuf::from(str::from_utf8(path)?))
+            })
+            .collect::<Result<Vec<_>, Utf8Error>>()?
+            .into_iter()
+            .filter(move |path| {
+                patterns.iter().any(|pattern| pattern.matches_path(path))
+                    && !custom_ignore
+                        .matched_path_or_any_parents(&path, false)
+                        .is_ignore()
+            })
+            .collect()
+    } else {
+        paths
+            .iter()
+            .map(|path| Ok(glob::glob(path)?.collect::<Result<Vec<_>, _>>()?))
+            .collect::<Result<Vec<_>, ApplicationError>>()?
+            .into_iter()
+            .flatten()
+            .filter(move |path| {
+                !custom_ignore
+                    .matched_path_or_any_parents(&path, false)
+                    .is_ignore()
+            })
+            .collect()
     })
 }
 
