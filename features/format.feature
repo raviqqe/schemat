@@ -160,7 +160,11 @@ Feature: Format
       """
       *.scm
       """
-    When I successfully run `schemat --ignore-file .gitignore *.scm`
+    And I successfully run `git init`
+    And I successfully run `git config user.name test`
+    And I successfully run `git add .`
+    And I successfully run `git commit -m commit`
+    When I successfully run `schemat *.scm`
     Then a file named "foo.scm" should contain exactly:
       """
         foo

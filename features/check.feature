@@ -119,5 +119,9 @@ Feature: Check
       """
       *.scm
       """
-    When I successfully run `schemat -c --ignore-file .gitignore *.scm`
+    And I successfully run `git init`
+    And I successfully run `git config user.name test`
+    And I successfully run `git add .`
+    And I successfully run `git commit -m commit`
+    When I successfully run `schemat -c *.scm`
     Then the exit status should be 0
