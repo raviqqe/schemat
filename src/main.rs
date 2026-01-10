@@ -178,7 +178,7 @@ fn read_paths(
         .iter()
         .filter(move |path| {
             if let Some(parent) = &repository_path {
-                Path::new(path).starts_with(&parent)
+                !Path::new(path).starts_with(&parent)
             } else {
                 true
             }
