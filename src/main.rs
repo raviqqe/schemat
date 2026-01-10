@@ -180,7 +180,7 @@ fn read_paths(
             builder.add_line(None, pattern)?;
         }
 
-        let ignore = builder.build()?;
+        let ignore = builder.build_global().0;
 
         Box::new(
             paths
