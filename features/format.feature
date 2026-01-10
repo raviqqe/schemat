@@ -142,7 +142,7 @@ Feature: Format
       """
     And I successfully run `git init bar`
     And I cd to "bar"
-    And I successfully run `git commit --allow-empty --no-message`
+    And I successfully run `git commit --allow-empty -m commit`
     When I successfully run `schemat ../foo.scm`
     Then a file named "foo.scm" should contain exactly:
       """
