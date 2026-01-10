@@ -19,14 +19,12 @@ use alloc::rc::Rc;
 use bumpalo::Bump;
 use clap::Parser;
 use colored::Colorize;
-use core::error::Error;
-use core::str::Utf8Error;
+use core::{error::Error, str::Utf8Error};
 use error::ApplicationError;
 use futures::future::try_join_all;
 use ignore::gitignore::GitignoreBuilder;
-use std::io;
-use std::path;
 use std::{
+    io, path,
     path::{Path, PathBuf},
     process::ExitCode,
 };
