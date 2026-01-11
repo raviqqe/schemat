@@ -1,5 +1,10 @@
+use crate::error::ApplicationError;
 use alloc::rc::Rc;
+use core::str::Utf8Error;
 use ignore::gitignore::GitignoreBuilder;
+use std::io;
+use std::path::absolute;
+use std::path::{Path, PathBuf};
 
 pub fn read_paths(
     paths: &[String],
