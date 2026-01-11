@@ -41,14 +41,13 @@ pub fn read_paths(
         .collect::<Vec<_>>();
 
     Ok(GlobWalkerBuilder::from_patterns(directory, &paths)
-        .build()
+        .build()?
+        .collect::<Result<Vec<_>, _>>()?
         .into_iter()
-        .collect::<Result<Vec<_>, ApplicationError>>()?
-        .into_iter()
-        .flatten()
+        .map(|entry| entry.path().to_owned())
         .filter({
             let ignore = ignore.clone();
-            move |path| !ignore.matched_path_or_any_parents(path, false).is_ignore()
+            move |path| !ignore.matched_path_or_any_parents(&path, false).is_ignore()
         })
         .chain(
             (if let Some(repository) = repository {

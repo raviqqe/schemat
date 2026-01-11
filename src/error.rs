@@ -12,6 +12,8 @@ pub enum ApplicationError {
     Format(fmt::Error),
     GixOpenIndex(Box<gix::worktree::open_index::Error>),
     Glob(GlobError),
+    GlobwalkGlob(globwalk::GlobError),
+    GlobwalkWalk(globwalk::WalkError),
     Ignore(ignore::Error),
     Io(io::Error),
     Parse(String),
@@ -27,6 +29,8 @@ impl Display for ApplicationError {
             Self::Format(error) => error.fmt(formatter),
             Self::GixOpenIndex(error) => error.fmt(formatter),
             Self::Glob(error) => error.fmt(formatter),
+            Self::GlobwalkGlob(error) => error.fmt(formatter),
+            Self::GlobwalkWalk(error) => error.fmt(formatter),
             Self::Ignore(error) => error.fmt(formatter),
             Self::Io(error) => error.fmt(formatter),
             Self::Parse(error) => error.fmt(formatter),
@@ -51,6 +55,18 @@ impl From<gix::worktree::open_index::Error> for ApplicationError {
 impl From<GlobError> for ApplicationError {
     fn from(error: GlobError) -> Self {
         Self::Glob(error)
+    }
+}
+
+impl From<globwalk::GlobError> for ApplicationError {
+    fn from(error: globwalk::GlobError) -> Self {
+        Self::GlobwalkGlob(error)
+    }
+}
+
+impl From<globwalk::WalkError> for ApplicationError {
+    fn from(error: globwalk::WalkError) -> Self {
+        Self::GlobwalkWalk(error)
     }
 }
 
