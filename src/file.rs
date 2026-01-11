@@ -1,7 +1,6 @@
 use crate::error::ApplicationError;
 use alloc::rc::Rc;
 use core::str::Utf8Error;
-use ignore::gitignore::GitignoreBuilder;
 use std::path::{Path, PathBuf};
 
 pub fn read_paths(
@@ -9,13 +8,12 @@ pub fn read_paths(
     paths: &[String],
     ignored_patterns: &[String],
 ) -> Result<impl Iterator<Item = PathBuf>, ApplicationError> {
-    let mut builder = GitignoreBuilder::new(base);
-
-    for pattern in ignored_patterns {
-        builder.add_line(None, pattern)?;
-    }
-
-    let ignore = Rc::new(builder.build()?);
+    let ignore_patterns = Rc::new(
+        ignore_patterns
+            .iter()
+            .map(|pattern| pattern)
+            .collect::<Vec<_>>(),
+    );
     let repository = gix::discover(base).ok();
     let repository_path = repository
         .as_ref()
