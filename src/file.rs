@@ -12,7 +12,7 @@ pub fn read_paths(
         ignore_patterns
             .iter()
             .map(|pattern| glob::Pattern::new(&resolve_path(pattern, base).display().to_string()))
-            .collect::<Vec<_>>(),
+            .collect::<Result<Vec<_>, _>>()?,
     );
     let repository = gix::discover(base).ok();
     let repository_path = repository
@@ -138,5 +138,26 @@ mod tests {
             .collect::<Vec<_>>();
 
         assert_eq!(paths, [directory.path().join("foo")]);
+    }
+
+    mod display {
+        use super::*;
+        use pretty_assertions::assert_eq;
+
+        #[test]
+        fn handle_current_directory() {
+            assert_eq!(
+                &display_path(&Path::new("foo"), &Path::new(".")),
+                Path::new("foo")
+            );
+        }
+
+        #[test]
+        fn remove_base_directory() {
+            assert_eq!(
+                &display_path(&Path::new("foo/bar"), &Path::new("foo")),
+                Path::new("bar")
+            );
+        }
     }
 }

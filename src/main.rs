@@ -80,7 +80,7 @@ async fn run(
 
 async fn check_paths(
     paths: &[String],
-    ignored_patterns: &[String],
+    ignore_patterns: &[String],
     verbose: bool,
 ) -> Result<(), Box<dyn Error>> {
     let directory = current_dir()?;
@@ -88,7 +88,7 @@ async fn check_paths(
     let mut error_count = 0;
 
     for (result, path) in try_join_all(
-        read_paths(&directory, paths, ignored_patterns)?
+        read_paths(&directory, paths, ignore_patterns)?
             .map(|path| spawn(async { (check_path(&path).await, path) })),
     )
     .await?
@@ -125,7 +125,7 @@ async fn check_paths(
 
 async fn format_paths(
     paths: &[String],
-    ignored_patterns: &[String],
+    ignore_patterns: &[String],
     verbose: bool,
 ) -> Result<(), Box<dyn Error>> {
     let directory = current_dir()?;
@@ -133,7 +133,7 @@ async fn format_paths(
     let mut error_count = 0;
 
     for (result, path) in try_join_all(
-        read_paths(&directory, paths, ignored_patterns)?
+        read_paths(&directory, paths, ignore_patterns)?
             .map(|path| spawn(async { (format_path(&path).await, path) })),
     )
     .await?
