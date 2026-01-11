@@ -36,11 +36,11 @@ use tokio::{
 struct Arguments {
     /// Glob patterns of files to format or check the format of.
     #[arg()]
-    paths: Vec<String>,
+    path: Vec<String>,
     /// Check if files are formatted correctly.
     #[arg(short, long)]
     check: bool,
-    /// Exclude a pattern.
+    /// Exclude a glob pattern.
     #[arg(short, long)]
     exclude: Vec<String>,
     /// Be verbose.
@@ -60,21 +60,21 @@ async fn main() -> ExitCode {
 
 async fn run(
     Arguments {
-        paths,
+        path,
         check,
         exclude,
         verbose,
         ..
     }: Arguments,
 ) -> Result<(), Box<dyn Error>> {
-    if paths.is_empty() && check {
+    if path.is_empty() && check {
         Err("cannot check stdin".into())
-    } else if paths.is_empty() {
+    } else if path.is_empty() {
         format_stdin().await
     } else if check {
-        check_paths(&paths, &exclude, verbose).await
+        check_paths(&path, &exclude, verbose).await
     } else {
-        format_paths(&paths, &exclude, verbose).await
+        format_paths(&path, &exclude, verbose).await
     }
 }
 
