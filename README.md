@@ -2,6 +2,7 @@
 
 [![GitHub Action](https://img.shields.io/github/actions/workflow/status/raviqqe/schemat/test.yaml?branch=main&style=flat-square)](https://github.com/raviqqe/schemat/actions?query=workflow%3Atest)
 [![Crate](https://img.shields.io/crates/v/schemat.svg?style=flat-square)](https://crates.io/crates/schemat)
+[![Codecov](https://img.shields.io/codecov/c/github/raviqqe/schemat.svg?style=flat-square)](https://codecov.io/gh/raviqqe/schemat)
 [![License](https://img.shields.io/github/license/raviqqe/schemat.svg?style=flat-square)](https://github.com/raviqqe/schemat/blob/main/UNLICENSE)
 
 A code formatter for Scheme, Lisp, and any S-expressions.
