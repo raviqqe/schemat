@@ -181,9 +181,19 @@ mod tests {
     }
 
     mod comment {
+        use crate::ast::BlockComment;
+
         use super::*;
         use allocator_api2::vec;
         use pretty_assertions::assert_eq;
+
+        #[test]
+        fn parse_block_comment() {
+            assert_eq!(
+                parse_comments("#|foo|#", Global),
+                Ok(vec![BlockComment::new("foo", Position::new(0, 7)).into()])
+            );
+        }
 
         #[test]
         fn parse_line_comment() {
