@@ -3,44 +3,38 @@ use alloc::rc::Rc;
 use core::str::Utf8Error;
 use globwalk::GlobWalkerBuilder;
 use ignore::gitignore::GitignoreBuilder;
-use std::{
-    io,
-    path::{Path, PathBuf, absolute},
-};
+use std::path::{Path, PathBuf};
 
 pub fn read_paths(
-    directory: &Path,
+    base: &Path,
     paths: &[String],
     ignored_patterns: &[String],
 ) -> Result<impl Iterator<Item = PathBuf>, ApplicationError> {
-    let mut builder = GitignoreBuilder::new(directory);
+    let mut builder = GitignoreBuilder::new(base);
 
     for pattern in ignored_patterns {
         builder.add_line(None, pattern)?;
     }
 
     let ignore = Rc::new(builder.build()?);
-    let repository = gix::discover(directory).ok();
+    let repository = gix::discover(base).ok();
     let repository_path = repository
         .as_ref()
         .and_then(|repository| repository.path().parent())
-        .map(resolve_path)
-        .transpose()?;
+        .map(|path| resolve_path(path, base));
     let paths = paths
         .iter()
-        .map(|path| Ok((path, resolve_path(path)?)))
-        .collect::<Result<Vec<_>, io::Error>>()?
-        .iter()
-        .filter(|(_, absolute_path)| {
+        .map(|path| resolve_path(path, base))
+        .filter(|path| {
             repository_path
                 .as_ref()
-                .map(|parent| !absolute_path.starts_with(parent))
+                .map(|parent| !path.starts_with(parent))
                 .unwrap_or(true)
         })
-        .map(|(path, _)| path.to_string())
+        .map(|path| path.display().to_string())
         .collect::<Vec<_>>();
 
-    Ok(GlobWalkerBuilder::from_patterns(directory, &paths)
+    Ok(GlobWalkerBuilder::from_patterns("/", &paths)
         .build()?
         .collect::<Result<Vec<_>, _>>()?
         .into_iter()
@@ -79,8 +73,8 @@ pub fn read_paths(
         ))
 }
 
-fn resolve_path(path: impl AsRef<Path>) -> Result<PathBuf, io::Error> {
-    Ok(path_clean::clean(absolute(path.as_ref())?))
+fn resolve_path(path: impl AsRef<Path>, base: &Path) -> PathBuf {
+    path_clean::clean(base.join(path))
 }
 
 pub fn display_path(path: &Path, base: &Path) -> String {
@@ -92,17 +86,54 @@ pub fn display_path(path: &Path, base: &Path) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pretty_assertions::assert_eq;
     use std::fs;
     use tempfile::tempdir;
 
     #[test]
-    fn read_file() {
+    fn list_file() {
         let directory = tempdir().unwrap();
 
         let path = directory.path().join("foo");
         fs::write(&path, "").unwrap();
 
         let paths = read_paths(directory.path(), &["foo".into()], &[])
+            .unwrap()
+            .collect::<Vec<_>>();
+
+        assert_eq!(paths, [directory.path().join("foo")]);
+    }
+
+    #[test]
+    fn list_file_outside_directory() {
+        let directory = tempdir().unwrap();
+
+        let path = directory.path().join("foo");
+        fs::write(&path, "").unwrap();
+
+        let bar_directory = directory.path().join("bar");
+        fs::create_dir_all(&bar_directory).unwrap();
+
+        let paths = read_paths(&bar_directory, &["../foo".into()], &[])
+            .unwrap()
+            .collect::<Vec<_>>();
+
+        assert_eq!(paths, [directory.path().join("foo")]);
+    }
+
+    #[test]
+    fn list_file_outside_git_repository() {
+        let directory = tempdir().unwrap();
+
+        let path = directory.path().join("foo");
+        fs::write(&path, "").unwrap();
+
+        let bar_directory = directory.path().join("bar");
+        fs::create_dir_all(&bar_directory).unwrap();
+
+        // TODO gix::open();
+
+        let paths = read_paths(&bar_directory, &["../foo".into()], &[])
             .unwrap()
             .collect::<Vec<_>>();
 
