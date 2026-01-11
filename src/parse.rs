@@ -212,7 +212,7 @@ mod tests {
         fn parse_directive() {
             assert_eq!(
                 parse_hash_directives("#foo\n", Global),
-                Ok(vec![HashDirective::new("foo", Position::new(0, 4)).into()])
+                Ok(vec![HashDirective::new("foo", Position::new(0, 4))])
             );
         }
 
@@ -221,8 +221,8 @@ mod tests {
             assert_eq!(
                 parse_hash_directives("#foo\n#bar\n", Global),
                 Ok(vec![
-                    HashDirective::new("foo", Position::new(0, 4)).into(),
-                    HashDirective::new("bar", Position::new(5, 9)).into()
+                    HashDirective::new("foo", Position::new(0, 4)),
+                    HashDirective::new("bar", Position::new(5, 9))
                 ])
             );
         }
