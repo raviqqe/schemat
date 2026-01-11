@@ -93,8 +93,7 @@ mod tests {
     fn list_file() {
         let directory = tempdir().unwrap();
 
-        let path = directory.path().join("foo");
-        fs::write(&path, "").unwrap();
+        fs::write(directory.path().join("foo"), "").unwrap();
 
         let paths = read_paths(directory.path(), &["foo".into()], &[])
             .unwrap()
@@ -107,8 +106,7 @@ mod tests {
     fn list_file_outside_directory() {
         let directory = tempdir().unwrap();
 
-        let path = directory.path().join("foo");
-        fs::write(&path, "").unwrap();
+        fs::write(directory.path().join("foo"), "").unwrap();
 
         let bar_directory = directory.path().join("bar");
         fs::create_dir_all(&bar_directory).unwrap();
@@ -124,8 +122,7 @@ mod tests {
     fn list_file_outside_git_repository() {
         let directory = tempdir().unwrap();
 
-        let path = directory.path().join("foo");
-        fs::write(&path, "").unwrap();
+        fs::write(directory.path().join("foo"), "").unwrap();
 
         let repository_directory = directory.path().join("bar");
         fs::create_dir_all(&repository_directory).unwrap();
@@ -137,6 +134,33 @@ mod tests {
             .collect::<Vec<_>>();
 
         assert_eq!(paths, [directory.path().join("foo")]);
+    }
+
+    #[test]
+    fn exclude_file() {
+        let directory = tempdir().unwrap();
+
+        fs::write(directory.path().join("foo"), "").unwrap();
+
+        let paths = read_paths(directory.path(), &["foo".into()], &["foo".into()])
+            .unwrap()
+            .collect::<Vec<_>>();
+
+        assert_eq!(paths, [] as [PathBuf; 0]);
+    }
+
+    #[test]
+    fn exclude_file() {
+        let directory = tempdir().unwrap();
+
+        let path = directory.path().join("foo");
+        fs::write(&path, "").unwrap();
+
+        let paths = read_paths(directory.path(), &["foo".into()], &["foo".into()])
+            .unwrap()
+            .collect::<Vec<_>>();
+
+        assert_eq!(paths, [] as [PathBuf; 0]);
     }
 
     mod display {
