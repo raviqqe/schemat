@@ -9,12 +9,7 @@ pub fn read_paths(
     paths: &[String],
     exclude_patterns: &[String],
 ) -> Result<impl Iterator<Item = PathBuf>, ApplicationError> {
-    let exclude_patterns = Rc::new(
-        exclude_patterns
-            .iter()
-            .map(|pattern| Pattern::new(&resolve_path(pattern, base).display().to_string()))
-            .collect::<Result<Vec<_>, _>>()?,
-    );
+    let exclude_patterns = Rc::new(compile_patterns(exclude_patterns, base)?);
     let repository = gix::discover(base).ok();
     let repository_path = repository
         .as_ref()
@@ -45,10 +40,7 @@ pub fn read_paths(
         .chain(
             (if let Some(repository) = repository {
                 let index = repository.index_or_empty()?;
-                let patterns = paths
-                    .iter()
-                    .map(|path| Pattern::new(path))
-                    .collect::<Result<Vec<_>, _>>()?;
+                let patterns = compile_patterns(paths, base)?;
 
                 Some(
                     index
@@ -70,6 +62,13 @@ pub fn read_paths(
             .into_iter()
             .flatten(),
         ))
+}
+
+fn compile_patterns(patterns: &[String], base: &Path) -> Result<Vec<Pattern>, glob::PatternError> {
+    patterns
+        .iter()
+        .map(|pattern| Pattern::new(&resolve_path(pattern, base).display().to_string()))
+        .collect::<Result<Vec<_>, _>>()
 }
 
 fn match_patterns(path: &Path, patterns: &[Pattern]) -> bool {
