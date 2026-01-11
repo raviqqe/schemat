@@ -5,29 +5,25 @@ extern crate alloc;
 mod ast;
 mod context;
 mod error;
+mod file;
 mod format;
 mod parse;
 mod position;
 mod position_map;
 
+use self::file::read_paths;
 use crate::{
     format::format,
     parse::{ParseError, parse, parse_comments, parse_hash_directives},
     position_map::PositionMap,
 };
-use alloc::rc::Rc;
 use bumpalo::Bump;
 use clap::Parser;
 use colored::Colorize;
-use core::{error::Error, str::Utf8Error};
+use core::error::Error;
 use error::ApplicationError;
 use futures::future::try_join_all;
-use ignore::gitignore::GitignoreBuilder;
-use std::{
-    io,
-    path::{Path, PathBuf, absolute},
-    process::ExitCode,
-};
+use std::{path::Path, process::ExitCode};
 use tokio::{
     fs::{read_to_string, write},
     io::{AsyncReadExt, AsyncWriteExt, stdin, stdout},
@@ -156,73 +152,6 @@ async fn format_paths(
     }
 }
 
-fn read_paths(
-    paths: &[String],
-    ignored_patterns: &[String],
-) -> Result<impl Iterator<Item = PathBuf>, ApplicationError> {
-    let mut builder = GitignoreBuilder::new(".");
-
-    for pattern in ignored_patterns {
-        builder.add_line(None, pattern)?;
-    }
-
-    let ignore = Rc::new(builder.build()?);
-    let repository = gix::discover(".").ok();
-    let repository_path = repository
-        .as_ref()
-        .and_then(|repository| repository.path().parent())
-        .map(resolve_path)
-        .transpose()?;
-
-    Ok(paths
-        .iter()
-        .map(|path| Ok((path, resolve_path(path)?)))
-        .collect::<Result<Vec<_>, io::Error>>()?
-        .iter()
-        .filter(|(_, absolute_path)| {
-            repository_path
-                .as_ref()
-                .map(|parent| !absolute_path.starts_with(parent))
-                .unwrap_or(true)
-        })
-        .map(|(path, _)| Ok(glob::glob(path)?.collect::<Result<Vec<_>, _>>()?))
-        .collect::<Result<Vec<_>, ApplicationError>>()?
-        .into_iter()
-        .flatten()
-        .filter({
-            let ignore = ignore.clone();
-            move |path| !ignore.matched_path_or_any_parents(path, false).is_ignore()
-        })
-        .chain(
-            (if let Some(repository) = repository {
-                let index = repository.index()?;
-                let patterns = paths
-                    .iter()
-                    .map(|path| glob::Pattern::new(path))
-                    .collect::<Result<Vec<_>, _>>()?;
-
-                Some(
-                    index
-                        .entries()
-                        .iter()
-                        .map(|entry| {
-                            Ok(PathBuf::from(str::from_utf8(entry.path(&index).as_ref())?))
-                        })
-                        .collect::<Result<Vec<_>, Utf8Error>>()?
-                        .into_iter()
-                        .filter(move |path| {
-                            patterns.iter().any(|pattern| pattern.matches_path(path))
-                                && !ignore.matched_path_or_any_parents(path, false).is_ignore()
-                        }),
-                )
-            } else {
-                None
-            })
-            .into_iter()
-            .flatten(),
-        ))
-}
-
 async fn format_stdin() -> Result<(), Box<dyn Error>> {
     let mut source = Default::default();
     stdin().read_to_string(&mut source).await?;
@@ -289,8 +218,4 @@ fn convert_parse_error(
     position_map: &PositionMap,
 ) -> ApplicationError {
     ApplicationError::Parse(error.to_string(source, position_map))
-}
-
-fn resolve_path(path: impl AsRef<Path>) -> Result<PathBuf, io::Error> {
-    Ok(path_clean::clean(absolute(path.as_ref())?))
 }
