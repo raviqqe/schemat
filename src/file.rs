@@ -81,28 +81,23 @@ fn resolve_path(path: impl AsRef<Path>) -> Result<PathBuf, io::Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::{fs, path::PathBuf};
+    use std::fs;
+    use tempfile::tempdir;
 
     #[test]
     fn read_single_file() {
-        let test_dir = PathBuf::from("target/test-fs/single_file");
-        if test_dir.exists() {
-            fs::remove_dir_all(&test_dir).unwrap();
-        }
-        fs::create_dir_all(&test_dir).unwrap();
+        let directory = tempdir().unwrap();
 
-        let result = std::panic::catch_unwind(|| {
-            let path = test_dir.join("foo");
-            fs::write(&path, "").unwrap();
+        let path = directory.path().join("foo");
+        fs::write(&path, "").unwrap();
 
-            let paths = read_paths(&[path.to_str().unwrap().to_string()], &[])
-                .unwrap()
-                .collect::<Vec<_>>();
+        let paths = read_paths(&["foo".into()], &[])
+            .unwrap()
+            .collect::<Vec<_>>();
 
-            assert!(!paths.is_empty());
-        });
+        assert!(!paths.is_empty());
 
-        fs::remove_dir_all(&test_dir).unwrap();
+        fs::remove_dir_all(&directory).unwrap();
         assert!(result.is_ok());
     }
 }
