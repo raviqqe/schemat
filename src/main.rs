@@ -23,7 +23,7 @@ use colored::Colorize;
 use core::error::Error;
 use error::ApplicationError;
 use futures::future::try_join_all;
-use std::{path::Path, process::ExitCode};
+use std::{env::current_dir, path::Path, process::ExitCode};
 use tokio::{
     fs::{read_to_string, write},
     io::{AsyncReadExt, AsyncWriteExt, stdin, stdout},
@@ -86,7 +86,7 @@ async fn check_paths(
     let mut error_count = 0;
 
     for (result, path) in try_join_all(
-        read_paths(paths, ignored_patterns)?
+        read_paths(&current_dir()?, paths, ignored_patterns)?
             .map(|path| spawn(async { (check_path(&path).await, path) })),
     )
     .await?
@@ -125,7 +125,7 @@ async fn format_paths(
     let mut error_count = 0;
 
     for (result, path) in try_join_all(
-        read_paths(paths, ignored_patterns)?
+        read_paths(&current_dir()?, paths, ignored_patterns)?
             .map(|path| spawn(async { (format_path(&path).await, path) })),
     )
     .await?

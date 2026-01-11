@@ -8,10 +8,11 @@ use std::{
 };
 
 pub fn read_paths(
+    directory: &Path,
     paths: &[String],
     ignored_patterns: &[String],
 ) -> Result<impl Iterator<Item = PathBuf>, ApplicationError> {
-    let mut builder = GitignoreBuilder::new(".");
+    let mut builder = GitignoreBuilder::new(directory);
 
     for pattern in ignored_patterns {
         builder.add_line(None, pattern)?;
@@ -85,19 +86,16 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
-    fn read_single_file() {
+    fn read_file() {
         let directory = tempdir().unwrap();
 
         let path = directory.path().join("foo");
         fs::write(&path, "").unwrap();
 
-        let paths = read_paths(&["foo".into()], &[])
+        let paths = read_paths(directory.path(), &["foo".into()], &[])
             .unwrap()
             .collect::<Vec<_>>();
 
-        assert!(!paths.is_empty());
-
-        fs::remove_dir_all(&directory).unwrap();
-        assert!(result.is_ok());
+        assert_eq!(paths, ["foo".to_owned()]);
     }
 }
