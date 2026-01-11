@@ -41,7 +41,7 @@ pub fn read_paths(
         })
         .chain(
             (if let Some(repository) = repository {
-                let index = repository.index()?;
+                let index = repository.index_or_empty()?;
                 let patterns = paths
                     .iter()
                     .map(|path| glob::Pattern::new(path))
