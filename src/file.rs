@@ -159,6 +159,27 @@ mod tests {
     }
 
     #[test]
+    fn list_file_in_current_directory() {
+        let directory = tempdir().unwrap();
+
+        fs::create_dir_all(directory.path().join("foo")).unwrap();
+        fs::write(directory.path().join("foo/foo"), "").unwrap();
+        fs::write(directory.path().join("bar"), "").unwrap();
+
+        let paths = read_paths(directory.path(), &[".".into()], &[])
+            .unwrap()
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            paths,
+            [
+                directory.path().join("bar"),
+                directory.path().join("foo/foo")
+            ]
+        );
+    }
+
+    #[test]
     fn exclude_file() {
         let directory = tempdir().unwrap();
 
