@@ -1,7 +1,6 @@
 use crate::error::ApplicationError;
 use alloc::rc::Rc;
 use core::str::Utf8Error;
-use globwalk::GlobWalkerBuilder;
 use ignore::gitignore::GitignoreBuilder;
 use std::path::{Path, PathBuf};
 
@@ -22,7 +21,8 @@ pub fn read_paths(
         .as_ref()
         .and_then(|repository| repository.path().parent())
         .map(|path| resolve_path(path, base));
-    let paths = paths
+
+    Ok(paths
         .iter()
         .map(|path| resolve_path(path, base))
         .filter(|path| {
@@ -32,13 +32,10 @@ pub fn read_paths(
                 .unwrap_or(true)
         })
         .map(|path| path.display().to_string())
-        .collect::<Vec<_>>();
-
-    Ok(GlobWalkerBuilder::from_patterns("/", &paths)
-        .build()?
-        .collect::<Result<Vec<_>, _>>()?
+        .map(|path| Ok(glob::glob(&path)?.collect::<Result<Vec<_>, _>>()?))
+        .collect::<Result<Vec<_>, ApplicationError>>()?
         .into_iter()
-        .map(|entry| entry.path().to_owned())
+        .flatten()
         .filter({
             let ignore = ignore.clone();
             move |path| !ignore.matched_path_or_any_parents(path, false).is_ignore()
