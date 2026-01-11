@@ -83,6 +83,15 @@ fn resolve_path(path: impl AsRef<Path>) -> Result<PathBuf, io::Error> {
     Ok(path_clean::clean(absolute(path.as_ref())?))
 }
 
+pub fn display_path(path: &Path, base: &Path) -> String {
+    if let Ok(path) = path.strip_prefix(base) {
+        path.display()
+    } else {
+        path.display()
+    }
+    .to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
