@@ -5,6 +5,7 @@
     "bumpalo",
     "clippy",
     "deque",
+    "globwalk",
     "goreleaser",
     "hexdigit",
     "indoc",

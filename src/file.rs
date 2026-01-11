@@ -37,7 +37,7 @@ pub fn read_paths(
                 .map(|parent| !absolute_path.starts_with(parent))
                 .unwrap_or(true)
         })
-        .map(|(path, _)| Ok(glob::glob(path)?.collect::<Result<Vec<_>, _>>()?))
+        .map(|(path, _)| Ok(globwalk::glob(path)?.collect::<Result<Vec<_>, _>>()?))
         .collect::<Result<Vec<_>, ApplicationError>>()?
         .into_iter()
         .flatten()
