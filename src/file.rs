@@ -25,11 +25,7 @@ pub fn read_paths(
                 .map(|parent| !path.starts_with(parent))
                 .unwrap_or(true)
         })
-        .map(|path| {
-            Ok(glob(&path.display().to_string())?
-                .chain(glob(&path.join("**/*").display().to_string())?)
-                .collect::<Result<Vec<_>, _>>()?)
-        })
+        .map(|path| Ok(glob(&path.display().to_string())?.collect::<Result<Vec<_>, _>>()?))
         .collect::<Result<Vec<_>, ApplicationError>>()?
         .into_iter()
         .flatten()
@@ -59,7 +55,7 @@ pub fn read_paths(
                                     .expect("repository directory"),
                             );
 
-                            match_patterns(&path, &patterns)
+                            patterns.iter().any(|pattern| pattern.matches_path(&path))
                                 && !match_patterns(&path, &exclude_patterns)
                         }),
                 )
@@ -159,11 +155,11 @@ mod tests {
             .unwrap()
             .collect::<Vec<_>>();
 
-        assert_eq!(paths, [directory.path().join("foo/foo")]);
+        assert_eq!(paths, [] as [PathBuf; _]);
     }
 
     #[test]
-    fn list_file_in_current_directory() {
+    fn list_files_in_current_directory() {
         let directory = tempdir().unwrap();
 
         fs::create_dir_all(directory.path().join("foo")).unwrap();
@@ -174,13 +170,7 @@ mod tests {
             .unwrap()
             .collect::<Vec<_>>();
 
-        assert_eq!(
-            paths,
-            [
-                directory.path().join("bar"),
-                directory.path().join("foo/foo")
-            ]
-        );
+        assert_eq!(paths, [] as [PathBuf; _]);
     }
 
     #[test]

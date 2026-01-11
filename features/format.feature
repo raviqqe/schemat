@@ -81,7 +81,7 @@ Feature: Format
       bar
       """
 
-  Scenario: Format files in a current directory
+  Scenario: Do not format files in a current directory
     Given a file named "foo.scm" with:
       """
         foo
@@ -89,7 +89,7 @@ Feature: Format
     When I successfully run `schemat .`
     Then a file named "foo.scm" should contain exactly:
       """
-      foo
+        foo
       """
 
   Scenario: Format files with a verbose option
@@ -181,7 +181,7 @@ Feature: Format
         foo
       """
 
-  Scenario: Format files in a current directory in a Git repository
+  Scenario: Do not format files in a current directory in a Git repository
     Given a file named "foo.scm" with:
       """
         foo
@@ -193,5 +193,5 @@ Feature: Format
     When I successfully run `schemat .`
     Then a file named "foo.scm" should contain exactly:
       """
-      foo
+        foo
       """
