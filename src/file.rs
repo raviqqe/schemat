@@ -30,13 +30,17 @@ pub fn read_paths(
                 .map(|parent| !path.starts_with(parent))
                 .unwrap_or(true)
         })
-        .map(|path| Ok(glob(&path.display().to_string())?.collect::<Result<Vec<_>, _>>()?))
+        .map(|path| {
+            Ok(glob(&path.display().to_string())?
+                .chain(glob(&path.join("**/*").display().to_string())?)
+                .collect::<Result<Vec<_>, _>>()?)
+        })
         .collect::<Result<Vec<_>, ApplicationError>>()?
         .into_iter()
         .flatten()
         .filter({
             let exclude_patterns = exclude_patterns.clone();
-            move |path| !match_patterns(path, &exclude_patterns)
+            move |path| !path.is_dir() && !match_patterns(path, &exclude_patterns)
         })
         .chain(
             (if let Some(repository) = repository {
@@ -69,7 +73,9 @@ pub fn read_paths(
 }
 
 fn match_patterns(path: &Path, patterns: &[Pattern]) -> bool {
-    patterns.iter().any(|pattern| pattern.matches_path(path))
+    patterns
+        .iter()
+        .any(|pattern| path.ancestors().any(|path| pattern.matches_path(path)))
 }
 
 fn resolve_path(path: impl AsRef<Path>, base: &Path) -> PathBuf {
@@ -93,8 +99,7 @@ mod tests {
     fn list_file() {
         let directory = tempdir().unwrap();
 
-        let path = directory.path().join("foo");
-        fs::write(&path, "").unwrap();
+        fs::write(directory.path().join("foo"), "").unwrap();
 
         let paths = read_paths(directory.path(), &["foo".into()], &[])
             .unwrap()
@@ -107,8 +112,7 @@ mod tests {
     fn list_file_outside_directory() {
         let directory = tempdir().unwrap();
 
-        let path = directory.path().join("foo");
-        fs::write(&path, "").unwrap();
+        fs::write(directory.path().join("foo"), "").unwrap();
 
         let bar_directory = directory.path().join("bar");
         fs::create_dir_all(&bar_directory).unwrap();
@@ -124,8 +128,7 @@ mod tests {
     fn list_file_outside_git_repository() {
         let directory = tempdir().unwrap();
 
-        let path = directory.path().join("foo");
-        fs::write(&path, "").unwrap();
+        fs::write(directory.path().join("foo"), "").unwrap();
 
         let repository_directory = directory.path().join("bar");
         fs::create_dir_all(&repository_directory).unwrap();
@@ -137,6 +140,69 @@ mod tests {
             .collect::<Vec<_>>();
 
         assert_eq!(paths, [directory.path().join("foo")]);
+    }
+
+    #[test]
+    fn list_file_in_directory() {
+        let directory = tempdir().unwrap();
+
+        fs::create_dir_all(directory.path().join("foo")).unwrap();
+        fs::write(directory.path().join("foo/foo"), "").unwrap();
+
+        let paths = read_paths(directory.path(), &["foo".into()], &[])
+            .unwrap()
+            .collect::<Vec<_>>();
+
+        assert_eq!(paths, [directory.path().join("foo/foo")]);
+    }
+
+    #[test]
+    fn list_file_in_current_directory() {
+        let directory = tempdir().unwrap();
+
+        fs::create_dir_all(directory.path().join("foo")).unwrap();
+        fs::write(directory.path().join("foo/foo"), "").unwrap();
+        fs::write(directory.path().join("bar"), "").unwrap();
+
+        let paths = read_paths(directory.path(), &[".".into()], &[])
+            .unwrap()
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            paths,
+            [
+                directory.path().join("bar"),
+                directory.path().join("foo/foo")
+            ]
+        );
+    }
+
+    #[test]
+    fn exclude_file() {
+        let directory = tempdir().unwrap();
+
+        fs::write(directory.path().join("foo"), "").unwrap();
+        fs::write(directory.path().join("bar"), "").unwrap();
+
+        let paths = read_paths(directory.path(), &["*".into()], &["foo".into()])
+            .unwrap()
+            .collect::<Vec<_>>();
+
+        assert_eq!(paths, [directory.path().join("bar")]);
+    }
+
+    #[test]
+    fn exclude_directory() {
+        let directory = tempdir().unwrap();
+
+        fs::create_dir_all(directory.path().join("foo")).unwrap();
+        fs::write(directory.path().join("foo/foo"), "").unwrap();
+
+        let paths = read_paths(directory.path(), &["foo/foo".into()], &["foo".into()])
+            .unwrap()
+            .collect::<Vec<_>>();
+
+        assert_eq!(paths, [] as [PathBuf; _]);
     }
 
     mod display {
