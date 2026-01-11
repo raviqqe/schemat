@@ -179,4 +179,52 @@ mod tests {
             )])
         );
     }
+
+    mod comment {
+        use super::*;
+        use crate::ast::{BlockComment, LineComment};
+        use allocator_api2::vec;
+        use pretty_assertions::assert_eq;
+
+        #[test]
+        fn parse_block_comment() {
+            assert_eq!(
+                parse_comments("#|foo|#", Global),
+                Ok(vec![BlockComment::new("foo", Position::new(0, 7)).into()])
+            );
+        }
+
+        #[test]
+        fn parse_line_comment() {
+            assert_eq!(
+                parse_comments(";foo\n", Global),
+                Ok(vec![LineComment::new("foo", Position::new(0, 4)).into()])
+            );
+        }
+    }
+
+    mod hash {
+        use super::*;
+        use allocator_api2::vec;
+        use pretty_assertions::assert_eq;
+
+        #[test]
+        fn parse_directive() {
+            assert_eq!(
+                parse_hash_directives("#foo\n", Global),
+                Ok(vec![HashDirective::new("foo", Position::new(0, 4)).into()])
+            );
+        }
+
+        #[test]
+        fn parse_directives() {
+            assert_eq!(
+                parse_hash_directives("#foo\n#bar\n", Global),
+                Ok(vec![
+                    HashDirective::new("foo", Position::new(0, 4)).into(),
+                    HashDirective::new("bar", Position::new(5, 9)).into()
+                ])
+            );
+        }
+    }
 }
