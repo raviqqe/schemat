@@ -20,7 +20,7 @@ pub fn read_paths(
     }
 
     let ignore = Rc::new(builder.build()?);
-    let repository = gix::discover(".").ok();
+    let repository = gix::discover(directory).ok();
     let repository_path = repository
         .as_ref()
         .and_then(|repository| repository.path().parent())
