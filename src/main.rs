@@ -34,7 +34,7 @@ use tokio::{
 #[derive(clap::Parser)]
 #[command(about, version)]
 struct Arguments {
-    /// Glob patterns of files to format or check the format of.
+    /// A glob pattern of files to format or check the format of.
     #[arg()]
     path: Vec<String>,
     /// Check if files are formatted correctly.
