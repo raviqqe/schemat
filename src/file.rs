@@ -1,21 +1,19 @@
 use crate::error::ApplicationError;
 use alloc::rc::Rc;
 use core::str::Utf8Error;
-use ignore::gitignore::GitignoreBuilder;
 use std::path::{Path, PathBuf};
 
 pub fn read_paths(
     base: &Path,
     paths: &[String],
-    ignored_patterns: &[String],
+    ignore_patterns: &[String],
 ) -> Result<impl Iterator<Item = PathBuf>, ApplicationError> {
-    let mut builder = GitignoreBuilder::new(base);
-
-    for pattern in ignored_patterns {
-        builder.add_line(None, pattern)?;
-    }
-
-    let ignore = Rc::new(builder.build()?);
+    let ignore_patterns = Rc::new(
+        ignore_patterns
+            .iter()
+            .map(|pattern| glob::Pattern::new(&resolve_path(pattern, base).display().to_string()))
+            .collect::<Result<Vec<_>, _>>()?,
+    );
     let repository = gix::discover(base).ok();
     let repository_path = repository
         .as_ref()
@@ -36,8 +34,12 @@ pub fn read_paths(
         .into_iter()
         .flatten()
         .filter({
-            let ignore = ignore.clone();
-            move |path| !ignore.matched_path_or_any_parents(path, false).is_ignore()
+            let ignore_patterns = ignore_patterns.clone();
+            move |path| {
+                !ignore_patterns
+                    .iter()
+                    .any(|pattern| pattern.matches_path(path))
+            }
         })
         .chain(
             (if let Some(repository) = repository {
@@ -58,7 +60,9 @@ pub fn read_paths(
                         .into_iter()
                         .filter(move |path| {
                             patterns.iter().any(|pattern| pattern.matches_path(path))
-                                && !ignore.matched_path_or_any_parents(path, false).is_ignore()
+                                && !ignore_patterns
+                                    .iter()
+                                    .any(|pattern| pattern.matches_path(path))
                         }),
                 )
             } else {
@@ -134,5 +138,26 @@ mod tests {
             .collect::<Vec<_>>();
 
         assert_eq!(paths, [directory.path().join("foo")]);
+    }
+
+    mod display {
+        use super::*;
+        use pretty_assertions::assert_eq;
+
+        #[test]
+        fn handle_current_directory() {
+            assert_eq!(
+                &display_path(&Path::new("foo"), &Path::new(".")),
+                Path::new("foo")
+            );
+        }
+
+        #[test]
+        fn remove_base_directory() {
+            assert_eq!(
+                &display_path(&Path::new("foo/bar"), &Path::new("foo")),
+                Path::new("bar")
+            );
+        }
     }
 }
