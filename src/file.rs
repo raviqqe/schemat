@@ -159,7 +159,7 @@ mod tests {
     }
 
     #[test]
-    fn list_file_in_current_directory() {
+    fn list_files_in_current_directory() {
         let directory = tempdir().unwrap();
 
         fs::create_dir_all(directory.path().join("foo")).unwrap();
