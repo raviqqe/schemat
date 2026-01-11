@@ -36,11 +36,7 @@ pub fn read_paths(
         .flatten()
         .filter({
             let ignore_patterns = ignore_patterns.clone();
-            move |path| {
-                !ignore_patterns
-                    .iter()
-                    .any(|pattern| pattern.matches_path(path))
-            }
+            move |path| !match_patterns(path, &ignore_patterns)
         })
         .chain(
             (if let Some(repository) = repository {
@@ -60,10 +56,8 @@ pub fn read_paths(
                         .collect::<Result<Vec<_>, Utf8Error>>()?
                         .into_iter()
                         .filter(move |path| {
-                            patterns.iter().any(|pattern| pattern.matches_path(path))
-                                && !ignore_patterns
-                                    .iter()
-                                    .any(|pattern| pattern.matches_path(path))
+                            match_patterns(path, &patterns)
+                                && !match_patterns(path, &ignore_patterns)
                         }),
                 )
             } else {
