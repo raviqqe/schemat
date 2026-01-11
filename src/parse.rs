@@ -43,7 +43,7 @@ fn convert_result<T, A: Allocator + Clone>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::position::Position;
+    use crate::{ast::LineComment, position::Position};
     use allocator_api2::{alloc::Global, vec};
     use pretty_assertions::assert_eq;
 
@@ -178,5 +178,19 @@ mod tests {
                 Position::new(0, 4)
             )])
         );
+    }
+
+    mod comment {
+        use super::*;
+        use allocator_api2::vec;
+        use pretty_assertions::assert_eq;
+
+        #[test]
+        fn parse_line_comment() {
+            assert_eq!(
+                parse_comments(";foo\n", Global),
+                Ok(vec![LineComment::new("foo", Position::new(0, 4)).into()])
+            );
+        }
     }
 }
