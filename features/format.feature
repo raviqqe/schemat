@@ -89,7 +89,7 @@ Feature: Format
     When I successfully run `schemat .`
     Then a file named "foo.scm" should contain exactly:
       """
-      foo
+        foo
       """
 
   Scenario: Format files with a verbose option
@@ -193,5 +193,5 @@ Feature: Format
     When I successfully run `schemat .`
     Then a file named "foo.scm" should contain exactly:
       """
-      foo
+        foo
       """
