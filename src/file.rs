@@ -1,6 +1,7 @@
 use crate::error::ApplicationError;
 use alloc::rc::Rc;
 use core::str::Utf8Error;
+use glob::{Pattern, glob};
 use std::path::{Path, PathBuf};
 
 pub fn read_paths(
@@ -11,7 +12,7 @@ pub fn read_paths(
     let ignore_patterns = Rc::new(
         ignore_patterns
             .iter()
-            .map(|pattern| glob::Pattern::new(&resolve_path(pattern, base).display().to_string()))
+            .map(|pattern| Pattern::new(&resolve_path(pattern, base).display().to_string()))
             .collect::<Result<Vec<_>, _>>()?,
     );
     let repository = gix::discover(base).ok();
@@ -29,24 +30,20 @@ pub fn read_paths(
                 .map(|parent| !path.starts_with(parent))
                 .unwrap_or(true)
         })
-        .map(|path| Ok(glob::glob(&path.display().to_string())?.collect::<Result<Vec<_>, _>>()?))
+        .map(|path| Ok(glob(&path.display().to_string())?.collect::<Result<Vec<_>, _>>()?))
         .collect::<Result<Vec<_>, ApplicationError>>()?
         .into_iter()
         .flatten()
         .filter({
             let ignore_patterns = ignore_patterns.clone();
-            move |path| {
-                !ignore_patterns
-                    .iter()
-                    .any(|pattern| pattern.matches_path(path))
-            }
+            move |path| !match_patterns(path, &ignore_patterns)
         })
         .chain(
             (if let Some(repository) = repository {
                 let index = repository.index_or_empty()?;
                 let patterns = paths
                     .iter()
-                    .map(|path| glob::Pattern::new(path))
+                    .map(|path| Pattern::new(path))
                     .collect::<Result<Vec<_>, _>>()?;
 
                 Some(
@@ -59,10 +56,8 @@ pub fn read_paths(
                         .collect::<Result<Vec<_>, Utf8Error>>()?
                         .into_iter()
                         .filter(move |path| {
-                            patterns.iter().any(|pattern| pattern.matches_path(path))
-                                && !ignore_patterns
-                                    .iter()
-                                    .any(|pattern| pattern.matches_path(path))
+                            match_patterns(path, &patterns)
+                                && !match_patterns(path, &ignore_patterns)
                         }),
                 )
             } else {
@@ -71,6 +66,10 @@ pub fn read_paths(
             .into_iter()
             .flatten(),
         ))
+}
+
+fn match_patterns(path: &Path, patterns: &[Pattern]) -> bool {
+    patterns.iter().any(|pattern| pattern.matches_path(path))
 }
 
 fn resolve_path(path: impl AsRef<Path>, base: &Path) -> PathBuf {
