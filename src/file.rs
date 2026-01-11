@@ -150,17 +150,17 @@ mod tests {
     }
 
     #[test]
-    fn exclude_file() {
+    fn exclude_directory() {
         let directory = tempdir().unwrap();
 
-        let path = directory.path().join("foo");
-        fs::write(&path, "").unwrap();
+        fs::write(directory.path().join("foo"), "").unwrap();
+        fs::write(directory.path().join("bar"), "").unwrap();
 
-        let paths = read_paths(directory.path(), &["foo".into()], &["foo".into()])
+        let paths = read_paths(directory.path(), &["*".into()], &["foo".into()])
             .unwrap()
             .collect::<Vec<_>>();
 
-        assert_eq!(paths, [] as [PathBuf; 0]);
+        assert_eq!(paths, [directory.path().join("bar")]);
     }
 
     mod display {
