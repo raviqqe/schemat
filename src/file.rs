@@ -7,10 +7,10 @@ use std::path::{Path, PathBuf};
 pub fn read_paths(
     base: &Path,
     paths: &[String],
-    ignore_patterns: &[String],
+    exclude_patterns: &[String],
 ) -> Result<impl Iterator<Item = PathBuf>, ApplicationError> {
-    let ignore_patterns = Rc::new(
-        ignore_patterns
+    let exclude_patterns = Rc::new(
+        exclude_patterns
             .iter()
             .map(|pattern| Pattern::new(&resolve_path(pattern, base).display().to_string()))
             .collect::<Result<Vec<_>, _>>()?,
@@ -35,8 +35,8 @@ pub fn read_paths(
         .into_iter()
         .flatten()
         .filter({
-            let ignore_patterns = ignore_patterns.clone();
-            move |path| !match_patterns(path, &ignore_patterns)
+            let exclude_patterns = exclude_patterns.clone();
+            move |path| !match_patterns(path, &exclude_patterns)
         })
         .chain(
             (if let Some(repository) = repository {
@@ -57,7 +57,7 @@ pub fn read_paths(
                         .into_iter()
                         .filter(move |path| {
                             match_patterns(path, &patterns)
-                                && !match_patterns(path, &ignore_patterns)
+                                && !match_patterns(path, &exclude_patterns)
                         }),
                 )
             } else {

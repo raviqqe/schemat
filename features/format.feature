@@ -124,7 +124,7 @@ Feature: Format
     And the stderr should contain "ERROR"
     And the stderr should contain "bar.scm"
 
-  Scenario: Respect an ignore option
+  Scenario: Respect an exclude option
     Given a file named "foo.scm" with:
       """
         foo
