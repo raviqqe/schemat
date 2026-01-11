@@ -16,6 +16,7 @@ clap = { version = "4.5.54", features = ["derive"] }
 colored = "3.0.0"
 futures = "0.3.31"
 gix = "0.77.0"
+glob = "0.3.3"
 globwalk = "0.9.1"
 ignore = "0.4.25"
 itertools = "0.14.0"
