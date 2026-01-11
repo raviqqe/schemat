@@ -12,7 +12,6 @@ pub enum ApplicationError {
     Format(fmt::Error),
     GixOpenIndex(Box<gix::worktree::open_index::Error>),
     Glob(GlobError),
-    Ignore(ignore::Error),
     Io(io::Error),
     Parse(String),
     Pattern(PatternError),
@@ -27,7 +26,6 @@ impl Display for ApplicationError {
             Self::Format(error) => error.fmt(formatter),
             Self::GixOpenIndex(error) => error.fmt(formatter),
             Self::Glob(error) => error.fmt(formatter),
-            Self::Ignore(error) => error.fmt(formatter),
             Self::Io(error) => error.fmt(formatter),
             Self::Parse(error) => error.fmt(formatter),
             Self::Pattern(error) => error.fmt(formatter),
@@ -51,12 +49,6 @@ impl From<gix::worktree::open_index::Error> for ApplicationError {
 impl From<GlobError> for ApplicationError {
     fn from(error: GlobError) -> Self {
         Self::Glob(error)
-    }
-}
-
-impl From<ignore::Error> for ApplicationError {
-    fn from(error: ignore::Error) -> Self {
-        Self::Ignore(error)
     }
 }
 
