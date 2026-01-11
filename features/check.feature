@@ -120,7 +120,7 @@ Feature: Check
       *.scm
       """
     And I successfully run `git init`
-    And I successfully run `git config user.name test`
+    And I successfully run `git config user.name me`
     And I successfully run `git add .`
     And I successfully run `git commit -m commit`
     When I successfully run `schemat -c *.scm`
