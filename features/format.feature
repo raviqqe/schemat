@@ -129,7 +129,7 @@ Feature: Format
       """
         foo
       """
-    When I successfully run `schemat -i *.scm *.scm`
+    When I successfully run `schemat -e *.scm *.scm`
     Then a file named "foo.scm" should contain exactly:
       """
         foo
