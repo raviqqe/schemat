@@ -100,6 +100,6 @@ mod tests {
             .unwrap()
             .collect::<Vec<_>>();
 
-        assert_eq!(paths, ["foo".to_owned()]);
+        assert_eq!(paths, [directory.path().join("foo")]);
     }
 }
