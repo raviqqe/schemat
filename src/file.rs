@@ -75,7 +75,6 @@ pub fn read_paths(
 fn match_patterns(path: &Path, patterns: &[Pattern]) -> bool {
     patterns.iter().any(|pattern| {
         path.ancestors()
-            .chain([path])
             .any(|path| pattern.matches_path(path))
     })
 }
