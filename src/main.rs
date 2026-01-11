@@ -13,6 +13,7 @@ mod position_map;
 
 use self::file::read_paths;
 use crate::{
+    file::display_path,
     format::format,
     parse::{ParseError, parse, parse_comments, parse_hash_directives},
     position_map::PositionMap,
@@ -23,7 +24,7 @@ use colored::Colorize;
 use core::error::Error;
 use error::ApplicationError;
 use futures::future::try_join_all;
-use std::{path::Path, process::ExitCode};
+use std::{env::current_dir, path::Path, process::ExitCode};
 use tokio::{
     fs::{read_to_string, write},
     io::{AsyncReadExt, AsyncWriteExt, stdin, stdout},
@@ -82,11 +83,12 @@ async fn check_paths(
     ignored_patterns: &[String],
     verbose: bool,
 ) -> Result<(), Box<dyn Error>> {
+    let directory = current_dir()?;
     let mut count = 0;
     let mut error_count = 0;
 
     for (result, path) in try_join_all(
-        read_paths(paths, ignored_patterns)?
+        read_paths(&directory, paths, ignored_patterns)?
             .map(|path| spawn(async { (check_path(&path).await, path) })),
     )
     .await?
@@ -96,14 +98,19 @@ async fn check_paths(
         match result {
             Ok(success) => {
                 if !success {
-                    eprintln!("{}\t{}", "FAIL".yellow(), path.display());
+                    eprintln!("{}\t{}", "FAIL".yellow(), display_path(&path, &directory));
                     error_count += 1;
                 } else if verbose {
-                    eprintln!("{}\t{}", "OK".green(), path.display());
+                    eprintln!("{}\t{}", "OK".green(), display_path(&path, &directory));
                 }
             }
             Err(error) => {
-                eprintln!("{}\t{}\t{}", "ERROR".red(), path.display(), error);
+                eprintln!(
+                    "{}\t{}\t{}",
+                    "ERROR".red(),
+                    display_path(&path, &directory),
+                    error
+                );
                 error_count += 1;
             }
         }
@@ -121,11 +128,12 @@ async fn format_paths(
     ignored_patterns: &[String],
     verbose: bool,
 ) -> Result<(), Box<dyn Error>> {
+    let directory = current_dir()?;
     let mut count = 0;
     let mut error_count = 0;
 
     for (result, path) in try_join_all(
-        read_paths(paths, ignored_patterns)?
+        read_paths(&directory, paths, ignored_patterns)?
             .map(|path| spawn(async { (format_path(&path).await, path) })),
     )
     .await?
@@ -135,11 +143,16 @@ async fn format_paths(
         match result {
             Ok(_) => {
                 if verbose {
-                    eprintln!("{}\t{}", "FORMAT".blue(), path.display());
+                    eprintln!("{}\t{}", "FORMAT".blue(), display_path(&path, &directory));
                 }
             }
             Err(error) => {
-                eprintln!("{}\t{}\t{}", "ERROR".red(), path.display(), error);
+                eprintln!(
+                    "{}\t{}\t{}",
+                    "ERROR".red(),
+                    display_path(&path, &directory),
+                    error
+                );
                 error_count += 1;
             }
         }
