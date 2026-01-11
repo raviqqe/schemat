@@ -25,11 +25,7 @@ pub fn read_paths(
                 .map(|parent| !path.starts_with(parent))
                 .unwrap_or(true)
         })
-        .map(|path| {
-            Ok(glob(&path.display().to_string())?
-                .chain(glob(&path.join("**/*").display().to_string())?)
-                .collect::<Result<Vec<_>, _>>()?)
-        })
+        .map(|path| Ok(glob(&path.display().to_string())?.collect::<Result<Vec<_>, _>>()?))
         .collect::<Result<Vec<_>, ApplicationError>>()?
         .into_iter()
         .flatten()
