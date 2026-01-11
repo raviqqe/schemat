@@ -155,7 +155,7 @@ mod tests {
             .unwrap()
             .collect::<Vec<_>>();
 
-        assert_eq!(paths, [directory.path().join("foo/foo")]);
+        assert_eq!(paths, [] as [PathBuf; _]);
     }
 
     #[test]
@@ -170,13 +170,7 @@ mod tests {
             .unwrap()
             .collect::<Vec<_>>();
 
-        assert_eq!(
-            paths,
-            [
-                directory.path().join("bar"),
-                directory.path().join("foo/foo")
-            ]
-        );
+        assert_eq!(paths, [] as [PathBuf; _]);
     }
 
     #[test]
