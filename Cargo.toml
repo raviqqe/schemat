@@ -34,6 +34,7 @@ tokio = { version = "1.49.0", default-features = false, features = [
 [dev-dependencies]
 indoc = "2.0.7"
 pretty_assertions = "1.4.1"
+tempfile = "3.24.0"
 
 [lints.clippy]
 alloc_instead_of_core = "deny"
