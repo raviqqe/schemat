@@ -34,13 +34,13 @@ use tokio::{
 #[derive(clap::Parser)]
 #[command(about, version)]
 struct Arguments {
-    /// A glob pattern of files to format or check the format of.
+    /// A glob pattern of files.
     #[arg()]
     path: Vec<String>,
     /// Check if files are formatted correctly.
     #[arg(short, long)]
     check: bool,
-    /// Exclude a glob pattern.
+    /// Exclude a glob pattern of files and directories.
     #[arg(short, long)]
     exclude: Vec<String>,
     /// Be verbose.
