@@ -13,8 +13,7 @@ pub fn read_paths(
     let repository = gix::discover(base).ok();
     let repository_path = repository
         .as_ref()
-        .and_then(|repository| repository.path().parent())
-        .map(|path| resolve_path(path, base));
+        .and_then(|repository| repository.path().parent());
 
     Ok(paths
         .iter()
