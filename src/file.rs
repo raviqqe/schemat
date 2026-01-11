@@ -59,7 +59,7 @@ pub fn read_paths(
                                     .expect("repository directory"),
                             );
 
-                            match_patterns(&path, &patterns)
+                            patterns.iter().any(|pattern| pattern.matches_path(&path))
                                 && !match_patterns(&path, &exclude_patterns)
                         }),
                 )
