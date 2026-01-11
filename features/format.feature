@@ -124,12 +124,12 @@ Feature: Format
     And the stderr should contain "ERROR"
     And the stderr should contain "bar.scm"
 
-  Scenario: Respect an ignore option
+  Scenario: Respect an exclude option
     Given a file named "foo.scm" with:
       """
         foo
       """
-    When I successfully run `schemat -i *.scm *.scm`
+    When I successfully run `schemat -e *.scm *.scm`
     Then a file named "foo.scm" should contain exactly:
       """
         foo

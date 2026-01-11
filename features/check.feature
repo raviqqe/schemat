@@ -102,12 +102,12 @@ Feature: Check
       cannot check stdin
       """
 
-  Scenario: Respect an ignore option
+  Scenario: Respect an exclude option
     Given a file named "foo.scm" with:
       """
         foo
       """
-    When I successfully run `schemat -ci *.scm *.scm`
+    When I successfully run `schemat -ce *.scm *.scm`
     Then the exit status should be 0
 
   Scenario: Respect .gitignore file

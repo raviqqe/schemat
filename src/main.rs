@@ -40,9 +40,9 @@ struct Arguments {
     /// Check if files are formatted correctly.
     #[arg(short, long)]
     check: bool,
-    /// Ignore a pattern.
+    /// Exclude a pattern.
     #[arg(short, long)]
-    ignore: Vec<String>,
+    exclude: Vec<String>,
     /// Be verbose.
     #[arg(short, long)]
     verbose: bool,
@@ -62,7 +62,7 @@ async fn run(
     Arguments {
         paths,
         check,
-        ignore,
+        exclude,
         verbose,
         ..
     }: Arguments,
@@ -72,15 +72,15 @@ async fn run(
     } else if paths.is_empty() {
         format_stdin().await
     } else if check {
-        check_paths(&paths, &ignore, verbose).await
+        check_paths(&paths, &exclude, verbose).await
     } else {
-        format_paths(&paths, &ignore, verbose).await
+        format_paths(&paths, &exclude, verbose).await
     }
 }
 
 async fn check_paths(
     paths: &[String],
-    ignore_patterns: &[String],
+    exclude_patterns: &[String],
     verbose: bool,
 ) -> Result<(), Box<dyn Error>> {
     let directory = current_dir()?;
@@ -88,7 +88,7 @@ async fn check_paths(
     let mut error_count = 0;
 
     for (result, path) in try_join_all(
-        read_paths(&directory, paths, ignore_patterns)?
+        read_paths(&directory, paths, exclude_patterns)?
             .map(|path| spawn(async { (check_path(&path).await, path) })),
     )
     .await?
@@ -125,7 +125,7 @@ async fn check_paths(
 
 async fn format_paths(
     paths: &[String],
-    ignore_patterns: &[String],
+    exclude_patterns: &[String],
     verbose: bool,
 ) -> Result<(), Box<dyn Error>> {
     let directory = current_dir()?;
@@ -133,7 +133,7 @@ async fn format_paths(
     let mut error_count = 0;
 
     for (result, path) in try_join_all(
-        read_paths(&directory, paths, ignore_patterns)?
+        read_paths(&directory, paths, exclude_patterns)?
             .map(|path| spawn(async { (format_path(&path).await, path) })),
     )
     .await?
