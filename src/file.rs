@@ -13,7 +13,7 @@ pub fn read_paths(
     let repository = gix::discover(base).ok();
     let repository_directory = repository
         .as_ref()
-        .and_then(|repository| repository.path().parent())
+        .and_then(gix::Repository::workdir)
         .map(ToOwned::to_owned);
 
     Ok(paths
