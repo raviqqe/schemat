@@ -73,10 +73,9 @@ pub fn read_paths(
 }
 
 fn match_patterns(path: &Path, patterns: &[Pattern]) -> bool {
-    patterns.iter().any(|pattern| {
-        path.ancestors()
-            .any(|path| pattern.matches_path(path))
-    })
+    patterns
+        .iter()
+        .any(|pattern| path.ancestors().any(|path| pattern.matches_path(path)))
 }
 
 fn resolve_path(path: impl AsRef<Path>, base: &Path) -> PathBuf {
