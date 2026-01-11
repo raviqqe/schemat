@@ -47,7 +47,7 @@ pub fn read_paths(
         .map(|entry| entry.path().to_owned())
         .filter({
             let ignore = ignore.clone();
-            move |path| !ignore.matched_path_or_any_parents(&path, false).is_ignore()
+            move |path| !ignore.matched_path_or_any_parents(path, false).is_ignore()
         })
         .chain(
             (if let Some(repository) = repository {
@@ -84,12 +84,9 @@ fn resolve_path(path: impl AsRef<Path>) -> Result<PathBuf, io::Error> {
 }
 
 pub fn display_path(path: &Path, base: &Path) -> String {
-    if let Ok(path) = path.strip_prefix(base) {
-        path.display()
-    } else {
-        path.display()
-    }
-    .to_string()
+    path.strip_prefix(base)
+        .map_or_else(|_| path.display(), |path| path.display())
+        .to_string()
 }
 
 #[cfg(test)]
