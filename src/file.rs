@@ -141,19 +141,6 @@ mod tests {
         let directory = tempdir().unwrap();
 
         fs::write(directory.path().join("foo"), "").unwrap();
-
-        let paths = read_paths(directory.path(), &["foo".into()], &["foo".into()])
-            .unwrap()
-            .collect::<Vec<_>>();
-
-        assert_eq!(paths, [] as [PathBuf; 0]);
-    }
-
-    #[test]
-    fn exclude_directory() {
-        let directory = tempdir().unwrap();
-
-        fs::write(directory.path().join("foo"), "").unwrap();
         fs::write(directory.path().join("bar"), "").unwrap();
 
         let paths = read_paths(directory.path(), &["*".into()], &["foo".into()])
@@ -161,6 +148,20 @@ mod tests {
             .collect::<Vec<_>>();
 
         assert_eq!(paths, [directory.path().join("bar")]);
+    }
+
+    #[test]
+    fn exclude_directory() {
+        let directory = tempdir().unwrap();
+
+        fs::create_dir_all(directory.path().join("foo")).unwrap();
+        fs::write(directory.path().join("foo/foo"), "").unwrap();
+
+        let paths = read_paths(directory.path(), &["foo/foo".into()], &["foo".into()])
+            .unwrap()
+            .collect::<Vec<_>>();
+
+        assert_eq!(paths, [] as [PathBuf; _]);
     }
 
     mod display {
