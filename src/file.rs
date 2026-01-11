@@ -69,7 +69,11 @@ pub fn read_paths(
 }
 
 fn match_patterns(path: &Path, patterns: &[Pattern]) -> bool {
-    patterns.iter().any(|pattern| pattern.matches_path(path))
+    patterns.iter().any(|pattern| {
+        path.ancestors()
+            .chain([path])
+            .any(|path| pattern.matches_path(path))
+    })
 }
 
 fn resolve_path(path: impl AsRef<Path>, base: &Path) -> PathBuf {
@@ -134,6 +138,20 @@ mod tests {
             .collect::<Vec<_>>();
 
         assert_eq!(paths, [directory.path().join("foo")]);
+    }
+
+    #[test]
+    fn list_file_in_directory() {
+        let directory = tempdir().unwrap();
+
+        fs::create_dir_all(directory.path().join("foo")).unwrap();
+        fs::write(directory.path().join("foo/foo"), "").unwrap();
+
+        let paths = read_paths(directory.path(), &["foo".into()], &[])
+            .unwrap()
+            .collect::<Vec<_>>();
+
+        assert_eq!(paths, [directory.path().join("foo/foo")]);
     }
 
     #[test]
