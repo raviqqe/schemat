@@ -7,9 +7,9 @@ use std::path::{Path, PathBuf};
 pub fn read_paths(
     base: &Path,
     paths: &[String],
-    exclude_patterns: &[String],
+    ignore_patterns: &[String],
 ) -> Result<impl Iterator<Item = PathBuf>, ApplicationError> {
-    let exclude_patterns = Rc::new(compile_patterns(exclude_patterns, base)?);
+    let ignore_patterns = Rc::new(compile_patterns(ignore_patterns, base)?);
     let repository = gix::discover(base).ok();
     let repository_directory = repository
         .as_ref()
@@ -30,8 +30,8 @@ pub fn read_paths(
         .into_iter()
         .flatten()
         .filter({
-            let exclude_patterns = exclude_patterns.clone();
-            move |path| !path.is_dir() && !match_patterns(path, &exclude_patterns)
+            let ignore_patterns = ignore_patterns.clone();
+            move |path| !path.is_dir() && !match_patterns(path, &ignore_patterns)
         })
         .chain(
             (if let Some(repository) = repository {
@@ -56,7 +56,7 @@ pub fn read_paths(
                             );
 
                             patterns.iter().any(|pattern| pattern.matches_path(&path))
-                                && !match_patterns(&path, &exclude_patterns)
+                                && !match_patterns(&path, &ignore_patterns)
                         }),
                 )
             } else {
@@ -174,7 +174,7 @@ mod tests {
     }
 
     #[test]
-    fn exclude_file() {
+    fn ignore_file() {
         let directory = tempdir().unwrap();
 
         fs::write(directory.path().join("foo"), "").unwrap();
@@ -188,7 +188,7 @@ mod tests {
     }
 
     #[test]
-    fn exclude_directory() {
+    fn ignore_directory() {
         let directory = tempdir().unwrap();
 
         fs::create_dir_all(directory.path().join("foo")).unwrap();
