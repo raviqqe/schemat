@@ -81,6 +81,17 @@ Feature: Format
       bar
       """
 
+  Scenario: Format files in a current directory
+    Given a file named "foo.scm" with:
+      """
+        foo
+      """
+    When I successfully run `schemat .`
+    Then a file named "foo.scm" should contain exactly:
+      """
+      foo
+      """
+
   Scenario: Format files with a verbose option
     Given a file named "foo.scm" with:
       """
