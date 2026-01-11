@@ -9,23 +9,18 @@ pub fn read_paths(
     paths: &[String],
     exclude_patterns: &[String],
 ) -> Result<impl Iterator<Item = PathBuf>, ApplicationError> {
-    let exclude_patterns = Rc::new(
-        exclude_patterns
-            .iter()
-            .map(|pattern| Pattern::new(&resolve_path(pattern, base).display().to_string()))
-            .collect::<Result<Vec<_>, _>>()?,
-    );
+    let exclude_patterns = Rc::new(compile_patterns(exclude_patterns, base)?);
     let repository = gix::discover(base).ok();
-    let repository_path = repository
+    let repository_directory = repository
         .as_ref()
         .and_then(|repository| repository.path().parent())
-        .map(|path| resolve_path(path, base));
+        .map(ToOwned::to_owned);
 
     Ok(paths
         .iter()
         .map(|path| resolve_path(path, base))
         .filter(|path| {
-            repository_path
+            repository_directory
                 .as_ref()
                 .map(|parent| !path.starts_with(parent))
                 .unwrap_or(true)
@@ -45,10 +40,7 @@ pub fn read_paths(
         .chain(
             (if let Some(repository) = repository {
                 let index = repository.index_or_empty()?;
-                let patterns = paths
-                    .iter()
-                    .map(|path| Pattern::new(path))
-                    .collect::<Result<Vec<_>, _>>()?;
+                let patterns = compile_patterns(paths, base)?;
 
                 Some(
                     index
@@ -60,8 +52,15 @@ pub fn read_paths(
                         .collect::<Result<Vec<_>, Utf8Error>>()?
                         .into_iter()
                         .filter(move |path| {
-                            match_patterns(path, &patterns)
-                                && !match_patterns(path, &exclude_patterns)
+                            let path = resolve_path(
+                                path,
+                                repository_directory
+                                    .as_deref()
+                                    .expect("repository directory"),
+                            );
+
+                            match_patterns(&path, &patterns)
+                                && !match_patterns(&path, &exclude_patterns)
                         }),
                 )
             } else {
@@ -70,6 +69,13 @@ pub fn read_paths(
             .into_iter()
             .flatten(),
         ))
+}
+
+fn compile_patterns(patterns: &[String], base: &Path) -> Result<Vec<Pattern>, glob::PatternError> {
+    patterns
+        .iter()
+        .map(|pattern| Pattern::new(&resolve_path(pattern, base).display().to_string()))
+        .collect::<Result<Vec<_>, _>>()
 }
 
 fn match_patterns(path: &Path, patterns: &[Pattern]) -> bool {

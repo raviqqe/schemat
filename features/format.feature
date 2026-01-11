@@ -153,7 +153,7 @@ Feature: Format
       """
     And I successfully run `git init bar`
     And I cd to "bar"
-    And I successfully run `git config user.name test`
+    And I successfully run `git config user.name me`
     And I successfully run `git commit --allow-empty -m commit`
     When I successfully run `schemat ../foo.scm`
     And I cd to ".."
@@ -172,11 +172,26 @@ Feature: Format
       *.scm
       """
     And I successfully run `git init`
-    And I successfully run `git config user.name test`
+    And I successfully run `git config user.name me`
     And I successfully run `git add .`
     And I successfully run `git commit -m commit`
     When I successfully run `schemat *.scm`
     Then a file named "foo.scm" should contain exactly:
       """
         foo
+      """
+
+  Scenario: Format files in a current directory in a Git repository
+    Given a file named "foo.scm" with:
+      """
+        foo
+      """
+    And I successfully run `git init`
+    And I successfully run `git config user.name me`
+    And I successfully run `git add .`
+    And I successfully run `git commit -m commit`
+    When I successfully run `schemat .`
+    Then a file named "foo.scm" should contain exactly:
+      """
+      foo
       """
