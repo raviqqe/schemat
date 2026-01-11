@@ -102,7 +102,7 @@ Feature: Check
       cannot check stdin
       """
 
-  Scenario: Respect an exclude option
+  Scenario: Respect an ignore option
     Given a file named "foo.scm" with:
       """
         foo
