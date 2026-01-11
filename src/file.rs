@@ -40,7 +40,7 @@ pub fn read_paths(
         .flatten()
         .filter({
             let exclude_patterns = exclude_patterns.clone();
-            move |path| !match_patterns(path, &exclude_patterns)
+            move |path| !path.is_dir() && !match_patterns(path, &exclude_patterns)
         })
         .chain(
             (if let Some(repository) = repository {
