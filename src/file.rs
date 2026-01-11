@@ -11,15 +11,16 @@ pub fn read_paths(
 ) -> Result<impl Iterator<Item = PathBuf>, ApplicationError> {
     let exclude_patterns = Rc::new(compile_patterns(exclude_patterns, base)?);
     let repository = gix::discover(base).ok();
-    let repository_path = repository
+    let repository_directory = repository
         .as_ref()
-        .and_then(|repository| repository.path().parent());
+        .and_then(|repository| repository.path().parent())
+        .map(ToOwned::to_owned);
 
     Ok(paths
         .iter()
         .map(|path| resolve_path(path, base))
         .filter(|path| {
-            repository_path
+            repository_directory
                 .as_ref()
                 .map(|parent| !path.starts_with(parent))
                 .unwrap_or(true)
@@ -51,8 +52,15 @@ pub fn read_paths(
                         .collect::<Result<Vec<_>, Utf8Error>>()?
                         .into_iter()
                         .filter(move |path| {
-                            match_patterns(path, &patterns)
-                                && !match_patterns(path, &exclude_patterns)
+                            let path = resolve_path(
+                                path,
+                                repository_directory
+                                    .as_deref()
+                                    .expect("repository directory"),
+                            );
+
+                            match_patterns(&path, &patterns)
+                                && !match_patterns(&path, &exclude_patterns)
                         }),
                 )
             } else {
