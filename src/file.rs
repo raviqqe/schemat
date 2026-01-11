@@ -124,12 +124,12 @@ mod tests {
         let path = directory.path().join("foo");
         fs::write(&path, "").unwrap();
 
-        let bar_directory = directory.path().join("bar");
-        fs::create_dir_all(&bar_directory).unwrap();
+        let repository_directory = directory.path().join("bar");
+        fs::create_dir_all(&repository_directory).unwrap();
 
-        // TODO gix::open();
+        gix::init(&repository_directory).unwrap();
 
-        let paths = read_paths(&bar_directory, &["../foo".into()], &[])
+        let paths = read_paths(&repository_directory, &["../foo".into()], &[])
             .unwrap()
             .collect::<Vec<_>>();
 
