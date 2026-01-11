@@ -181,7 +181,7 @@ Feature: Format
         foo
       """
 
-  Scenario: Format files in a current directory
+  Scenario: Format files in a current directory in a Git repository
     Given a file named "foo.scm" with:
       """
         foo
