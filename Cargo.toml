@@ -12,7 +12,7 @@ categories = ["command-line-utilities", "development-tools"]
 [dependencies]
 allocator-api2 = "0.2.21"
 bumpalo = { version = "3.19.1", features = ["allocator-api2"] }
-clap = { version = "4.5.57", features = ["derive"] }
+clap = { version = "4.5.58", features = ["derive"] }
 colored = "3.1.1"
 futures = "0.3.31"
 gix = "0.79.0"
