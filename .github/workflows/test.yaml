@@ -30,7 +30,7 @@ jobs:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - uses: raviqqe/cargo-cache@e56278c26e69da71a8d6ffc14271b71db22d77f3 # v1.0.2
       - run: tools/coverage.sh
-      - uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe # v5.5.4
+      - uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
         with:
           files: lcov.info
   test:
