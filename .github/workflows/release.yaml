@@ -34,7 +34,7 @@ jobs:
       - uses: raviqqe/cargo-cache@4c7db86c0f73cc94a5608ad8b09e7a8e136fd259 # v1.0.4
       - id: version
         run: echo version=v$(cargo run -- --version | grep -o '[0-9.]*') > ${{ github.output }}
-      - uses: raviqqe/goreleaser-action@8af8ed473f5cf03aa1f670ac5f728c4b29809fd6 # v1.0.1
+      - uses: raviqqe/goreleaser-action@2ec1f4c6dd2c754f5f9c7779e8de095c0cf64e62 # v1.0.2
         with:
           version: ${{ steps.version.outputs.version }}
           snapshot: ${{ github.ref != 'refs/heads/main' }}
