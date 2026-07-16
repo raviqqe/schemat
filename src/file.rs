@@ -208,7 +208,7 @@ mod tests {
         #[test]
         fn handle_current_directory() {
             assert_eq!(
-                &display_path(&Path::new("foo"), &Path::new(".")),
+                &display_path(Path::new("foo"), Path::new(".")),
                 Path::new("foo")
             );
         }
@@ -216,7 +216,7 @@ mod tests {
         #[test]
         fn remove_base_directory() {
             assert_eq!(
-                &display_path(&Path::new("foo/bar"), &Path::new("foo")),
+                &display_path(Path::new("foo/bar"), Path::new("foo")),
                 Path::new("bar")
             );
         }
