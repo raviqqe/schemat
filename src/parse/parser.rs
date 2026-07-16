@@ -594,8 +594,8 @@ mod tests {
                 "(",
                 ")",
                 vec![
-                    Expression::Symbol("@", Position::new(1, 2)).into(),
-                    Expression::Symbol("foo", Position::new(3, 6)).into(),
+                    Expression::Symbol("@", Position::new(1, 2)),
+                    Expression::Symbol("foo", Position::new(3, 6)),
                 ],
                 Position::new(0, 7)
             )
@@ -610,8 +610,8 @@ mod tests {
                 "(",
                 ")",
                 vec![
-                    Expression::Symbol("@@", Position::new(1, 3)).into(),
-                    Expression::Symbol("foo", Position::new(4, 7)).into(),
+                    Expression::Symbol("@@", Position::new(1, 3)),
+                    Expression::Symbol("foo", Position::new(4, 7)),
                 ],
                 Position::new(0, 8)
             )

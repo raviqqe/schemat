@@ -33,7 +33,7 @@ impl ParseError {
 
         format!(
             "{} at line {} and column {}: {}",
-            &self.message,
+            self.message,
             &position_map.line_index(self.offset).expect("valid offset") + 1,
             &position_map
                 .column_index(self.offset)
