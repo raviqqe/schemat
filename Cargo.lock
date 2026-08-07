@@ -1800,7 +1800,7 @@ dependencies = [
 
 [[package]]
 name = "schemat"
-version = "0.5.3"
+version = "0.5.4"
 dependencies = [
  "allocator-api2",
  "bumpalo",
