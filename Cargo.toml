@@ -1,6 +1,6 @@
 [package]
 name = "schemat"
-version = "0.5.6"
+version = "0.5.7"
 edition = "2024"
 description = "A code formatter for Scheme, Lisp, and any S-expressions"
 readme = "./README.md"
@@ -22,13 +22,17 @@ mfmt = "0.4.2"
 nom = "8.0.0"
 nom_locate = "5.0.0"
 path-clean = "1.0.1"
-tokio = { version = "1.52.3", default-features = false, features = [
-  "fs",
-  "io-std",
-  "io-util",
-  "macros",
-  "rt-multi-thread",
-] }
+tokio = {
+  version = "1.52.3",
+  default-features = false,
+  features = [
+    "fs",
+    "io-std",
+    "io-util",
+    "macros",
+    "rt-multi-thread",
+  ]
+}
 
 [dev-dependencies]
 indoc = "2.0.7"
