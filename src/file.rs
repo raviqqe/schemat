@@ -149,6 +149,25 @@ mod tests {
     }
 
     #[test]
+    fn list_files_outside_git_repository() {
+        let directory = tempdir().unwrap();
+        let directory = directory.path().canonicalize().unwrap();
+
+        fs::write(directory.join("foo"), "").unwrap();
+
+        let repository_directory = directory.join("bar");
+        fs::create_dir_all(&repository_directory).unwrap();
+
+        gix::init(&repository_directory).unwrap();
+
+        let paths = read_paths(&repository_directory, &["../*".into()], &[])
+            .unwrap()
+            .collect::<Vec<_>>();
+
+        assert_eq!(paths, [directory.join("foo")]);
+    }
+
+    #[test]
     fn list_untracked_file_in_git_repository() {
         let directory = tempdir().unwrap();
         let directory = directory.path().canonicalize().unwrap();

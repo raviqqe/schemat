@@ -162,6 +162,22 @@ Feature: Format
       foo
       """
 
+  Scenario: Format files outside a Git repository with a glob
+    Given a file named "foo.scm" with:
+      """
+        foo
+      """
+    And I successfully run `git init bar`
+    And I cd to "bar"
+    And I successfully run `git config user.name me`
+    And I successfully run `git commit --allow-empty -m commit`
+    When I successfully run `schemat ../*.scm`
+    And I cd to ".."
+    Then a file named "foo.scm" should contain exactly:
+      """
+      foo
+      """
+
   Scenario: Format an untracked file in a Git repository
     Given a file named "foo.scm" with:
       """
