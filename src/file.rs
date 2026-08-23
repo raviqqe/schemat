@@ -32,8 +32,9 @@ pub fn read_paths(
         .into_iter()
         .flatten()
         .filter({
-            let ignore_patterns = ignore_patterns.clone();
-            move |path| !path.is_dir() && !match_patterns(path, &ignore_patterns)
+            let patterns = ignore_patterns.clone();
+
+            move |path| !path.is_dir() && !match_patterns(path, &patterns)
         })
         .chain(
             (if let Some(repository) = repository {
