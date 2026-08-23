@@ -2,6 +2,7 @@ use crate::error::ApplicationError;
 use alloc::rc::Rc;
 use core::str::Utf8Error;
 use glob::{Pattern, glob};
+use itertools::Itertools;
 use std::path::{Path, PathBuf};
 
 pub fn read_paths(
@@ -20,10 +21,11 @@ pub fn read_paths(
         .iter()
         .map(|path| resolve_path(path, base))
         .filter(|path| {
-            repository_directory
-                .as_ref()
-                .map(|parent| !path.starts_with(parent))
-                .unwrap_or(true)
+            path.is_file()
+                || repository_directory
+                    .as_ref()
+                    .map(|parent| !path.starts_with(parent))
+                    .unwrap_or(true)
         })
         .map(|path| Ok(glob(&path.display().to_string())?.collect::<Result<Vec<_>, _>>()?))
         .collect::<Result<Vec<_>, ApplicationError>>()?
@@ -64,7 +66,8 @@ pub fn read_paths(
             })
             .into_iter()
             .flatten(),
-        ))
+        )
+        .unique())
 }
 
 fn compile_patterns(patterns: &[String], base: &Path) -> Result<Vec<Pattern>, glob::PatternError> {
@@ -145,6 +148,21 @@ mod tests {
     }
 
     #[test]
+    fn list_untracked_file_in_git_repository() {
+        let directory = tempdir().unwrap();
+        let directory = directory.path().canonicalize().unwrap();
+
+        gix::init(&directory).unwrap();
+        fs::write(directory.join("foo"), "").unwrap();
+
+        let paths = read_paths(&directory, &["foo".into()], &[])
+            .unwrap()
+            .collect::<Vec<_>>();
+
+        assert_eq!(paths, [directory.join("foo")]);
+    }
+
+    #[test]
     fn list_file_in_directory() {
         let directory = tempdir().unwrap();
 
@@ -171,6 +189,19 @@ mod tests {
             .collect::<Vec<_>>();
 
         assert_eq!(paths, [] as [PathBuf; _]);
+    }
+
+    #[test]
+    fn list_file_matched_by_two_arguments_once() {
+        let directory = tempdir().unwrap();
+
+        fs::write(directory.path().join("foo"), "").unwrap();
+
+        let paths = read_paths(directory.path(), &["foo".into(), "*".into()], &[])
+            .unwrap()
+            .collect::<Vec<_>>();
+
+        assert_eq!(paths, [directory.path().join("foo")]);
     }
 
     #[test]

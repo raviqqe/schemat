@@ -162,6 +162,18 @@ Feature: Format
       foo
       """
 
+  Scenario: Format an untracked file in a Git repository
+    Given a file named "foo.scm" with:
+      """
+        foo
+      """
+    And I successfully run `git init`
+    When I successfully run `schemat foo.scm`
+    Then a file named "foo.scm" should contain exactly:
+      """
+      foo
+      """
+
   Scenario: Respect .gitignore file
     Given a file named "foo.scm" with:
       """
