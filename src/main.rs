@@ -4,7 +4,7 @@ use clap::Parser;
 use colored::Colorize;
 use core::error::Error;
 use futures::future::try_join_all;
-use schemat::{ApplicationError, display_path, format_string, read_paths};
+use schemat::{display_path, format_string, read_paths};
 use std::{env::current_dir, path::Path, process::ExitCode};
 use tokio::{
     fs::{read_to_string, write},
@@ -157,13 +157,13 @@ async fn format_stdin() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-async fn check_path(path: &Path) -> Result<bool, ApplicationError> {
+async fn check_path(path: &Path) -> Result<bool, schemat::Error> {
     let source = read_to_string(path).await?;
 
     Ok(source == format_string(&source)?)
 }
 
-async fn format_path(path: &Path) -> Result<(), ApplicationError> {
+async fn format_path(path: &Path) -> Result<(), schemat::Error> {
     let source = read_to_string(path).await?;
     let formatted = format_string(&source)?;
 

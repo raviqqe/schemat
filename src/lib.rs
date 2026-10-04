@@ -12,7 +12,7 @@ mod position;
 mod position_map;
 
 pub use self::{
-    error::ApplicationError,
+    error::Error,
     file::{display_path, read_paths},
 };
 use self::{
@@ -23,7 +23,7 @@ use self::{
 use bumpalo::Bump;
 
 /// Formats a source string.
-pub fn format_string(source: &str) -> Result<String, ApplicationError> {
+pub fn format_string(source: &str) -> Result<String, Error> {
     let position_map = PositionMap::new(source);
     let convert_error = |error| convert_parse_error(error, source, &position_map);
     let allocator = Bump::new();
@@ -37,12 +37,8 @@ pub fn format_string(source: &str) -> Result<String, ApplicationError> {
     )?)
 }
 
-fn convert_parse_error(
-    error: ParseError,
-    source: &str,
-    position_map: &PositionMap,
-) -> ApplicationError {
-    ApplicationError::Parse(error.to_string(source, position_map))
+fn convert_parse_error(error: ParseError, source: &str, position_map: &PositionMap) -> Error {
+    Error::Parse(error.to_string(source, position_map))
 }
 
 #[cfg(test)]
@@ -62,9 +58,6 @@ mod tests {
 
     #[test]
     fn fail_to_format_unclosed_list() {
-        assert!(matches!(
-            format_string("(foo"),
-            Err(ApplicationError::Parse(_))
-        ));
+        assert!(matches!(format_string("(foo"), Err(Error::Parse(_))));
     }
 }
