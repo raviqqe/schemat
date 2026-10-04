@@ -18,7 +18,7 @@ use nom::{
 };
 
 const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&~^.:";
-const SPECIAL_SIGNS: &str = ";";
+const SPECIAL_SIGNS: &str = ";\"";
 
 pub type IResult<'a, T, A> = nom::IResult<Input<'a, A>, T, NomError<'a, A>>;
 
@@ -439,6 +439,10 @@ mod tests {
         assert_eq!(
             expression(Input::new_extra("|\\;|", Global)).unwrap().1,
             Expression::QuotedSymbol("\\;", Position::new(0, 4))
+        );
+        assert_eq!(
+            expression(Input::new_extra("|\\\"|", Global)).unwrap().1,
+            Expression::QuotedSymbol("\\\"", Position::new(0, 4))
         );
     }
 
