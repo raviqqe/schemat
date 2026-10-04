@@ -8,6 +8,7 @@ use glob::{GlobError, PatternError};
 use std::io;
 
 /// An application error.
+// TODO Rename this `Error`.
 #[derive(Debug)]
 pub enum ApplicationError {
     /// A format error.
