@@ -60,4 +60,20 @@ mod tests {
     fn fail_to_format_unclosed_list() {
         assert!(matches!(format_string("(foo"), Err(Error::Parse(_))));
     }
+
+    #[test]
+    fn fail_to_format_unclosed_list_after_multi_byte_characters() {
+        assert_eq!(
+            format_string("λλ (foo").unwrap_err().to_string(),
+            "failed to parse at line 1 and column 7: λλ (foo"
+        );
+    }
+
+    #[test]
+    fn fail_to_format_unclosed_list_ending_with_multi_byte_character() {
+        assert_eq!(
+            format_string("(λ").unwrap_err().to_string(),
+            "failed to parse at line 1 and column 2: (λ"
+        );
+    }
 }
