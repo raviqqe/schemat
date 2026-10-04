@@ -25,7 +25,7 @@ use bumpalo::Bump;
 /// Formats a source string.
 pub fn format_string(source: &str) -> Result<String, ApplicationError> {
     let position_map = PositionMap::new(source);
-    let convert_error = |error: ParseError| convert_parse_error(error, source, &position_map);
+    let convert_error = |error| convert_parse_error(error, source, &position_map);
     let allocator = Bump::new();
 
     let source = format(
