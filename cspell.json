@@ -4,6 +4,7 @@
     "anychar",
     "bumpalo",
     "clippy",
+    "codspeed",
     "deque",
     "goreleaser",
     "hexdigit",

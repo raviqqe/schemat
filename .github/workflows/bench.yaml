@@ -4,10 +4,40 @@ on:
     branches:
       - main
   pull_request:
+concurrency:
+  group: bench-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 jobs:
-  bench:
+  cargo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: raviqqe/cargo-cache@4c7db86c0f73cc94a5608ad8b09e7a8e136fd259 # v1.0.4
+      - run: cargo bench
+  codspeed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: raviqqe/cargo-cache@4c7db86c0f73cc94a5608ad8b09e7a8e136fd259 # v1.0.4
+      - run: cargo install --features vendored-openssl cargo-codspeed
+      - run: cargo codspeed build
+        # spell-checker: ignore codspeedhq
+      - uses: codspeedhq/action@c4fd08a3a159bd0cc208da1e0edf32b8c47d75e5 # v5.4.0
+        with:
+          mode: simulation
+          run: cargo codspeed run
+  command:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: raviqqe/cargo-cache@4c7db86c0f73cc94a5608ad8b09e7a8e136fd259 # v1.0.4
       - run: tools/bench.sh
+  bench:
+    needs:
+      - cargo
+      - codspeed
+      - command
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: for result in ${{ join(needs.*.result, ' ') }}; do [ $result = success ]; done
