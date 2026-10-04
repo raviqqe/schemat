@@ -35,4 +35,4 @@ For more information, see `schemat --help`.
 
 ## License
 
-[The Unlicense](UNLICENSE)
+[The Unlicense](https://github.com/raviqqe/schemat/blob/main/UNLICENSE)

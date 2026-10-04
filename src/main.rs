@@ -1,29 +1,10 @@
 #![doc = include_str!("../README.md")]
 
-extern crate alloc;
-
-mod ast;
-mod context;
-mod error;
-mod file;
-mod format;
-mod parse;
-mod position;
-mod position_map;
-
-use self::file::read_paths;
-use crate::{
-    file::display_path,
-    format::format,
-    parse::{ParseError, parse, parse_comments, parse_hash_directives},
-    position_map::PositionMap,
-};
-use bumpalo::Bump;
 use clap::Parser;
 use colored::Colorize;
 use core::error::Error;
-use error::ApplicationError;
 use futures::future::try_join_all;
+use schemat::{ApplicationError, display_path, format_string, read_paths};
 use std::{env::current_dir, path::Path, process::ExitCode};
 use tokio::{
     fs::{read_to_string, write},
@@ -168,23 +149,9 @@ async fn format_paths(
 async fn format_stdin() -> Result<(), Box<dyn Error>> {
     let mut source = Default::default();
     stdin().read_to_string(&mut source).await?;
-    let position_map = PositionMap::new(&source);
-    let convert_error = |error| convert_parse_error(error, &source, &position_map);
-    let allocator = Bump::new();
 
     let mut stdout = stdout();
-    stdout
-        .write_all(
-            format(
-                &parse(&source, &allocator).map_err(convert_error)?,
-                &parse_comments(&source, &allocator).map_err(convert_error)?,
-                &parse_hash_directives(&source, &allocator).map_err(convert_error)?,
-                &position_map,
-                &allocator,
-            )?
-            .as_bytes(),
-        )
-        .await?;
+    stdout.write_all(format_string(&source)?.as_bytes()).await?;
     stdout.flush().await?;
 
     Ok(())
@@ -207,28 +174,4 @@ async fn format_path(path: &Path) -> Result<(), ApplicationError> {
     }
 
     Ok(())
-}
-
-fn format_string(source: &str) -> Result<String, ApplicationError> {
-    let position_map = PositionMap::new(source);
-    let convert_error = |error: ParseError| convert_parse_error(error, source, &position_map);
-    let allocator = Bump::new();
-
-    let source = format(
-        &parse(source, &allocator).map_err(convert_error)?,
-        &parse_comments(source, &allocator).map_err(convert_error)?,
-        &parse_hash_directives(source, &allocator).map_err(convert_error)?,
-        &position_map,
-        &allocator,
-    )?;
-
-    Ok(source)
-}
-
-fn convert_parse_error(
-    error: ParseError,
-    source: &str,
-    position_map: &PositionMap,
-) -> ApplicationError {
-    ApplicationError::Parse(error.to_string(source, position_map))
 }

@@ -5,6 +5,7 @@ use glob::{Pattern, glob};
 use itertools::Itertools;
 use std::path::{Path, PathBuf};
 
+/// Reads file paths matching glob patterns.
 pub fn read_paths(
     base: &Path,
     paths: &[String],
@@ -37,7 +38,7 @@ pub fn read_paths(
             move |path| !path.is_dir() && !match_patterns(path, &patterns)
         })
         .chain(
-            (if let Some(repository) = repository {
+            (if let Some((repository, directory)) = repository.zip(repository_directory) {
                 let index = repository.index_or_empty()?;
                 let patterns = compile_patterns(paths, base)?;
 
@@ -51,12 +52,7 @@ pub fn read_paths(
                         .collect::<Result<Vec<_>, Utf8Error>>()?
                         .into_iter()
                         .filter(move |path| {
-                            let path = resolve_path(
-                                path,
-                                repository_directory
-                                    .as_deref()
-                                    .expect("repository directory"),
-                            );
+                            let path = resolve_path(path, &directory);
 
                             patterns.iter().any(|pattern| pattern.matches_path(&path))
                                 && !match_patterns(&path, &ignore_patterns)
@@ -88,6 +84,7 @@ fn resolve_path(path: impl AsRef<Path>, base: &Path) -> PathBuf {
     path_clean::clean(base.join(path))
 }
 
+/// Displays a path relative to a base directory.
 pub fn display_path(path: &Path, base: &Path) -> String {
     path.strip_prefix(base)
         .map_or_else(|_| path.display(), |path| path.display())
