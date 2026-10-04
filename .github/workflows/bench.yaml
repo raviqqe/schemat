@@ -8,12 +8,6 @@ concurrency:
   group: bench-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 jobs:
-  command:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: raviqqe/cargo-cache@4c7db86c0f73cc94a5608ad8b09e7a8e136fd259 # v1.0.4
-      - run: tools/bench.sh
   cargo:
     runs-on: ubuntu-latest
     steps:
@@ -32,11 +26,17 @@ jobs:
         with:
           mode: simulation
           run: cargo codspeed run
+  command:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: raviqqe/cargo-cache@4c7db86c0f73cc94a5608ad8b09e7a8e136fd259 # v1.0.4
+      - run: tools/bench.sh
   bench:
     needs:
-      - command
       - cargo
       - codspeed
+      - command
     if: always()
     runs-on: ubuntu-latest
     steps:
