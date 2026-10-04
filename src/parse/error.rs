@@ -14,7 +14,7 @@ pub struct ParseError {
 
 impl ParseError {
     pub fn new<A: Allocator>(source: &str, error: nom::Err<NomError<'_, A>>) -> Self {
-        let end_offset = source.len() - 1;
+        let end_offset = source.floor_char_boundary(source.len() - 1);
 
         match error {
             nom::Err::Incomplete(_) => Self {
