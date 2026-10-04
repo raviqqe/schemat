@@ -9,6 +9,10 @@ license = "Unlicense"
 keywords = ["format", "scheme"]
 categories = ["command-line-utilities", "development-tools"]
 
+[[bench]]
+harness = false
+name = "main"
+
 [dependencies]
 allocator-api2 = "0.2.21"
 bumpalo = { version = "3.20.3", features = ["allocator-api2"] }
@@ -35,6 +39,7 @@ tokio = {
 }
 
 [dev-dependencies]
+criterion = { package = "codspeed-criterion-compat", version = "5.0.2" }
 indoc = "2.0.7"
 pretty_assertions = "1.4.1"
 tempfile = "3.27.0"
