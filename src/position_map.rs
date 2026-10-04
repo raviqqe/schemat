@@ -1,12 +1,13 @@
 use core::ops::Range;
 
 #[derive(Debug)]
-pub struct PositionMap {
+pub struct PositionMap<'a> {
+    source: &'a str,
     lines: Vec<usize>,
 }
 
-impl PositionMap {
-    pub fn new(source: &str) -> Self {
+impl<'a> PositionMap<'a> {
+    pub fn new(source: &'a str) -> Self {
         let mut lines = vec![0];
 
         for (index, &character) in source.as_bytes().iter().enumerate() {
@@ -20,7 +21,7 @@ impl PositionMap {
             lines.push(source.len());
         }
 
-        Self { lines }
+        Self { source, lines }
     }
 
     pub fn line_index(&self, offset: usize) -> Option<usize> {
@@ -38,7 +39,7 @@ impl PositionMap {
 
     pub fn column_index(&self, offset: usize) -> Option<usize> {
         self.line_index(offset)
-            .map(|line| offset - self.lines[line])
+            .map(|line| self.source[self.lines[line]..offset].chars().count())
     }
 
     pub fn line_range(&self, offset: usize) -> Option<Range<usize>> {
@@ -99,6 +100,56 @@ mod tests {
             assert_eq!(map.line_index(6), Some(1));
             assert_eq!(map.line_index(7), Some(1));
             assert_eq!(map.line_index(8), None);
+        }
+    }
+
+    mod column_index {
+        use super::*;
+
+        #[test]
+        fn get_column_of_empty_source() {
+            let source = "";
+            let map = PositionMap::new(source);
+
+            assert_eq!(map.column_index(0), None);
+        }
+
+        #[test]
+        fn get_column_in_line() {
+            let source = "foo";
+            let map = PositionMap::new(source);
+
+            assert_eq!(map.column_index(0), Some(0));
+            assert_eq!(map.column_index(1), Some(1));
+            assert_eq!(map.column_index(2), Some(2));
+            assert_eq!(map.column_index(3), None);
+        }
+
+        #[test]
+        fn get_column_in_two_lines() {
+            let source = "foo\nbar\n";
+            let map = PositionMap::new(source);
+
+            assert_eq!(map.column_index(3), Some(3));
+            assert_eq!(map.column_index(4), Some(0));
+            assert_eq!(map.column_index(5), Some(1));
+            assert_eq!(map.column_index(7), Some(3));
+            assert_eq!(map.column_index(8), None);
+        }
+
+        #[test]
+        fn get_column_after_multi_byte_characters() {
+            let source = "λμ x\n😄 y";
+            let map = PositionMap::new(source);
+
+            assert_eq!(map.column_index(0), Some(0));
+            assert_eq!(map.column_index(2), Some(1));
+            assert_eq!(map.column_index(4), Some(2));
+            assert_eq!(map.column_index(5), Some(3));
+            assert_eq!(map.column_index(7), Some(0));
+            assert_eq!(map.column_index(11), Some(1));
+            assert_eq!(map.column_index(12), Some(2));
+            assert_eq!(map.column_index(13), None);
         }
     }
 

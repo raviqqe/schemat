@@ -6,14 +6,14 @@ use mfmt::Builder;
 pub struct Context<'a, A: Allocator + Clone> {
     builder: Builder<A>,
     comments: VecDeque<&'a Comment<'a>>,
-    position_map: &'a PositionMap,
+    position_map: &'a PositionMap<'a>,
 }
 
 impl<'a, A: Allocator + Clone> Context<'a, A> {
     pub fn new(
         builder: Builder<A>,
         comments: &'a [Comment<'a>],
-        position_map: &'a PositionMap,
+        position_map: &'a PositionMap<'a>,
     ) -> Self {
         Self {
             builder,
@@ -22,7 +22,7 @@ impl<'a, A: Allocator + Clone> Context<'a, A> {
         }
     }
 
-    pub const fn position_map(&self) -> &'a PositionMap {
+    pub const fn position_map(&self) -> &'a PositionMap<'a> {
         self.position_map
     }
 

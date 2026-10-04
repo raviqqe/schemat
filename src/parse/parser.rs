@@ -122,7 +122,11 @@ fn head_symbol_character<A: Allocator + Clone>(input: Input<A>) -> IResult<Input
     recognize(alt((
         value(
             (),
-            satisfy(|character| character.is_alphanumeric() || SYMBOL_SIGNS.contains(character)),
+            satisfy(|character| {
+                character.is_ascii_alphanumeric()
+                    || SYMBOL_SIGNS.contains(character)
+                    || !character.is_ascii() && !character.is_whitespace()
+            }),
         ),
         value((), (char('\\'), anychar)),
     )))
@@ -384,6 +388,30 @@ mod tests {
                 .1,
             Expression::Symbol("あいうえお", Position::new(0, 15))
         );
+        assert_eq!(
+            expression(Input::new_extra("→", Global)).unwrap().1,
+            Expression::Symbol("→", Position::new(0, 3))
+        );
+        assert_eq!(
+            expression(Input::new_extra("…", Global)).unwrap().1,
+            Expression::Symbol("…", Position::new(0, 3))
+        );
+        assert_eq!(
+            expression(Input::new_extra("🎉", Global)).unwrap().1,
+            Expression::Symbol("🎉", Position::new(0, 4))
+        );
+        assert_eq!(
+            expression(Input::new_extra("list→vector", Global))
+                .unwrap()
+                .1,
+            Expression::Symbol("list→vector", Position::new(0, 13))
+        );
+        assert_eq!(
+            expression(Input::new_extra("foo\u{3000}bar", Global))
+                .unwrap()
+                .1,
+            Expression::Symbol("foo", Position::new(0, 3))
+        );
     }
 
     #[test]
@@ -417,6 +445,7 @@ mod tests {
     #[test]
     fn parse_invalid_symbol() {
         assert!(expression(Input::new_extra("#", Global)).is_err());
+        assert!(expression(Input::new_extra("\u{3000}", Global)).is_err());
     }
 
     #[test]
