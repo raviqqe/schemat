@@ -393,6 +393,10 @@ mod tests {
             Expression::Symbol("→", Position::new(0, 3))
         );
         assert_eq!(
+            expression(Input::new_extra("…", Global)).unwrap().1,
+            Expression::Symbol("…", Position::new(0, 3))
+        );
+        assert_eq!(
             expression(Input::new_extra("🎉", Global)).unwrap().1,
             Expression::Symbol("🎉", Position::new(0, 4))
         );
