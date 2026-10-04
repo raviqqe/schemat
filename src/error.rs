@@ -7,14 +7,22 @@ use core::{
 use glob::{GlobError, PatternError};
 use std::io;
 
+/// An application error.
 #[derive(Debug)]
 pub enum ApplicationError {
+    /// A format error.
     Format(fmt::Error),
+    /// A Git error.
     Gix(gix::Error),
+    /// A glob error.
     Glob(GlobError),
+    /// An I/O error.
     Io(io::Error),
+    /// A parse error.
     Parse(String),
+    /// A glob pattern error.
     Pattern(PatternError),
+    /// A UTF-8 error.
     Utf8(Utf8Error),
 }
 
