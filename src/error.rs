@@ -8,6 +8,7 @@ use std::io;
 
 /// An error.
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum Error {
     /// A format error.
     Format(fmt::Error),
