@@ -1,16 +1,15 @@
 use core::{
-    error::Error,
-    fmt,
+    error, fmt,
     fmt::{Display, Formatter},
     str::Utf8Error,
 };
 use glob::{GlobError, PatternError};
 use std::io;
 
-/// An application error.
-// TODO Rename this type `Error`.
+/// An error.
 #[derive(Debug)]
-pub enum ApplicationError {
+#[non_exhaustive]
+pub enum Error {
     /// A format error.
     Format(fmt::Error),
     /// A Git error.
@@ -27,9 +26,9 @@ pub enum ApplicationError {
     Utf8(Utf8Error),
 }
 
-impl Error for ApplicationError {}
+impl error::Error for Error {}
 
-impl Display for ApplicationError {
+impl Display for Error {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::Format(error) => error.fmt(formatter),
@@ -43,37 +42,37 @@ impl Display for ApplicationError {
     }
 }
 
-impl From<fmt::Error> for ApplicationError {
+impl From<fmt::Error> for Error {
     fn from(error: fmt::Error) -> Self {
         Self::Format(error)
     }
 }
 
-impl From<gix::Error> for ApplicationError {
+impl From<gix::Error> for Error {
     fn from(error: gix::Error) -> Self {
         Self::Gix(error)
     }
 }
 
-impl From<GlobError> for ApplicationError {
+impl From<GlobError> for Error {
     fn from(error: GlobError) -> Self {
         Self::Glob(error)
     }
 }
 
-impl From<io::Error> for ApplicationError {
+impl From<io::Error> for Error {
     fn from(error: io::Error) -> Self {
         Self::Io(error)
     }
 }
 
-impl From<PatternError> for ApplicationError {
+impl From<PatternError> for Error {
     fn from(error: PatternError) -> Self {
         Self::Pattern(error)
     }
 }
 
-impl From<Utf8Error> for ApplicationError {
+impl From<Utf8Error> for Error {
     fn from(error: Utf8Error) -> Self {
         Self::Utf8(error)
     }

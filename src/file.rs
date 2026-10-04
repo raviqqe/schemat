@@ -1,4 +1,4 @@
-use crate::error::ApplicationError;
+use crate::error::Error;
 use alloc::rc::Rc;
 use core::str::Utf8Error;
 use glob::{Pattern, glob};
@@ -10,7 +10,7 @@ pub fn read_paths(
     base: &Path,
     paths: &[String],
     ignore_patterns: &[String],
-) -> Result<impl Iterator<Item = PathBuf>, ApplicationError> {
+) -> Result<impl Iterator<Item = PathBuf>, Error> {
     let ignore_patterns = Rc::new(compile_patterns(ignore_patterns, base)?);
     let repository = gix::discover(base).ok();
     let repository_directory = repository
@@ -29,7 +29,7 @@ pub fn read_paths(
                     .unwrap_or(true)
         })
         .map(|path| Ok(glob(&path.display().to_string())?.collect::<Result<Vec<_>, _>>()?))
-        .collect::<Result<Vec<_>, ApplicationError>>()?
+        .collect::<Result<Vec<_>, Error>>()?
         .into_iter()
         .flatten()
         .filter({
