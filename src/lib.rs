@@ -28,15 +28,13 @@ pub fn format_string(source: &str) -> Result<String, ApplicationError> {
     let convert_error = |error| convert_parse_error(error, source, &position_map);
     let allocator = Bump::new();
 
-    let source = format(
+    Ok(format(
         &parse(source, &allocator).map_err(convert_error)?,
         &parse_comments(source, &allocator).map_err(convert_error)?,
         &parse_hash_directives(source, &allocator).map_err(convert_error)?,
         &position_map,
         &allocator,
-    )?;
-
-    Ok(source)
+    )?)
 }
 
 fn convert_parse_error(
