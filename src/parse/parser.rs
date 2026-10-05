@@ -13,7 +13,7 @@ use nom::{
     },
     combinator::{all_consuming, cut, eof, map, not, peek, recognize, value},
     error::context,
-    multi::{fold_many0, many0_count, many1, many1_count},
+    multi::{fold_many0, many0_count, many1_count},
     sequence::{delimited, preceded, terminated},
 };
 
@@ -104,10 +104,7 @@ fn escaped_character<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>,
         recognize((char('\\'), hexadecimal_digit, hexadecimal_digit)),
         recognize(preceded(
             tag("\\x"),
-            cut(terminated(
-                many1((hexadecimal_digit, hexadecimal_digit)),
-                char(';'),
-            )),
+            cut(terminated(many1_count(hexadecimal_digit), char(';'))),
         )),
         recognize((
             tag("\\u"),
@@ -950,6 +947,29 @@ mod tests {
                 string(Input::new_extra("\"\\xABCD;\"", Global)).unwrap().1,
                 Expression::String("\\xABCD;", Position::new(0, 9))
             );
+        }
+
+        #[test]
+        fn parse_scheme_hexadecimal_scalar_values() {
+            assert_eq!(
+                string(Input::new_extra("\"\\xA;\"", Global)).unwrap().1,
+                Expression::String("\\xA;", Position::new(0, 6))
+            );
+            assert_eq!(
+                string(Input::new_extra("\"\\x3bb;\"", Global)).unwrap().1,
+                Expression::String("\\x3bb;", Position::new(0, 8))
+            );
+            assert_eq!(
+                string(Input::new_extra("\"\\x1F600;\"", Global)).unwrap().1,
+                Expression::String("\\x1F600;", Position::new(0, 10))
+            );
+        }
+
+        #[test]
+        fn parse_invalid_scheme_hexadecimal_scalar_values() {
+            assert!(string(Input::new_extra("\"\\x;\"", Global)).is_err());
+            assert!(string(Input::new_extra("\"\\x41\"", Global)).is_err());
+            assert!(string(Input::new_extra("\"\\xG;\"", Global)).is_err());
         }
 
         // https://webassembly.github.io/spec/core/text/values.html#strings
