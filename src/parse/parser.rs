@@ -95,6 +95,8 @@ fn escaped_character<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>,
     alt((
         tag("\\\\"),
         tag("\\'"),
+        tag("\\a"),
+        tag("\\b"),
         tag("\\n"),
         tag("\\r"),
         tag("\\t"),
@@ -443,6 +445,10 @@ mod tests {
         assert_eq!(
             expression(Input::new_extra("|\\\"|", Global)).unwrap().1,
             Expression::QuotedSymbol("\\\"", Position::new(0, 4))
+        );
+        assert_eq!(
+            expression(Input::new_extra("|\\a\\b|", Global)).unwrap().1,
+            Expression::QuotedSymbol("\\a\\b", Position::new(0, 6))
         );
     }
 
@@ -927,10 +933,10 @@ mod tests {
         #[test]
         fn parse_escaped_characters() {
             assert_eq!(
-                string(Input::new_extra("\"\\\\\\n\\r\\t\"", Global))
+                string(Input::new_extra("\"\\\\\\a\\b\\n\\r\\t\"", Global))
                     .unwrap()
                     .1,
-                Expression::String("\\\\\\n\\r\\t", Position::new(0, 10))
+                Expression::String("\\\\\\a\\b\\n\\r\\t", Position::new(0, 14))
             );
         }
 
