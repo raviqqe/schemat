@@ -167,10 +167,7 @@ fn quote(input: Input) -> IResult<Input> {
     .parse(input)
 }
 
-fn list_like(
-    left: &'static str,
-    right: &'static str,
-) -> impl FnMut(Input) -> IResult<Expression> {
+fn list_like(left: &'static str, right: &'static str) -> impl FnMut(Input) -> IResult<Expression> {
     move |input| {
         map(
             token(positioned((
@@ -374,9 +371,7 @@ mod tests {
             Expression::Symbol("\\#", Position::new(0, 2))
         );
         assert_eq!(
-            expression(Input::new("あいうえお"))
-                .unwrap()
-                .1,
+            expression(Input::new("あいうえお")).unwrap().1,
             Expression::Symbol("あいうえお", Position::new(0, 15))
         );
         assert_eq!(
@@ -392,15 +387,11 @@ mod tests {
             Expression::Symbol("🎉", Position::new(0, 4))
         );
         assert_eq!(
-            expression(Input::new("list→vector"))
-                .unwrap()
-                .1,
+            expression(Input::new("list→vector")).unwrap().1,
             Expression::Symbol("list→vector", Position::new(0, 13))
         );
         assert_eq!(
-            expression(Input::new("foo\u{3000}bar"))
-                .unwrap()
-                .1,
+            expression(Input::new("foo\u{3000}bar")).unwrap().1,
             Expression::Symbol("foo", Position::new(0, 3))
         );
     }
@@ -549,9 +540,7 @@ mod tests {
     #[test]
     fn parse_byte_vector() {
         assert_eq!(
-            expression(Input::new("#u8(1 2 3)"))
-                .unwrap()
-                .1,
+            expression(Input::new("#u8(1 2 3)")).unwrap().1,
             Expression::Quote(
                 "#",
                 Expression::Quote(
@@ -853,9 +842,7 @@ mod tests {
         #[test]
         fn parse_shebang() {
             assert_eq!(
-                hash_directive(Input::new("#!/bin/sh\n"))
-                    .unwrap()
-                    .1,
+                hash_directive(Input::new("#!/bin/sh\n")).unwrap().1,
                 HashDirective::new("!/bin/sh", Position::new(0, 9))
             );
         }
@@ -863,21 +850,14 @@ mod tests {
         #[test]
         fn parse_lang_directive() {
             assert_eq!(
-                hash_directive(Input::new("#lang r7rs\n"))
-                    .unwrap()
-                    .1,
+                hash_directive(Input::new("#lang r7rs\n")).unwrap().1,
                 HashDirective::new("lang r7rs", Position::new(0, 10))
             );
         }
 
         #[test]
         fn parse_comment() {
-            assert_eq!(
-                hash_directives(Input::new("#||#\n"))
-                    .unwrap()
-                    .1,
-                vec![]
-            );
+            assert_eq!(hash_directives(Input::new("#||#\n")).unwrap().1, vec![]);
         }
     }
 
@@ -920,9 +900,7 @@ mod tests {
         #[test]
         fn parse_escaped_characters() {
             assert_eq!(
-                string(Input::new("\"\\\\\\a\\b\\n\\r\\t\""))
-                    .unwrap()
-                    .1,
+                string(Input::new("\"\\\\\\a\\b\\n\\r\\t\"")).unwrap().1,
                 Expression::String("\\\\\\a\\b\\n\\r\\t", Position::new(0, 14))
             );
         }
@@ -1011,9 +989,7 @@ mod tests {
         #[test]
         fn parse_comments() {
             assert_eq!(
-                comments(Input::new(";foo\n;bar\n"))
-                    .unwrap()
-                    .1,
+                comments(Input::new(";foo\n;bar\n")).unwrap().1,
                 vec![
                     LineComment::new("foo", Position::new(0, 4)).into(),
                     LineComment::new("bar", Position::new(5, 9)).into()
@@ -1024,9 +1000,7 @@ mod tests {
         #[test]
         fn parse_comments_with_blank_lines() {
             assert_eq!(
-                comments(Input::new(";foo\n\n;bar\n"))
-                    .unwrap()
-                    .1,
+                comments(Input::new(";foo\n\n;bar\n")).unwrap().1,
                 vec![
                     LineComment::new("foo", Position::new(0, 4)).into(),
                     LineComment::new("bar", Position::new(6, 10)).into()
@@ -1037,9 +1011,7 @@ mod tests {
         #[test]
         fn parse_comments_skipping_hash_semicolon() {
             assert_eq!(
-                comments(Input::new("#;foo\n;bar\n"))
-                    .unwrap()
-                    .1,
+                comments(Input::new("#;foo\n;bar\n")).unwrap().1,
                 vec![LineComment::new("bar", Position::new(6, 10)).into()]
             );
         }
@@ -1047,27 +1019,20 @@ mod tests {
         #[test]
         fn parse_comments_skipping_hash_character() {
             assert_eq!(
-                comments(Input::new("#foo\n;bar\n"))
-                    .unwrap()
-                    .1,
+                comments(Input::new("#foo\n;bar\n")).unwrap().1,
                 vec![LineComment::new("bar", Position::new(5, 9)).into()]
             );
         }
 
         #[test]
         fn parse_comment_character() {
-            assert_eq!(
-                comments(Input::new("#\\;foo\n")).unwrap().1,
-                vec![]
-            );
+            assert_eq!(comments(Input::new("#\\;foo\n")).unwrap().1, vec![]);
         }
 
         #[test]
         fn parse_comment_in_list() {
             assert_eq!(
-                comments(Input::new("(f\n;foo\nx)"))
-                    .unwrap()
-                    .1,
+                comments(Input::new("(f\n;foo\nx)")).unwrap().1,
                 vec![LineComment::new("foo", Position::new(3, 7)).into()]
             );
         }
@@ -1092,9 +1057,7 @@ mod tests {
             #[test]
             fn parse_one_line() {
                 assert_eq!(
-                    block_comment(Input::new("#|foo|#"))
-                        .unwrap()
-                        .1,
+                    block_comment(Input::new("#|foo|#")).unwrap().1,
                     BlockComment::new("foo", Position::new(0, 7))
                 );
             }
