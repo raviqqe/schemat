@@ -12,7 +12,7 @@ use nom::{
     },
     combinator::{all_consuming, cut, eof, map, not, peek, recognize, value},
     error::context,
-    multi::{fold_many0, many0_count, many1_count},
+    multi::{fold_many0, many0, many0_count, many1_count},
     sequence::{delimited, preceded, terminated},
 };
 
@@ -317,22 +317,6 @@ fn newline(input: Input) -> IResult<()> {
         many1_count(delimited(space0, nom::character::complete::newline, space0)),
     )
     .parse(input)
-}
-
-fn many0<'a, T>(
-    mut parser: impl Parser<Input<'a>, Output = T, Error = NomError<'a>>,
-) -> impl FnMut(Input<'a>) -> IResult<'a, Vec<T>> {
-    move |input| {
-        fold_many0(
-            |input| parser.parse(input),
-            Vec::new,
-            |mut all, value| {
-                all.push(value);
-                all
-            },
-        )
-        .parse(input)
-    }
 }
 
 #[cfg(test)]
