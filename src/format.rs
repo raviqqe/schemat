@@ -15,8 +15,8 @@ const COMMENT_PREFIX: &str = ";";
 const QUOTE_SIGNS: &[&str] = &["'", "`", "#"];
 const UNQUOTE_SIGNS: &[&str] = &[",", ",@"];
 
-pub fn format<A: Allocator + Clone>(
-    module: &[Expression<A>],
+pub fn format<A: Allocator + Clone, B: Allocator>(
+    module: &[Expression<B>],
     comments: &[Comment],
     hash_directives: &[HashDirective],
     position_map: &PositionMap,
@@ -42,9 +42,9 @@ pub fn format<A: Allocator + Clone>(
     Ok(string)
 }
 
-fn compile_module<'a, A: Allocator + Clone + 'a>(
+fn compile_module<'a, A: Allocator + Clone + 'a, B: Allocator + 'a>(
     context: &mut Context<'a, A>,
-    module: &'a [Expression<'a, A>],
+    module: &'a [Expression<'a, B>],
     hash_directives: &[HashDirective],
 ) -> Document<'a> {
     [
@@ -95,9 +95,9 @@ fn compile_hash_directive<'a, A: Allocator + Clone + 'a>(
     ])
 }
 
-fn compile_expression<'a, A: Allocator + Clone + 'a>(
+fn compile_expression<'a, A: Allocator + Clone + 'a, B: Allocator + 'a>(
     context: &mut Context<'a, A>,
-    expression: &'a Expression<'a, A>,
+    expression: &'a Expression<'a, B>,
     data: bool,
 ) -> Document<'a> {
     compile_comment(context, expression.position(), |context| match expression {
@@ -118,9 +118,9 @@ fn compile_expression<'a, A: Allocator + Clone + 'a>(
     })
 }
 
-fn compile_list<'a, A: Allocator + Clone + 'a>(
+fn compile_list<'a, A: Allocator + Clone + 'a, B: Allocator + 'a>(
     context: &mut Context<'a, A>,
-    expressions: &'a [Expression<'a, A>],
+    expressions: &'a [Expression<'a, B>],
     position: &Position,
     left: &'a str,
     right: &'a str,
@@ -208,14 +208,14 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
     ])
 }
 
-fn compile_expressions<'a, A: Allocator + Clone + 'a>(
+fn compile_expressions<'a, A: Allocator + Clone + 'a, B: Allocator + 'a>(
     context: &mut Context<'a, A>,
-    expressions: &'a [Expression<'a, A>],
+    expressions: &'a [Expression<'a, B>],
     data: bool,
 ) -> Document<'a> {
     let mut documents =
         Vec::with_capacity_in(2 * expressions.len(), context.builder().allocator().clone());
-    let mut last_expression = None::<&Expression<A>>;
+    let mut last_expression = None::<&Expression<B>>;
 
     for expression in expressions {
         if let Some(last_expression) = last_expression {
