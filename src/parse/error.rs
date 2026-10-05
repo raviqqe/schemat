@@ -1,10 +1,9 @@
 use super::input::Input;
 use crate::position_map::PositionMap;
-use allocator_api2::alloc::Allocator;
 use core::str;
 use nom::error::Error;
 
-pub type NomError<'a, A> = Error<Input<'a, A>>;
+pub type NomError<'a> = Error<Input<'a>>;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParseError {
@@ -13,7 +12,7 @@ pub struct ParseError {
 }
 
 impl ParseError {
-    pub fn new<A: Allocator>(source: &str, error: nom::Err<NomError<'_, A>>) -> Self {
+    pub fn new(source: &str, error: nom::Err<NomError<'_>>) -> Self {
         let end_offset = source.floor_char_boundary(source.len() - 1);
 
         match error {
@@ -47,7 +46,6 @@ impl ParseError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use allocator_api2::alloc::Global;
     use nom::error::ErrorKind;
     use pretty_assertions::assert_eq;
 
@@ -59,7 +57,7 @@ mod tests {
         let error = ParseError::new(
             "foo",
             nom::Err::Error(Error {
-                input: Input::new_extra("foo", Global),
+                input: Input::new("foo"),
                 code: ErrorKind::Tag,
             }),
         );

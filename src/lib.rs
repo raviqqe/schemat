@@ -29,9 +29,9 @@ pub fn format_string(source: &str) -> Result<String, Error> {
     let allocator = Bump::new();
 
     Ok(format(
-        &parse(source, &allocator).map_err(convert_error)?,
-        &parse_comments(source, &allocator).map_err(convert_error)?,
-        &parse_hash_directives(source, &allocator).map_err(convert_error)?,
+        &parse(source).map_err(convert_error)?,
+        &parse_comments(source).map_err(convert_error)?,
+        &parse_hash_directives(source).map_err(convert_error)?,
         &position_map,
         &allocator,
     )?)

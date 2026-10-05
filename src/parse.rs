@@ -8,33 +8,20 @@ use self::{
     parser::{IResult, comments, hash_directives, module},
 };
 use crate::ast::{Comment, Expression, HashDirective};
-use allocator_api2::{alloc::Allocator, vec::Vec};
 
-pub fn parse<A: Allocator + Clone>(
-    source: &str,
-    allocator: A,
-) -> Result<Vec<Expression<'_, A>, A>, ParseError> {
-    convert_result(module(Input::new_extra(source, allocator)), source)
+pub fn parse(source: &str) -> Result<Vec<Expression<'_>>, ParseError> {
+    convert_result(module(Input::new(source)), source)
 }
 
-pub fn parse_comments<A: Allocator + Clone>(
-    source: &str,
-    allocator: A,
-) -> Result<Vec<Comment<'_>, A>, ParseError> {
-    convert_result(comments(Input::new_extra(source, allocator)), source)
+pub fn parse_comments(source: &str) -> Result<Vec<Comment<'_>>, ParseError> {
+    convert_result(comments(Input::new(source)), source)
 }
 
-pub fn parse_hash_directives<A: Allocator + Clone>(
-    source: &str,
-    allocator: A,
-) -> Result<Vec<HashDirective<'_>, A>, ParseError> {
-    convert_result(hash_directives(Input::new_extra(source, allocator)), source)
+pub fn parse_hash_directives(source: &str) -> Result<Vec<HashDirective<'_>>, ParseError> {
+    convert_result(hash_directives(Input::new(source)), source)
 }
 
-fn convert_result<T, A: Allocator + Clone>(
-    result: IResult<T, A>,
-    source: &str,
-) -> Result<T, ParseError> {
+fn convert_result<T>(result: IResult<T>, source: &str) -> Result<T, ParseError> {
     result
         .map(|(_, value)| value)
         .map_err(|error| ParseError::new(source, error))
@@ -44,18 +31,17 @@ fn convert_result<T, A: Allocator + Clone>(
 mod tests {
     use super::*;
     use crate::position::Position;
-    use allocator_api2::{alloc::Global, vec};
     use pretty_assertions::assert_eq;
 
     #[test]
     fn parse_nothing() {
-        assert_eq!(parse("", Global), Ok(vec![]));
+        assert_eq!(parse(""), Ok(vec![]));
     }
 
     #[test]
     fn parse_symbol() {
         assert_eq!(
-            parse("foo", Global),
+            parse("foo"),
             Ok(vec![Expression::Symbol("foo", Position::new(0, 3))])
         );
     }
@@ -63,7 +49,7 @@ mod tests {
     #[test]
     fn parse_shebang() {
         assert_eq!(
-            parse("#!/bin/sh\n#t", Global),
+            parse("#!/bin/sh\n#t"),
             Ok(vec![Expression::Quote(
                 "#",
                 Expression::Symbol("t", Position::new(11, 12)).into(),
@@ -75,7 +61,7 @@ mod tests {
     #[test]
     fn parse_lang_directive() {
         assert_eq!(
-            parse("#lang racket\n#t", Global),
+            parse("#lang racket\n#t"),
             Ok(vec![Expression::Quote(
                 "#",
                 Expression::Symbol("t", Position::new(14, 15)).into(),
@@ -87,7 +73,7 @@ mod tests {
     #[test]
     fn parse_empty_list() {
         assert_eq!(
-            parse("()", Global),
+            parse("()"),
             Ok(vec![Expression::List(
                 "(",
                 ")",
@@ -100,7 +86,7 @@ mod tests {
     #[test]
     fn parse_list_with_element() {
         assert_eq!(
-            parse("(foo)", Global),
+            parse("(foo)"),
             Ok(vec![Expression::List(
                 "(",
                 ")",
@@ -113,7 +99,7 @@ mod tests {
     #[test]
     fn parse_list_with_elements() {
         assert_eq!(
-            parse("(foo bar)", Global),
+            parse("(foo bar)"),
             Ok(vec![Expression::List(
                 "(",
                 ")",
@@ -129,7 +115,7 @@ mod tests {
     #[test]
     fn parse_vector() {
         assert_eq!(
-            parse("#()", Global),
+            parse("#()"),
             Ok(vec![Expression::Quote(
                 "#",
                 Expression::List("(", ")", vec![], Position::new(1, 3)).into(),
@@ -141,7 +127,7 @@ mod tests {
     #[test]
     fn parse_symbol_starting_with_escaped_hash() {
         assert_eq!(
-            parse("\\#foo", Global),
+            parse("\\#foo"),
             Ok(vec![Expression::Symbol("\\#foo", Position::new(0, 5)),])
         );
     }
@@ -149,7 +135,7 @@ mod tests {
     #[test]
     fn parse_symbol_quoted_by_hash_and_single_quote() {
         assert_eq!(
-            parse("#'foo", Global),
+            parse("#'foo"),
             Ok(vec![Expression::Quote(
                 "#",
                 Expression::Quote(
@@ -166,7 +152,7 @@ mod tests {
     #[test]
     fn parse_last_boolean_in_list() {
         assert_eq!(
-            parse("(#f)", Global),
+            parse("(#f)"),
             Ok(vec![Expression::List(
                 "(",
                 ")",
@@ -183,13 +169,12 @@ mod tests {
     mod comment {
         use super::*;
         use crate::ast::{BlockComment, LineComment};
-        use allocator_api2::vec;
         use pretty_assertions::assert_eq;
 
         #[test]
         fn parse_block_comment() {
             assert_eq!(
-                parse_comments("#|foo|#", Global),
+                parse_comments("#|foo|#"),
                 Ok(vec![BlockComment::new("foo", Position::new(0, 7)).into()])
             );
         }
@@ -197,7 +182,7 @@ mod tests {
         #[test]
         fn parse_line_comment() {
             assert_eq!(
-                parse_comments(";foo\n", Global),
+                parse_comments(";foo\n"),
                 Ok(vec![LineComment::new("foo", Position::new(0, 4)).into()])
             );
         }
@@ -205,13 +190,12 @@ mod tests {
 
     mod hash {
         use super::*;
-        use allocator_api2::vec;
         use pretty_assertions::assert_eq;
 
         #[test]
         fn parse_directive() {
             assert_eq!(
-                parse_hash_directives("#foo\n", Global),
+                parse_hash_directives("#foo\n"),
                 Ok(vec![HashDirective::new("foo", Position::new(0, 4))])
             );
         }
@@ -219,7 +203,7 @@ mod tests {
         #[test]
         fn parse_directives() {
             assert_eq!(
-                parse_hash_directives("#foo\n#bar\n", Global),
+                parse_hash_directives("#foo\n#bar\n"),
                 Ok(vec![
                     HashDirective::new("foo", Position::new(0, 4)),
                     HashDirective::new("bar", Position::new(5, 9))

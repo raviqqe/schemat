@@ -16,7 +16,7 @@ const QUOTE_SIGNS: &[&str] = &["'", "`", "#"];
 const UNQUOTE_SIGNS: &[&str] = &[",", ",@"];
 
 pub fn format<A: Allocator + Clone>(
-    module: &[Expression<A>],
+    module: &[Expression],
     comments: &[Comment],
     hash_directives: &[HashDirective],
     position_map: &PositionMap,
@@ -44,7 +44,7 @@ pub fn format<A: Allocator + Clone>(
 
 fn compile_module<'a, A: Allocator + Clone + 'a>(
     context: &mut Context<'a, A>,
-    module: &'a [Expression<'a, A>],
+    module: &'a [Expression<'a>],
     hash_directives: &[HashDirective],
 ) -> Document<'a> {
     [
@@ -97,7 +97,7 @@ fn compile_hash_directive<'a, A: Allocator + Clone + 'a>(
 
 fn compile_expression<'a, A: Allocator + Clone + 'a>(
     context: &mut Context<'a, A>,
-    expression: &'a Expression<'a, A>,
+    expression: &'a Expression<'a>,
     data: bool,
 ) -> Document<'a> {
     compile_comment(context, expression.position(), |context| match expression {
@@ -120,7 +120,7 @@ fn compile_expression<'a, A: Allocator + Clone + 'a>(
 
 fn compile_list<'a, A: Allocator + Clone + 'a>(
     context: &mut Context<'a, A>,
-    expressions: &'a [Expression<'a, A>],
+    expressions: &'a [Expression<'a>],
     position: &Position,
     left: &'a str,
     right: &'a str,
@@ -210,12 +210,12 @@ fn compile_list<'a, A: Allocator + Clone + 'a>(
 
 fn compile_expressions<'a, A: Allocator + Clone + 'a>(
     context: &mut Context<'a, A>,
-    expressions: &'a [Expression<'a, A>],
+    expressions: &'a [Expression<'a>],
     data: bool,
 ) -> Document<'a> {
     let mut documents =
         Vec::with_capacity_in(2 * expressions.len(), context.builder().allocator().clone());
-    let mut last_expression = None::<&Expression<A>>;
+    let mut last_expression = None::<&Expression>;
 
     for expression in expressions {
         if let Some(last_expression) = last_expression {
@@ -381,12 +381,12 @@ mod tests {
         position::Position,
         position_map::PositionMap,
     };
-    use allocator_api2::{alloc::Global, vec};
+    use allocator_api2::alloc::Global;
     use indoc::indoc;
     use pretty_assertions::assert_eq;
 
     fn format(
-        module: &[Expression<Global>],
+        module: &[Expression],
         comments: &[Comment],
         hash_directives: &[HashDirective],
         source: &str,
@@ -600,7 +600,6 @@ mod tests {
 
     mod list {
         use super::*;
-        use allocator_api2::vec;
         use pretty_assertions::assert_eq;
 
         #[test]
@@ -871,7 +870,6 @@ mod tests {
 
     mod comment {
         use super::*;
-        use allocator_api2::vec;
         use pretty_assertions::assert_eq;
 
         #[test]
@@ -1318,7 +1316,6 @@ mod tests {
 
         mod suffix {
             use super::*;
-            use allocator_api2::vec;
             use pretty_assertions::assert_eq;
 
             #[test]
@@ -1464,7 +1461,6 @@ mod tests {
 
             mod inline {
                 use super::*;
-                use allocator_api2::vec;
                 use pretty_assertions::assert_eq;
 
                 #[test]
@@ -1759,7 +1755,6 @@ mod tests {
 
     mod data {
         use super::*;
-        use allocator_api2::vec;
         use pretty_assertions::assert_eq;
 
         #[test]
@@ -1914,7 +1909,6 @@ mod tests {
 
         mod nested {
             use super::*;
-            use allocator_api2::vec;
             use pretty_assertions::assert_eq;
 
             #[test]
