@@ -20,7 +20,6 @@ use self::{
     parse::{ParseError, parse, parse_comments, parse_hash_directives},
     position_map::PositionMap,
 };
-use allocator_api2::alloc::Global;
 use bumpalo::Bump;
 
 /// Formats a source string.
@@ -30,9 +29,9 @@ pub fn format_string(source: &str) -> Result<String, Error> {
     let allocator = Bump::new();
 
     Ok(format(
-        &parse(source, Global).map_err(convert_error)?,
-        &parse_comments(source, Global).map_err(convert_error)?,
-        &parse_hash_directives(source, Global).map_err(convert_error)?,
+        &parse(source).map_err(convert_error)?,
+        &parse_comments(source).map_err(convert_error)?,
+        &parse_hash_directives(source).map_err(convert_error)?,
         &position_map,
         &allocator,
     )?)
