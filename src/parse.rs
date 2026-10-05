@@ -44,7 +44,6 @@ fn convert_result<T, A: Allocator + Clone>(
 mod tests {
     use super::*;
     use crate::position::Position;
-    use allocator_api2::{alloc::Global, vec};
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -183,7 +182,6 @@ mod tests {
     mod comment {
         use super::*;
         use crate::ast::{BlockComment, LineComment};
-        use allocator_api2::vec;
         use pretty_assertions::assert_eq;
 
         #[test]
@@ -205,7 +203,6 @@ mod tests {
 
     mod hash {
         use super::*;
-        use allocator_api2::vec;
         use pretty_assertions::assert_eq;
 
         #[test]

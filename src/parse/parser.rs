@@ -3,7 +3,6 @@ use crate::{
     ast::{BlockComment, Comment, Expression, HashDirective, LineComment},
     position::Position,
 };
-use allocator_api2::{alloc::Allocator, boxed::Box, vec::Vec};
 use nom::{
     Parser,
     branch::alt,
@@ -20,9 +19,9 @@ use nom::{
 const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&~^.:";
 const SPECIAL_SIGNS: &str = ";\"";
 
-pub type IResult<'a, T, A> = nom::IResult<Input<'a, A>, T, NomError<'a, A>>;
+pub type IResult<'a, T> = nom::IResult<Input<'a>, T, NomError<'a>>;
 
-pub fn module<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Expression<A>, A>, A> {
+pub fn module(input: Input) -> IResult<Vec<Expression>> {
     all_consuming(delimited(
         many0_count(hash_directive),
         many0(expression),
@@ -31,9 +30,7 @@ pub fn module<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Expression<A
     .parse(input)
 }
 
-pub fn comments<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Comment, A>, A> {
-    let allocator = input.extra.clone();
-
+pub fn comments(input: Input) -> IResult<Vec<Comment>> {
     all_consuming(fold_many0(
         alt((
             map(none_of("\"|;#\\"), |_| None),
@@ -43,7 +40,7 @@ pub fn comments<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Comment, A
             map(comment, Some),
             map(quote, |_| None),
         )),
-        move || Vec::new_in(allocator.clone()),
+        Vec::new,
         |mut all, comment| {
             if let Some(comment) = comment {
                 all.push(comment);
@@ -55,29 +52,29 @@ pub fn comments<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<Comment, A
     .parse(input)
 }
 
-pub fn hash_directives<A: Allocator + Clone>(input: Input<A>) -> IResult<Vec<HashDirective, A>, A> {
+pub fn hash_directives(input: Input) -> IResult<Vec<HashDirective>> {
     many0(hash_directive).parse(input)
 }
 
-fn symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
+fn symbol(input: Input) -> IResult<Expression> {
     map(token(positioned(raw_symbol)), |(input, position)| {
         Expression::Symbol(&input, position)
     })
     .parse(input)
 }
 
-fn raw_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
+fn raw_symbol(input: Input) -> IResult<Input> {
     recognize((head_symbol_character, many0(tail_symbol_character))).parse(input)
 }
 
-fn quoted_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
+fn quoted_symbol(input: Input) -> IResult<Expression> {
     map(token(positioned(raw_quoted_symbol)), |(input, position)| {
         Expression::QuotedSymbol(&input, position)
     })
     .parse(input)
 }
 
-fn raw_quoted_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
+fn raw_quoted_symbol(input: Input) -> IResult<Input> {
     delimited(
         char('|'),
         recognize(many0(alt((
@@ -91,7 +88,7 @@ fn raw_quoted_symbol<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>,
     .parse(input)
 }
 
-fn escaped_character<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
+fn escaped_character(input: Input) -> IResult<Input> {
     alt((
         tag("\\\\"),
         tag("\\'"),
@@ -117,7 +114,7 @@ fn escaped_character<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>,
     .parse(input)
 }
 
-fn head_symbol_character<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
+fn head_symbol_character(input: Input) -> IResult<Input> {
     recognize(alt((
         value(
             (),
@@ -132,13 +129,11 @@ fn head_symbol_character<A: Allocator + Clone>(input: Input<A>) -> IResult<Input
     .parse(input)
 }
 
-fn tail_symbol_character<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
+fn tail_symbol_character(input: Input) -> IResult<Input> {
     alt((head_symbol_character, recognize(char('#')))).parse(input)
 }
 
-fn expression<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
-    let allocator = input.extra.clone();
-
+fn expression(input: Input) -> IResult<Expression> {
     alt((
         context("list", list_like("(", ")")),
         context("string", string),
@@ -146,8 +141,8 @@ fn expression<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A
             "quote",
             map(
                 token(positioned((quote, expression))),
-                move |((sign, expression), position)| {
-                    Expression::Quote(&sign, Box::new_in(expression, allocator.clone()), position)
+                |((sign, expression), position)| {
+                    Expression::Quote(&sign, expression.into(), position)
                 },
             ),
         ),
@@ -159,7 +154,7 @@ fn expression<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A
     .parse(input)
 }
 
-fn quote<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
+fn quote(input: Input) -> IResult<Input> {
     alt((
         tag("'"),
         tag("`"),
@@ -172,10 +167,10 @@ fn quote<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
     .parse(input)
 }
 
-fn list_like<A: Allocator + Clone>(
+fn list_like(
     left: &'static str,
     right: &'static str,
-) -> impl FnMut(Input<A>) -> IResult<Expression<A>, A> {
+) -> impl FnMut(Input) -> IResult<Expression> {
     move |input| {
         map(
             token(positioned((
@@ -190,14 +185,14 @@ fn list_like<A: Allocator + Clone>(
     }
 }
 
-fn string<A: Allocator + Clone>(input: Input<A>) -> IResult<Expression<A>, A> {
+fn string(input: Input) -> IResult<Expression> {
     map(token(positioned(raw_string)), |(input, position)| {
         Expression::String(*input, position)
     })
     .parse(input)
 }
 
-fn raw_string<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
+fn raw_string(input: Input) -> IResult<Input> {
     delimited(
         char('"'),
         recognize(many0(alt((
@@ -210,23 +205,23 @@ fn raw_string<A: Allocator + Clone>(input: Input<A>) -> IResult<Input<A>, A> {
     .parse(input)
 }
 
-fn hexadecimal_digit<A: Allocator + Clone>(input: Input<A>) -> IResult<char, A> {
+fn hexadecimal_digit(input: Input) -> IResult<char> {
     satisfy(|character| character.is_ascii_hexdigit()).parse(input)
 }
 
-fn sign<A: Allocator + Clone>(sign: &'static str) -> impl Fn(Input<A>) -> IResult<Input<A>, A> {
+fn sign(sign: &'static str) -> impl Fn(Input) -> IResult<Input> {
     move |input| token(tag(sign)).parse(input)
 }
 
-fn token<'a, T, A: Allocator + Clone>(
-    mut parser: impl Parser<Input<'a, A>, Output = T, Error = NomError<'a, A>>,
-) -> impl FnMut(Input<'a, A>) -> IResult<'a, T, A> {
+fn token<'a, T>(
+    mut parser: impl Parser<Input<'a>, Output = T, Error = NomError<'a>>,
+) -> impl FnMut(Input<'a>) -> IResult<'a, T> {
     move |input| preceded(blank, |input| parser.parse(input)).parse(input)
 }
 
-fn positioned<'a, T, A: Allocator + Clone>(
-    mut parser: impl Parser<Input<'a, A>, Output = T, Error = NomError<'a, A>>,
-) -> impl FnMut(Input<'a, A>) -> IResult<'a, (T, Position), A> {
+fn positioned<'a, T>(
+    mut parser: impl Parser<Input<'a>, Output = T, Error = NomError<'a>>,
+) -> impl FnMut(Input<'a>) -> IResult<'a, (T, Position)> {
     move |input| {
         map(
             (
@@ -245,9 +240,9 @@ fn positioned<'a, T, A: Allocator + Clone>(
     }
 }
 
-fn positioned_meta<'a, T, A: Allocator + Clone>(
-    mut parser: impl Parser<Input<'a, A>, Output = T, Error = NomError<'a, A>>,
-) -> impl FnMut(Input<'a, A>) -> IResult<'a, (T, Position), A> {
+fn positioned_meta<'a, T>(
+    mut parser: impl Parser<Input<'a>, Output = T, Error = NomError<'a>>,
+) -> impl FnMut(Input<'a>) -> IResult<'a, (T, Position)> {
     move |input| {
         map(
             (
@@ -266,7 +261,7 @@ fn positioned_meta<'a, T, A: Allocator + Clone>(
     }
 }
 
-fn blank<A: Allocator + Clone>(input: Input<A>) -> IResult<(), A> {
+fn blank(input: Input) -> IResult<()> {
     value(
         (),
         many0_count(alt((value((), multispace1), value((), comment)))),
@@ -274,7 +269,7 @@ fn blank<A: Allocator + Clone>(input: Input<A>) -> IResult<(), A> {
     .parse(input)
 }
 
-fn comment<A: Allocator + Clone>(input: Input<A>) -> IResult<Comment, A> {
+fn comment(input: Input) -> IResult<Comment> {
     alt((
         map(line_comment, From::from),
         map(block_comment, From::from),
@@ -282,7 +277,7 @@ fn comment<A: Allocator + Clone>(input: Input<A>) -> IResult<Comment, A> {
     .parse(input)
 }
 
-fn line_comment<A: Allocator + Clone>(input: Input<A>) -> IResult<LineComment, A> {
+fn line_comment(input: Input) -> IResult<LineComment> {
     map(
         terminated(
             positioned_meta(preceded(char(';'), take_until("\n"))),
@@ -293,7 +288,7 @@ fn line_comment<A: Allocator + Clone>(input: Input<A>) -> IResult<LineComment, A
     .parse(input)
 }
 
-fn block_comment<A: Allocator + Clone>(input: Input<A>) -> IResult<BlockComment, A> {
+fn block_comment(input: Input) -> IResult<BlockComment> {
     map(
         positioned_meta(delimited(
             tag("#|"),
@@ -305,7 +300,7 @@ fn block_comment<A: Allocator + Clone>(input: Input<A>) -> IResult<BlockComment,
     .parse(input)
 }
 
-fn hash_directive<A: Allocator + Clone>(input: Input<A>) -> IResult<HashDirective, A> {
+fn hash_directive(input: Input) -> IResult<HashDirective> {
     map(
         terminated(
             positioned_meta(preceded(
@@ -319,7 +314,7 @@ fn hash_directive<A: Allocator + Clone>(input: Input<A>) -> IResult<HashDirectiv
     .parse(input)
 }
 
-fn newline<A: Allocator + Clone>(input: Input<A>) -> IResult<(), A> {
+fn newline(input: Input) -> IResult<()> {
     value(
         (),
         many1_count(delimited(space0, nom::character::complete::newline, space0)),
@@ -327,15 +322,13 @@ fn newline<A: Allocator + Clone>(input: Input<A>) -> IResult<(), A> {
     .parse(input)
 }
 
-fn many0<'a, T, A: Allocator + Clone>(
-    mut parser: impl Parser<Input<'a, A>, Output = T, Error = NomError<'a, A>>,
-) -> impl FnMut(Input<'a, A>) -> IResult<'a, Vec<T, A>, A> {
+fn many0<'a, T>(
+    mut parser: impl Parser<Input<'a>, Output = T, Error = NomError<'a>>,
+) -> impl FnMut(Input<'a>) -> IResult<'a, Vec<T>> {
     move |input| {
-        let allocator = input.extra.clone();
-
         fold_many0(
             |input| parser.parse(input),
-            move || Vec::new_in(allocator.clone()),
+            Vec::new,
             |mut all, value| {
                 all.push(value);
                 all
@@ -348,65 +341,64 @@ fn many0<'a, T, A: Allocator + Clone>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use allocator_api2::{alloc::Global, vec};
     use pretty_assertions::assert_eq;
 
     #[test]
     fn parse_symbol() {
         assert_eq!(
-            expression(Input::new_extra("x", Global)).unwrap().1,
+            expression(Input::new("x")).unwrap().1,
             Expression::Symbol("x", Position::new(0, 1))
         );
         assert_eq!(
-            expression(Input::new_extra("foo", Global)).unwrap().1,
+            expression(Input::new("foo")).unwrap().1,
             Expression::Symbol("foo", Position::new(0, 3))
         );
         assert_eq!(
-            expression(Input::new_extra("1", Global)).unwrap().1,
+            expression(Input::new("1")).unwrap().1,
             Expression::Symbol("1", Position::new(0, 1))
         );
         assert_eq!(
-            expression(Input::new_extra("42", Global)).unwrap().1,
+            expression(Input::new("42")).unwrap().1,
             Expression::Symbol("42", Position::new(0, 2))
         );
         assert_eq!(
-            expression(Input::new_extra("3.14", Global)).unwrap().1,
+            expression(Input::new("3.14")).unwrap().1,
             Expression::Symbol("3.14", Position::new(0, 4))
         );
         assert_eq!(
-            expression(Input::new_extra("a#a", Global)).unwrap().1,
+            expression(Input::new("a#a")).unwrap().1,
             Expression::Symbol("a#a", Position::new(0, 3))
         );
         assert_eq!(
-            expression(Input::new_extra("\\#", Global)).unwrap().1,
+            expression(Input::new("\\#")).unwrap().1,
             Expression::Symbol("\\#", Position::new(0, 2))
         );
         assert_eq!(
-            expression(Input::new_extra("あいうえお", Global))
+            expression(Input::new("あいうえお"))
                 .unwrap()
                 .1,
             Expression::Symbol("あいうえお", Position::new(0, 15))
         );
         assert_eq!(
-            expression(Input::new_extra("→", Global)).unwrap().1,
+            expression(Input::new("→")).unwrap().1,
             Expression::Symbol("→", Position::new(0, 3))
         );
         assert_eq!(
-            expression(Input::new_extra("…", Global)).unwrap().1,
+            expression(Input::new("…")).unwrap().1,
             Expression::Symbol("…", Position::new(0, 3))
         );
         assert_eq!(
-            expression(Input::new_extra("🎉", Global)).unwrap().1,
+            expression(Input::new("🎉")).unwrap().1,
             Expression::Symbol("🎉", Position::new(0, 4))
         );
         assert_eq!(
-            expression(Input::new_extra("list→vector", Global))
+            expression(Input::new("list→vector"))
                 .unwrap()
                 .1,
             Expression::Symbol("list→vector", Position::new(0, 13))
         );
         assert_eq!(
-            expression(Input::new_extra("foo\u{3000}bar", Global))
+            expression(Input::new("foo\u{3000}bar"))
                 .unwrap()
                 .1,
             Expression::Symbol("foo", Position::new(0, 3))
@@ -416,49 +408,49 @@ mod tests {
     #[test]
     fn parse_quoted_symbol() {
         assert_eq!(
-            expression(Input::new_extra("|a|", Global)).unwrap().1,
+            expression(Input::new("|a|")).unwrap().1,
             Expression::QuotedSymbol("a", Position::new(0, 3))
         );
         assert_eq!(
-            expression(Input::new_extra("|a b|", Global)).unwrap().1,
+            expression(Input::new("|a b|")).unwrap().1,
             Expression::QuotedSymbol("a b", Position::new(0, 5))
         );
         assert_eq!(
-            expression(Input::new_extra("|\\||", Global)).unwrap().1,
+            expression(Input::new("|\\||")).unwrap().1,
             Expression::QuotedSymbol("\\|", Position::new(0, 4))
         );
         assert_eq!(
-            expression(Input::new_extra("|\t\n|", Global)).unwrap().1,
+            expression(Input::new("|\t\n|")).unwrap().1,
             Expression::QuotedSymbol("\t\n", Position::new(0, 4))
         );
         assert_eq!(
-            expression(Input::new_extra("|\\t\\n|", Global)).unwrap().1,
+            expression(Input::new("|\\t\\n|")).unwrap().1,
             Expression::QuotedSymbol("\\t\\n", Position::new(0, 6))
         );
         assert_eq!(
-            expression(Input::new_extra("|\\;|", Global)).unwrap().1,
+            expression(Input::new("|\\;|")).unwrap().1,
             Expression::QuotedSymbol("\\;", Position::new(0, 4))
         );
         assert_eq!(
-            expression(Input::new_extra("|\\\"|", Global)).unwrap().1,
+            expression(Input::new("|\\\"|")).unwrap().1,
             Expression::QuotedSymbol("\\\"", Position::new(0, 4))
         );
         assert_eq!(
-            expression(Input::new_extra("|\\a\\b|", Global)).unwrap().1,
+            expression(Input::new("|\\a\\b|")).unwrap().1,
             Expression::QuotedSymbol("\\a\\b", Position::new(0, 6))
         );
     }
 
     #[test]
     fn parse_invalid_symbol() {
-        assert!(expression(Input::new_extra("#", Global)).is_err());
-        assert!(expression(Input::new_extra("\u{3000}", Global)).is_err());
+        assert!(expression(Input::new("#")).is_err());
+        assert!(expression(Input::new("\u{3000}")).is_err());
     }
 
     #[test]
     fn parse_list() {
         assert_eq!(
-            expression(Input::new_extra("(1 2 3)", Global)).unwrap().1,
+            expression(Input::new("(1 2 3)")).unwrap().1,
             Expression::List(
                 "(",
                 ")",
@@ -475,7 +467,7 @@ mod tests {
     #[test]
     fn parse_list_with_correct_position() {
         assert_eq!(
-            expression(Input::new_extra(" ()", Global)).unwrap().1,
+            expression(Input::new(" ()")).unwrap().1,
             Expression::List("(", ")", vec![], Position::new(1, 3))
         );
     }
@@ -483,7 +475,7 @@ mod tests {
     #[test]
     fn parse_character() {
         assert_eq!(
-            expression(Input::new_extra("#\\a", Global)).unwrap().1,
+            expression(Input::new("#\\a")).unwrap().1,
             Expression::Quote(
                 "#",
                 Expression::Symbol("\\a", Position::new(1, 3)).into(),
@@ -491,7 +483,7 @@ mod tests {
             )
         );
         assert_eq!(
-            expression(Input::new_extra("#\\(", Global)).unwrap().1,
+            expression(Input::new("#\\(")).unwrap().1,
             Expression::Quote(
                 "#",
                 Expression::Symbol("\\(", Position::new(1, 3)).into(),
@@ -499,7 +491,7 @@ mod tests {
             )
         );
         assert_eq!(
-            expression(Input::new_extra("#\\;", Global)).unwrap().1,
+            expression(Input::new("#\\;")).unwrap().1,
             Expression::Quote(
                 "#",
                 Expression::Symbol("\\;", Position::new(1, 3)).into(),
@@ -507,7 +499,7 @@ mod tests {
             )
         );
         assert_eq!(
-            expression(Input::new_extra("#\\ ", Global)).unwrap().1,
+            expression(Input::new("#\\ ")).unwrap().1,
             Expression::Quote(
                 "#",
                 Expression::Symbol("\\ ", Position::new(1, 3)).into(),
@@ -515,7 +507,7 @@ mod tests {
             )
         );
         assert_eq!(
-            expression(Input::new_extra("#\\space", Global)).unwrap().1,
+            expression(Input::new("#\\space")).unwrap().1,
             Expression::Quote(
                 "#",
                 Expression::Symbol("\\space", Position::new(1, 7)).into(),
@@ -523,7 +515,7 @@ mod tests {
             )
         );
         assert_eq!(
-            expression(Input::new_extra("#\\\n", Global)).unwrap().1,
+            expression(Input::new("#\\\n")).unwrap().1,
             Expression::Quote(
                 "#",
                 Expression::Symbol("\\\n", Position::new(1, 3)).into(),
@@ -535,7 +527,7 @@ mod tests {
     #[test]
     fn parse_vector() {
         assert_eq!(
-            expression(Input::new_extra("#(1 2 3)", Global)).unwrap().1,
+            expression(Input::new("#(1 2 3)")).unwrap().1,
             Expression::Quote(
                 "#",
                 Expression::List(
@@ -557,7 +549,7 @@ mod tests {
     #[test]
     fn parse_byte_vector() {
         assert_eq!(
-            expression(Input::new_extra("#u8(1 2 3)", Global))
+            expression(Input::new("#u8(1 2 3)"))
                 .unwrap()
                 .1,
             Expression::Quote(
@@ -586,7 +578,7 @@ mod tests {
     #[test]
     fn parse_bracket_vector() {
         assert_eq!(
-            expression(Input::new_extra("[1 2 3]", Global)).unwrap().1,
+            expression(Input::new("[1 2 3]")).unwrap().1,
             Expression::List(
                 "[",
                 "]",
@@ -603,7 +595,7 @@ mod tests {
     #[test]
     fn parse_map() {
         assert_eq!(
-            expression(Input::new_extra("#{1 2 3}", Global)).unwrap().1,
+            expression(Input::new("#{1 2 3}")).unwrap().1,
             Expression::Quote(
                 "#",
                 Expression::List(
@@ -625,7 +617,7 @@ mod tests {
     #[test]
     fn parse_single_at_mark() {
         assert_eq!(
-            expression(Input::new_extra("(@ foo)", Global)).unwrap().1,
+            expression(Input::new("(@ foo)")).unwrap().1,
             Expression::List(
                 "(",
                 ")",
@@ -641,7 +633,7 @@ mod tests {
     #[test]
     fn parse_double_at_marks() {
         assert_eq!(
-            expression(Input::new_extra("(@@ foo)", Global)).unwrap().1,
+            expression(Input::new("(@@ foo)")).unwrap().1,
             Expression::List(
                 "(",
                 ")",
@@ -661,7 +653,7 @@ mod tests {
         #[test]
         fn parse_false() {
             assert_eq!(
-                expression(Input::new_extra("#f", Global)).unwrap().1,
+                expression(Input::new("#f")).unwrap().1,
                 Expression::Quote(
                     "#",
                     Expression::Symbol("f", Position::new(1, 2)).into(),
@@ -669,7 +661,7 @@ mod tests {
                 )
             );
             assert_eq!(
-                expression(Input::new_extra("#false", Global)).unwrap().1,
+                expression(Input::new("#false")).unwrap().1,
                 Expression::Quote(
                     "#",
                     Expression::Symbol("false", Position::new(1, 6)).into(),
@@ -681,7 +673,7 @@ mod tests {
         #[test]
         fn parse_true() {
             assert_eq!(
-                expression(Input::new_extra("#t", Global)).unwrap().1,
+                expression(Input::new("#t")).unwrap().1,
                 Expression::Quote(
                     "#",
                     Expression::Symbol("t", Position::new(1, 2)).into(),
@@ -689,7 +681,7 @@ mod tests {
                 )
             );
             assert_eq!(
-                expression(Input::new_extra("#true", Global)).unwrap().1,
+                expression(Input::new("#true")).unwrap().1,
                 Expression::Quote(
                     "#",
                     Expression::Symbol("true", Position::new(1, 5)).into(),
@@ -701,7 +693,7 @@ mod tests {
         #[test]
         fn parse_boolean_followed_by_comment() {
             assert_eq!(
-                expression(Input::new_extra("#f;", Global)).unwrap().1,
+                expression(Input::new("#f;")).unwrap().1,
                 Expression::Quote(
                     "#",
                     Expression::Symbol("f", Position::new(1, 2)).into(),
@@ -713,7 +705,7 @@ mod tests {
         #[test]
         fn parse_boolean_followed_by_right_parenthesis() {
             assert_eq!(
-                expression(Input::new_extra("#f)", Global)).unwrap().1,
+                expression(Input::new("#f)")).unwrap().1,
                 Expression::Quote(
                     "#",
                     Expression::Symbol("f", Position::new(1, 2)).into(),
@@ -725,13 +717,12 @@ mod tests {
 
     mod quote {
         use super::*;
-        use allocator_api2::vec;
         use pretty_assertions::assert_eq;
 
         #[test]
         fn parse_quote() {
             assert_eq!(
-                expression(Input::new_extra("'foo", Global)).unwrap().1,
+                expression(Input::new("'foo")).unwrap().1,
                 Expression::Quote(
                     "'",
                     Expression::Symbol("foo", Position::new(1, 4)).into(),
@@ -743,7 +734,7 @@ mod tests {
         #[test]
         fn parse_quote_with_correct_position() {
             assert_eq!(
-                expression(Input::new_extra(" 'foo", Global)).unwrap().1,
+                expression(Input::new(" 'foo")).unwrap().1,
                 Expression::Quote(
                     "'",
                     Expression::Symbol("foo", Position::new(2, 5)).into(),
@@ -755,7 +746,7 @@ mod tests {
         #[test]
         fn parse_unquote() {
             assert_eq!(
-                expression(Input::new_extra(",foo", Global)).unwrap().1,
+                expression(Input::new(",foo")).unwrap().1,
                 Expression::Quote(
                     ",",
                     Expression::Symbol("foo", Position::new(1, 4)).into(),
@@ -767,7 +758,7 @@ mod tests {
         #[test]
         fn parse_hash_quote() {
             assert_eq!(
-                expression(Input::new_extra("#()", Global)).unwrap().1,
+                expression(Input::new("#()")).unwrap().1,
                 Expression::Quote(
                     "#",
                     Expression::List("(", ")", vec![], Position::new(1, 3)).into(),
@@ -779,7 +770,7 @@ mod tests {
         #[test]
         fn parse_hash_semicolon_quote() {
             assert_eq!(
-                expression(Input::new_extra("#;()", Global)).unwrap().1,
+                expression(Input::new("#;()")).unwrap().1,
                 Expression::Quote(
                     "#;",
                     Expression::List("(", ")", vec![], Position::new(2, 4)).into(),
@@ -791,7 +782,7 @@ mod tests {
         #[test]
         fn parse_quasi_quote() {
             assert_eq!(
-                expression(Input::new_extra("`foo", Global)).unwrap().1,
+                expression(Input::new("`foo")).unwrap().1,
                 Expression::Quote(
                     "`",
                     Expression::Symbol("foo", Position::new(1, 4)).into(),
@@ -803,7 +794,7 @@ mod tests {
         #[test]
         fn parse_splicing_unquote() {
             assert_eq!(
-                expression(Input::new_extra(",@foo", Global)).unwrap().1,
+                expression(Input::new(",@foo")).unwrap().1,
                 Expression::Quote(
                     ",@",
                     Expression::Symbol("foo", Position::new(2, 5)).into(),
@@ -815,7 +806,7 @@ mod tests {
         #[test]
         fn parse_splicing_unquote_with_space() {
             assert_eq!(
-                expression(Input::new_extra(",@ foo", Global)).unwrap().1,
+                expression(Input::new(",@ foo")).unwrap().1,
                 Expression::Quote(
                     ",@",
                     Expression::Symbol("foo", Position::new(3, 6)).into(),
@@ -828,7 +819,7 @@ mod tests {
         fn parse_symbol_and_quoted_list() {
             assert_eq!(
                 (expression, expression)
-                    .parse(Input::new_extra("#u8 ()", Global))
+                    .parse(Input::new("#u8 ()"))
                     .unwrap()
                     .1,
                 (
@@ -845,7 +836,7 @@ mod tests {
         #[test]
         fn parse_quote_with_space() {
             assert_eq!(
-                expression(Input::new_extra("' foo", Global)).unwrap().1,
+                expression(Input::new("' foo")).unwrap().1,
                 Expression::Quote(
                     "'",
                     Expression::Symbol("foo", Position::new(2, 5)).into(),
@@ -857,13 +848,12 @@ mod tests {
 
     mod hash_directive {
         use super::*;
-        use allocator_api2::vec;
         use pretty_assertions::assert_eq;
 
         #[test]
         fn parse_shebang() {
             assert_eq!(
-                hash_directive(Input::new_extra("#!/bin/sh\n", Global))
+                hash_directive(Input::new("#!/bin/sh\n"))
                     .unwrap()
                     .1,
                 HashDirective::new("!/bin/sh", Position::new(0, 9))
@@ -873,7 +863,7 @@ mod tests {
         #[test]
         fn parse_lang_directive() {
             assert_eq!(
-                hash_directive(Input::new_extra("#lang r7rs\n", Global))
+                hash_directive(Input::new("#lang r7rs\n"))
                     .unwrap()
                     .1,
                 HashDirective::new("lang r7rs", Position::new(0, 10))
@@ -883,7 +873,7 @@ mod tests {
         #[test]
         fn parse_comment() {
             assert_eq!(
-                hash_directives(Input::new_extra("#||#\n", Global))
+                hash_directives(Input::new("#||#\n"))
                     .unwrap()
                     .1,
                 vec![]
@@ -898,7 +888,7 @@ mod tests {
         #[test]
         fn parse_empty() {
             assert_eq!(
-                string(Input::new_extra("\"\"", Global)).unwrap().1,
+                string(Input::new("\"\"")).unwrap().1,
                 Expression::String("", Position::new(0, 2))
             );
         }
@@ -906,7 +896,7 @@ mod tests {
         #[test]
         fn parse_non_empty() {
             assert_eq!(
-                string(Input::new_extra("\"foo\"", Global)).unwrap().1,
+                string(Input::new("\"foo\"")).unwrap().1,
                 Expression::String("foo", Position::new(0, 5))
             );
         }
@@ -914,7 +904,7 @@ mod tests {
         #[test]
         fn parse_escaped_double_quote() {
             assert_eq!(
-                string(Input::new_extra("\"\\\"\"", Global)).unwrap().1,
+                string(Input::new("\"\\\"\"")).unwrap().1,
                 Expression::String("\\\"", Position::new(0, 4))
             );
         }
@@ -922,7 +912,7 @@ mod tests {
         #[test]
         fn parse_escaped_single_quote() {
             assert_eq!(
-                string(Input::new_extra("\"\\'\"", Global)).unwrap().1,
+                string(Input::new("\"\\'\"")).unwrap().1,
                 Expression::String("\\'", Position::new(0, 4))
             );
         }
@@ -930,7 +920,7 @@ mod tests {
         #[test]
         fn parse_escaped_characters() {
             assert_eq!(
-                string(Input::new_extra("\"\\\\\\a\\b\\n\\r\\t\"", Global))
+                string(Input::new("\"\\\\\\a\\b\\n\\r\\t\""))
                     .unwrap()
                     .1,
                 Expression::String("\\\\\\a\\b\\n\\r\\t", Position::new(0, 14))
@@ -940,11 +930,11 @@ mod tests {
         #[test]
         fn parse_scheme_hexadecimal_bytes() {
             assert_eq!(
-                string(Input::new_extra("\"\\x0F;\"", Global)).unwrap().1,
+                string(Input::new("\"\\x0F;\"")).unwrap().1,
                 Expression::String("\\x0F;", Position::new(0, 7))
             );
             assert_eq!(
-                string(Input::new_extra("\"\\xABCD;\"", Global)).unwrap().1,
+                string(Input::new("\"\\xABCD;\"")).unwrap().1,
                 Expression::String("\\xABCD;", Position::new(0, 9))
             );
         }
@@ -952,31 +942,31 @@ mod tests {
         #[test]
         fn parse_scheme_hexadecimal_scalar_values() {
             assert_eq!(
-                string(Input::new_extra("\"\\xA;\"", Global)).unwrap().1,
+                string(Input::new("\"\\xA;\"")).unwrap().1,
                 Expression::String("\\xA;", Position::new(0, 6))
             );
             assert_eq!(
-                string(Input::new_extra("\"\\x3bb;\"", Global)).unwrap().1,
+                string(Input::new("\"\\x3bb;\"")).unwrap().1,
                 Expression::String("\\x3bb;", Position::new(0, 8))
             );
             assert_eq!(
-                string(Input::new_extra("\"\\x1F600;\"", Global)).unwrap().1,
+                string(Input::new("\"\\x1F600;\"")).unwrap().1,
                 Expression::String("\\x1F600;", Position::new(0, 10))
             );
         }
 
         #[test]
         fn parse_invalid_scheme_hexadecimal_scalar_values() {
-            assert!(string(Input::new_extra("\"\\x;\"", Global)).is_err());
-            assert!(string(Input::new_extra("\"\\x41\"", Global)).is_err());
-            assert!(string(Input::new_extra("\"\\xG;\"", Global)).is_err());
+            assert!(string(Input::new("\"\\x;\"")).is_err());
+            assert!(string(Input::new("\"\\x41\"")).is_err());
+            assert!(string(Input::new("\"\\xG;\"")).is_err());
         }
 
         // https://webassembly.github.io/spec/core/text/values.html#strings
         #[test]
         fn parse_wasm_hexadecimal_bytes() {
             assert_eq!(
-                string(Input::new_extra("\"\\00\\FF\"", Global)).unwrap().1,
+                string(Input::new("\"\\00\\FF\"")).unwrap().1,
                 Expression::String("\\00\\FF", Position::new(0, 8))
             );
         }
@@ -984,7 +974,7 @@ mod tests {
         #[test]
         fn parse_multi_line() {
             assert_eq!(
-                string(Input::new_extra("\"a\\\nb\"", Global)).unwrap().1,
+                string(Input::new("\"a\\\nb\"")).unwrap().1,
                 Expression::String("a\\\nb", Position::new(0, 6))
             );
         }
@@ -992,7 +982,7 @@ mod tests {
         #[test]
         fn parse_escaped_unicode() {
             assert_eq!(
-                string(Input::new_extra("\"\\ubeef\"", Global)).unwrap().1,
+                string(Input::new("\"\\ubeef\"")).unwrap().1,
                 Expression::String("\\ubeef", Position::new(0, 8))
             );
         }
@@ -1000,13 +990,12 @@ mod tests {
 
     mod comment {
         use super::*;
-        use allocator_api2::vec;
         use pretty_assertions::assert_eq;
 
         #[test]
         fn parse_empty() {
             assert_eq!(
-                comment(Input::new_extra(";\n", Global)).unwrap().1,
+                comment(Input::new(";\n")).unwrap().1,
                 LineComment::new("", Position::new(0, 1)).into()
             );
         }
@@ -1014,7 +1003,7 @@ mod tests {
         #[test]
         fn parse_comment() {
             assert_eq!(
-                comment(Input::new_extra(";foo\n", Global)).unwrap().1,
+                comment(Input::new(";foo\n")).unwrap().1,
                 LineComment::new("foo", Position::new(0, 4)).into()
             );
         }
@@ -1022,7 +1011,7 @@ mod tests {
         #[test]
         fn parse_comments() {
             assert_eq!(
-                comments(Input::new_extra(";foo\n;bar\n", Global))
+                comments(Input::new(";foo\n;bar\n"))
                     .unwrap()
                     .1,
                 vec![
@@ -1035,7 +1024,7 @@ mod tests {
         #[test]
         fn parse_comments_with_blank_lines() {
             assert_eq!(
-                comments(Input::new_extra(";foo\n\n;bar\n", Global))
+                comments(Input::new(";foo\n\n;bar\n"))
                     .unwrap()
                     .1,
                 vec![
@@ -1048,7 +1037,7 @@ mod tests {
         #[test]
         fn parse_comments_skipping_hash_semicolon() {
             assert_eq!(
-                comments(Input::new_extra("#;foo\n;bar\n", Global))
+                comments(Input::new("#;foo\n;bar\n"))
                     .unwrap()
                     .1,
                 vec![LineComment::new("bar", Position::new(6, 10)).into()]
@@ -1058,7 +1047,7 @@ mod tests {
         #[test]
         fn parse_comments_skipping_hash_character() {
             assert_eq!(
-                comments(Input::new_extra("#foo\n;bar\n", Global))
+                comments(Input::new("#foo\n;bar\n"))
                     .unwrap()
                     .1,
                 vec![LineComment::new("bar", Position::new(5, 9)).into()]
@@ -1068,7 +1057,7 @@ mod tests {
         #[test]
         fn parse_comment_character() {
             assert_eq!(
-                comments(Input::new_extra("#\\;foo\n", Global)).unwrap().1,
+                comments(Input::new("#\\;foo\n")).unwrap().1,
                 vec![]
             );
         }
@@ -1076,7 +1065,7 @@ mod tests {
         #[test]
         fn parse_comment_in_list() {
             assert_eq!(
-                comments(Input::new_extra("(f\n;foo\nx)", Global))
+                comments(Input::new("(f\n;foo\nx)"))
                     .unwrap()
                     .1,
                 vec![LineComment::new("foo", Position::new(3, 7)).into()]
@@ -1085,18 +1074,17 @@ mod tests {
 
         #[test]
         fn parse_comment_with_vector() {
-            assert_eq!(comments(Input::new_extra("#()", Global)).unwrap().1, vec![]);
+            assert_eq!(comments(Input::new("#()")).unwrap().1, vec![]);
         }
 
         mod block {
             use super::*;
-            use allocator_api2::vec;
             use pretty_assertions::assert_eq;
 
             #[test]
             fn parse_empty() {
                 assert_eq!(
-                    block_comment(Input::new_extra("#||#", Global)).unwrap().1,
+                    block_comment(Input::new("#||#")).unwrap().1,
                     BlockComment::new("", Position::new(0, 4))
                 );
             }
@@ -1104,7 +1092,7 @@ mod tests {
             #[test]
             fn parse_one_line() {
                 assert_eq!(
-                    block_comment(Input::new_extra("#|foo|#", Global))
+                    block_comment(Input::new("#|foo|#"))
                         .unwrap()
                         .1,
                     BlockComment::new("foo", Position::new(0, 7))
@@ -1115,7 +1103,7 @@ mod tests {
             fn parse_multi_line() {
                 assert_eq!(
                     // spell-checker: disable-next-line
-                    block_comment(Input::new_extra("#|\nfoo\nbar\nbaz\n|#", Global))
+                    block_comment(Input::new("#|\nfoo\nbar\nbaz\n|#"))
                         .unwrap()
                         .1,
                     // spell-checker: disable-next-line
@@ -1126,7 +1114,7 @@ mod tests {
             #[test]
             fn parse_in_comments() {
                 assert_eq!(
-                    comments(Input::new_extra("#|foo|#", Global)).unwrap().1,
+                    comments(Input::new("#|foo|#")).unwrap().1,
                     vec![BlockComment::new("foo", Position::new(0, 7)).into()]
                 );
             }
