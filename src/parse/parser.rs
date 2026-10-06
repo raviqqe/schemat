@@ -145,10 +145,7 @@ fn expression(input: Input) -> IResult<Expression> {
                         recognize((
                             tag("#"),
                             raw_symbol,
-                            peek(not(alt((
-                                value((), multispace1),
-                                value((), comment),
-                            )))),
+                            peek(not(alt((value((), multispace1), value((), comment))))),
                         )),
                         expression,
                     ),
