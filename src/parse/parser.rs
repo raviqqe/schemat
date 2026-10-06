@@ -25,7 +25,7 @@ pub fn module(input: Input) -> IResult<Vec<Expression>> {
     all_consuming(delimited(
         many0_count(hash_directive),
         many0(expression),
-        blank,
+        blank0,
     ))
     .parse(input)
 }
@@ -216,7 +216,7 @@ fn sign(sign: &'static str) -> impl Fn(Input) -> IResult<Input> {
 fn token<'a, T>(
     mut parser: impl Parser<Input<'a>, Output = T, Error = NomError<'a>>,
 ) -> impl FnMut(Input<'a>) -> IResult<'a, T> {
-    move |input| preceded(blank, |input| parser.parse(input)).parse(input)
+    move |input| preceded(blank0, |input| parser.parse(input)).parse(input)
 }
 
 fn positioned<'a, T>(
@@ -261,12 +261,12 @@ fn positioned_meta<'a, T>(
     }
 }
 
+fn blank0(input: Input) -> IResult<()> {
+    value((), many0_count(blank)).parse(input)
+}
+
 fn blank(input: Input) -> IResult<()> {
-    value(
-        (),
-        many0_count(alt((value((), multispace1), value((), comment)))),
-    )
-    .parse(input)
+    alt((value((), multispace1), value((), comment))).parse(input)
 }
 
 fn comment(input: Input) -> IResult<Comment> {
