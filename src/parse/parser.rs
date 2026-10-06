@@ -691,6 +691,150 @@ mod tests {
         }
     }
 
+    mod comment {
+        use super::*;
+        use pretty_assertions::assert_eq;
+
+        #[test]
+        fn parse_empty() {
+            assert_eq!(
+                comment(Input::new(";\n")).unwrap().1,
+                LineComment::new("", Position::new(0, 1)).into()
+            );
+        }
+
+        #[test]
+        fn parse_comment() {
+            assert_eq!(
+                comment(Input::new(";foo\n")).unwrap().1,
+                LineComment::new("foo", Position::new(0, 4)).into()
+            );
+        }
+
+        #[test]
+        fn parse_comments() {
+            assert_eq!(
+                comments(Input::new(";foo\n;bar\n")).unwrap().1,
+                vec![
+                    LineComment::new("foo", Position::new(0, 4)).into(),
+                    LineComment::new("bar", Position::new(5, 9)).into()
+                ]
+            );
+        }
+
+        #[test]
+        fn parse_comments_with_blank_lines() {
+            assert_eq!(
+                comments(Input::new(";foo\n\n;bar\n")).unwrap().1,
+                vec![
+                    LineComment::new("foo", Position::new(0, 4)).into(),
+                    LineComment::new("bar", Position::new(6, 10)).into()
+                ]
+            );
+        }
+
+        #[test]
+        fn parse_comments_skipping_hash_semicolon() {
+            assert_eq!(
+                comments(Input::new("#;foo\n;bar\n")).unwrap().1,
+                vec![LineComment::new("bar", Position::new(6, 10)).into()]
+            );
+        }
+
+        #[test]
+        fn parse_comments_skipping_hash_character() {
+            assert_eq!(
+                comments(Input::new("#foo\n;bar\n")).unwrap().1,
+                vec![LineComment::new("bar", Position::new(5, 9)).into()]
+            );
+        }
+
+        #[test]
+        fn parse_comment_character() {
+            assert_eq!(comments(Input::new("#\\;foo\n")).unwrap().1, vec![]);
+        }
+
+        #[test]
+        fn parse_comment_in_list() {
+            assert_eq!(
+                comments(Input::new("(f\n;foo\nx)")).unwrap().1,
+                vec![LineComment::new("foo", Position::new(3, 7)).into()]
+            );
+        }
+
+        #[test]
+        fn parse_comment_with_vector() {
+            assert_eq!(comments(Input::new("#()")).unwrap().1, vec![]);
+        }
+
+        mod block {
+            use super::*;
+            use pretty_assertions::assert_eq;
+
+            #[test]
+            fn parse_empty() {
+                assert_eq!(
+                    block_comment(Input::new("#||#")).unwrap().1,
+                    BlockComment::new("", Position::new(0, 4))
+                );
+            }
+
+            #[test]
+            fn parse_one_line() {
+                assert_eq!(
+                    block_comment(Input::new("#|foo|#")).unwrap().1,
+                    BlockComment::new("foo", Position::new(0, 7))
+                );
+            }
+
+            #[test]
+            fn parse_multi_line() {
+                assert_eq!(
+                    // spell-checker: disable-next-line
+                    block_comment(Input::new("#|\nfoo\nbar\nbaz\n|#"))
+                        .unwrap()
+                        .1,
+                    // spell-checker: disable-next-line
+                    BlockComment::new("\nfoo\nbar\nbaz\n", Position::new(0, 17))
+                );
+            }
+
+            #[test]
+            fn parse_in_comments() {
+                assert_eq!(
+                    comments(Input::new("#|foo|#")).unwrap().1,
+                    vec![BlockComment::new("foo", Position::new(0, 7)).into()]
+                );
+            }
+        }
+    }
+
+    mod hash_directive {
+        use super::*;
+        use pretty_assertions::assert_eq;
+
+        #[test]
+        fn parse_shebang() {
+            assert_eq!(
+                hash_directive(Input::new("#!/bin/sh\n")).unwrap().1,
+                HashDirective::new("!/bin/sh", Position::new(0, 9))
+            );
+        }
+
+        #[test]
+        fn parse_lang_directive() {
+            assert_eq!(
+                hash_directive(Input::new("#lang r7rs\n")).unwrap().1,
+                HashDirective::new("lang r7rs", Position::new(0, 10))
+            );
+        }
+
+        #[test]
+        fn parse_comment() {
+            assert_eq!(hash_directives(Input::new("#||#\n")).unwrap().1, vec![]);
+        }
+    }
+
     mod quote {
         use super::*;
         use pretty_assertions::assert_eq;
@@ -897,29 +1041,221 @@ mod tests {
         }
     }
 
-    mod hash_directive {
+    mod racket {
         use super::*;
         use pretty_assertions::assert_eq;
 
         #[test]
-        fn parse_shebang() {
+        fn parse_command_without_arguments() {
             assert_eq!(
-                hash_directive(Input::new("#!/bin/sh\n")).unwrap().1,
-                HashDirective::new("!/bin/sh", Position::new(0, 9))
+                expression(Input::new("@foo")).unwrap().1,
+                Expression::Symbol("@foo", Position::new(0, 4))
             );
         }
 
         #[test]
-        fn parse_lang_directive() {
+        fn parse_command_with_datum() {
             assert_eq!(
-                hash_directive(Input::new("#lang r7rs\n")).unwrap().1,
-                HashDirective::new("lang r7rs", Position::new(0, 10))
+                expression(Input::new("@foo[bar]")).unwrap().1,
+                Expression::Quote(
+                    "@foo",
+                    Expression::List(
+                        "[",
+                        "]",
+                        vec![Expression::Symbol("bar", Position::new(5, 8))],
+                        Position::new(4, 9)
+                    )
+                    .into(),
+                    Position::new(0, 9)
+                )
             );
         }
 
         #[test]
-        fn parse_comment() {
-            assert_eq!(hash_directives(Input::new("#||#\n")).unwrap().1, vec![]);
+        fn parse_command_with_text_body() {
+            assert_eq!(
+                expression(Input::new("@foo{bar}")).unwrap().1,
+                Expression::Quote(
+                    "@foo",
+                    Expression::List(
+                        "{",
+                        "}",
+                        vec![Expression::Symbol("bar", Position::new(5, 8))],
+                        Position::new(4, 9)
+                    )
+                    .into(),
+                    Position::new(0, 9)
+                )
+            );
+        }
+
+        #[test]
+        fn parse_command_and_separated_text_body() {
+            assert_eq!(
+                (expression, expression)
+                    .parse(Input::new("@foo {bar}"))
+                    .unwrap()
+                    .1,
+                (
+                    Expression::Symbol("@foo", Position::new(0, 4)),
+                    Expression::List(
+                        "{",
+                        "}",
+                        vec![Expression::Symbol("bar", Position::new(6, 9))],
+                        Position::new(5, 10)
+                    )
+                )
+            );
+        }
+
+        #[test]
+        fn parse_text_body_without_command() {
+            assert_eq!(
+                expression(Input::new("@{foo}")).unwrap().1,
+                Expression::Quote(
+                    "@",
+                    Expression::List(
+                        "{",
+                        "}",
+                        vec![Expression::Symbol("foo", Position::new(2, 5))],
+                        Position::new(1, 6)
+                    )
+                    .into(),
+                    Position::new(0, 6)
+                )
+            );
+        }
+
+        #[test]
+        fn parse_s_expression_command() {
+            assert_eq!(
+                expression(Input::new("@(foo bar)")).unwrap().1,
+                Expression::Quote(
+                    "@",
+                    Expression::List(
+                        "(",
+                        ")",
+                        vec![
+                            Expression::Symbol("foo", Position::new(2, 5)),
+                            Expression::Symbol("bar", Position::new(6, 9))
+                        ],
+                        Position::new(1, 10)
+                    )
+                    .into(),
+                    Position::new(0, 10)
+                )
+            );
+        }
+
+        #[test]
+        fn parse_string_command() {
+            assert_eq!(
+                expression(Input::new("@\"foo\"")).unwrap().1,
+                Expression::Quote(
+                    "@",
+                    Expression::String("foo", Position::new(1, 6)).into(),
+                    Position::new(0, 6)
+                )
+            );
+        }
+
+        #[test]
+        fn parse_escaped_identifier() {
+            assert_eq!(
+                expression(Input::new("@|foo|")).unwrap().1,
+                Expression::Quote(
+                    "@",
+                    Expression::QuotedSymbol("foo", Position::new(1, 6)).into(),
+                    Position::new(0, 6)
+                )
+            );
+        }
+
+        #[test]
+        fn parse_quoted_command() {
+            assert_eq!(
+                expression(Input::new("@'foo{bar}")).unwrap().1,
+                Expression::Quote(
+                    "@",
+                    Expression::Quote(
+                        "'",
+                        Expression::Quote(
+                            "foo",
+                            Expression::List(
+                                "{",
+                                "}",
+                                vec![Expression::Symbol("bar", Position::new(6, 9))],
+                                Position::new(5, 10)
+                            )
+                            .into(),
+                            Position::new(2, 10)
+                        )
+                        .into(),
+                        Position::new(1, 10)
+                    )
+                    .into(),
+                    Position::new(0, 10)
+                )
+            );
+        }
+
+        #[test]
+        fn parse_nested_command() {
+            assert_eq!(
+                expression(Input::new("@foo{bar @baz{qux}}")).unwrap().1,
+                Expression::Quote(
+                    "@foo",
+                    Expression::List(
+                        "{",
+                        "}",
+                        vec![
+                            Expression::Symbol("bar", Position::new(5, 8)),
+                            Expression::Quote(
+                                "@baz",
+                                Expression::List(
+                                    "{",
+                                    "}",
+                                    vec![Expression::Symbol("qux", Position::new(14, 17))],
+                                    Position::new(13, 18)
+                                )
+                                .into(),
+                                Position::new(9, 18)
+                            )
+                        ],
+                        Position::new(4, 19)
+                    )
+                    .into(),
+                    Position::new(0, 19)
+                )
+            );
+        }
+
+        #[test]
+        fn parse_command_after_text() {
+            assert_eq!(
+                expression(Input::new("@foo{R@sup{2}}")).unwrap().1,
+                Expression::Quote(
+                    "@foo",
+                    Expression::List(
+                        "{",
+                        "}",
+                        vec![Expression::Quote(
+                            "R@sup",
+                            Expression::List(
+                                "{",
+                                "}",
+                                vec![Expression::Symbol("2", Position::new(11, 12))],
+                                Position::new(10, 13)
+                            )
+                            .into(),
+                            Position::new(5, 13)
+                        )],
+                        Position::new(4, 14)
+                    )
+                    .into(),
+                    Position::new(0, 14)
+                )
+            );
         }
     }
 
@@ -1025,124 +1361,6 @@ mod tests {
                 string(Input::new("\"\\ubeef\"")).unwrap().1,
                 Expression::String("\\ubeef", Position::new(0, 8))
             );
-        }
-    }
-
-    mod comment {
-        use super::*;
-        use pretty_assertions::assert_eq;
-
-        #[test]
-        fn parse_empty() {
-            assert_eq!(
-                comment(Input::new(";\n")).unwrap().1,
-                LineComment::new("", Position::new(0, 1)).into()
-            );
-        }
-
-        #[test]
-        fn parse_comment() {
-            assert_eq!(
-                comment(Input::new(";foo\n")).unwrap().1,
-                LineComment::new("foo", Position::new(0, 4)).into()
-            );
-        }
-
-        #[test]
-        fn parse_comments() {
-            assert_eq!(
-                comments(Input::new(";foo\n;bar\n")).unwrap().1,
-                vec![
-                    LineComment::new("foo", Position::new(0, 4)).into(),
-                    LineComment::new("bar", Position::new(5, 9)).into()
-                ]
-            );
-        }
-
-        #[test]
-        fn parse_comments_with_blank_lines() {
-            assert_eq!(
-                comments(Input::new(";foo\n\n;bar\n")).unwrap().1,
-                vec![
-                    LineComment::new("foo", Position::new(0, 4)).into(),
-                    LineComment::new("bar", Position::new(6, 10)).into()
-                ]
-            );
-        }
-
-        #[test]
-        fn parse_comments_skipping_hash_semicolon() {
-            assert_eq!(
-                comments(Input::new("#;foo\n;bar\n")).unwrap().1,
-                vec![LineComment::new("bar", Position::new(6, 10)).into()]
-            );
-        }
-
-        #[test]
-        fn parse_comments_skipping_hash_character() {
-            assert_eq!(
-                comments(Input::new("#foo\n;bar\n")).unwrap().1,
-                vec![LineComment::new("bar", Position::new(5, 9)).into()]
-            );
-        }
-
-        #[test]
-        fn parse_comment_character() {
-            assert_eq!(comments(Input::new("#\\;foo\n")).unwrap().1, vec![]);
-        }
-
-        #[test]
-        fn parse_comment_in_list() {
-            assert_eq!(
-                comments(Input::new("(f\n;foo\nx)")).unwrap().1,
-                vec![LineComment::new("foo", Position::new(3, 7)).into()]
-            );
-        }
-
-        #[test]
-        fn parse_comment_with_vector() {
-            assert_eq!(comments(Input::new("#()")).unwrap().1, vec![]);
-        }
-
-        mod block {
-            use super::*;
-            use pretty_assertions::assert_eq;
-
-            #[test]
-            fn parse_empty() {
-                assert_eq!(
-                    block_comment(Input::new("#||#")).unwrap().1,
-                    BlockComment::new("", Position::new(0, 4))
-                );
-            }
-
-            #[test]
-            fn parse_one_line() {
-                assert_eq!(
-                    block_comment(Input::new("#|foo|#")).unwrap().1,
-                    BlockComment::new("foo", Position::new(0, 7))
-                );
-            }
-
-            #[test]
-            fn parse_multi_line() {
-                assert_eq!(
-                    // spell-checker: disable-next-line
-                    block_comment(Input::new("#|\nfoo\nbar\nbaz\n|#"))
-                        .unwrap()
-                        .1,
-                    // spell-checker: disable-next-line
-                    BlockComment::new("\nfoo\nbar\nbaz\n", Position::new(0, 17))
-                );
-            }
-
-            #[test]
-            fn parse_in_comments() {
-                assert_eq!(
-                    comments(Input::new("#|foo|#")).unwrap().1,
-                    vec![BlockComment::new("foo", Position::new(0, 7)).into()]
-                );
-            }
         }
     }
 }
