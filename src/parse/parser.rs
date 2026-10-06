@@ -139,36 +139,25 @@ fn expression(input: Input) -> IResult<Expression> {
         context("string", string),
         context(
             "quote",
-            token(alt((
-                map(
-                    positioned((
-                        tag("#"),
-                        map(
-                            positioned((
-                                raw_symbol,
-                                preceded(
-                                    not(alt((
-                                        value((), multispace1),
-                                        value((), comment),
-                                        value((), eof),
-                                    ))),
-                                    expression,
-                                ),
-                            )),
-                            |((symbol, expression), position)| {
-                                Expression::Quote(&symbol, expression.into(), position)
-                            },
+            token(map(
+                positioned(alt((
+                    (
+                        recognize((tag("#"), raw_symbol)),
+                        preceded(
+                            not(alt((
+                                value((), multispace1),
+                                value((), comment),
+                                value((), eof),
+                            ))),
+                            expression,
                         ),
-                    )),
-                    |((sign, quote), position)| Expression::Quote(&sign, quote.into(), position),
-                ),
-                map(
-                    positioned((quote, expression)),
-                    |((sign, expression), position)| {
-                        Expression::Quote(&sign, expression.into(), position)
-                    },
-                ),
-            ))),
+                    ),
+                    (quote, expression),
+                ))),
+                |((sign, expression), position)| {
+                    Expression::Quote(&sign, expression.into(), position)
+                },
+            )),
         ),
         context("quoted symbol", quoted_symbol),
         context("symbol", symbol),
@@ -541,21 +530,16 @@ mod tests {
         assert_eq!(
             expression(Input::new("#u8(1 2 3)")).unwrap().1,
             Expression::Quote(
-                "#",
-                Expression::Quote(
-                    "u8",
-                    Expression::List(
-                        "(",
-                        ")",
-                        vec![
-                            Expression::Symbol("1", Position::new(4, 5)),
-                            Expression::Symbol("2", Position::new(6, 7)),
-                            Expression::Symbol("3", Position::new(8, 9))
-                        ],
-                        Position::new(3, 10)
-                    )
-                    .into(),
-                    Position::new(1, 10)
+                "#u8",
+                Expression::List(
+                    "(",
+                    ")",
+                    vec![
+                        Expression::Symbol("1", Position::new(4, 5)),
+                        Expression::Symbol("2", Position::new(6, 7)),
+                        Expression::Symbol("3", Position::new(8, 9))
+                    ],
+                    Position::new(3, 10)
                 )
                 .into(),
                 Position::new(0, 10)
@@ -889,13 +873,8 @@ mod tests {
             assert_eq!(
                 expression(Input::new("#rx\"foo\"")).unwrap().1,
                 Expression::Quote(
-                    "#",
-                    Expression::Quote(
-                        "rx",
-                        Expression::String("foo", Position::new(3, 8)).into(),
-                        Position::new(1, 8)
-                    )
-                    .into(),
+                    "#rx",
+                    Expression::String("foo", Position::new(3, 8)).into(),
                     Position::new(0, 8)
                 )
             );
