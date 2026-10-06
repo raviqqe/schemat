@@ -10,7 +10,7 @@ use nom::{
     character::complete::{
         anychar, char, multispace0, multispace1, none_of, one_of, satisfy, space0,
     },
-    combinator::{all_consuming, cut, eof, map, not, opt, peek, recognize, value},
+    combinator::{all_consuming, cut, eof, map, not, peek, recognize, value},
     error::context,
     multi::{fold_many0, many0, many0_count, many1_count},
     sequence::{delimited, preceded, terminated},
@@ -57,16 +57,9 @@ pub fn hash_directives(input: Input) -> IResult<Vec<HashDirective>> {
 }
 
 fn symbol(input: Input) -> IResult<Expression> {
-    map(
-        token(positioned((
-            raw_symbol,
-            opt(preceded(not(alt((multispace1, eof))), expression)),
-        ))),
-        |((symbol, expression), position)| match expression {
-            Some(expression) => Expression::Quote(&symbol, expression.into(), position),
-            None => Expression::Symbol(&symbol, position),
-        },
-    )
+    map(token(positioned(raw_symbol)), |(input, position)| {
+        Expression::Symbol(&input, position)
+    })
     .parse(input)
 }
 
@@ -144,6 +137,25 @@ fn expression(input: Input) -> IResult<Expression> {
     alt((
         context("list", list_like("(", ")")),
         context("string", string),
+        context(
+            "hash quote",
+            map(
+                token(positioned((
+                    tag("#"),
+                    positioned((
+                        raw_symbol,
+                        preceded(not(alt((multispace1, eof))), expression),
+                    )),
+                ))),
+                |((sign, ((symbol, expression), symbol_position)), position)| {
+                    Expression::Quote(
+                        &sign,
+                        Expression::Quote(&symbol, expression.into(), symbol_position).into(),
+                        position,
+                    )
+                },
+            ),
+        ),
         context(
             "quote",
             map(
@@ -817,21 +829,45 @@ mod tests {
         }
 
         #[test]
-        fn parse_symbol_quoting_string() {
+        fn parse_symbol_and_adjacent_list() {
             assert_eq!(
-                expression(Input::new("foo\"bar\"")).unwrap().1,
+                (expression, expression)
+                    .parse(Input::new("foo(bar)"))
+                    .unwrap()
+                    .1,
+                (
+                    Expression::Symbol("foo", Position::new(0, 3)),
+                    Expression::List(
+                        "(",
+                        ")",
+                        vec![Expression::Symbol("bar", Position::new(4, 7))],
+                        Position::new(3, 8)
+                    )
+                )
+            );
+        }
+
+        #[test]
+        fn parse_hash_symbol_quoting_string() {
+            assert_eq!(
+                expression(Input::new("#rx\"foo\"")).unwrap().1,
                 Expression::Quote(
-                    "foo",
-                    Expression::String("bar", Position::new(3, 8)).into(),
+                    "#",
+                    Expression::Quote(
+                        "rx",
+                        Expression::String("foo", Position::new(3, 8)).into(),
+                        Position::new(1, 8)
+                    )
+                    .into(),
                     Position::new(0, 8)
                 )
             );
         }
 
         #[test]
-        fn fail_to_parse_symbol_quoting_unclosed_list() {
+        fn fail_to_parse_hash_symbol_quoting_unclosed_list() {
             assert!(matches!(
-                expression(Input::new("foo(bar")),
+                expression(Input::new("#u8(1")),
                 Err(nom::Err::Failure(_))
             ));
         }
