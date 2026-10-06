@@ -138,39 +138,38 @@ fn expression(input: Input) -> IResult<Expression> {
         context("list", list_like("(", ")")),
         context("string", string),
         context(
-            "hash quote",
-            map(
-                token(positioned((
-                    tag("#"),
-                    positioned((
-                        raw_symbol,
-                        preceded(
-                            not(alt((
-                                value((), multispace1),
-                                value((), comment),
-                                value((), eof),
-                            ))),
-                            expression,
-                        ),
-                    )),
-                ))),
-                |((sign, ((symbol, expression), symbol_position)), position)| {
-                    Expression::Quote(
-                        &sign,
-                        Expression::Quote(&symbol, expression.into(), symbol_position).into(),
-                        position,
-                    )
-                },
-            ),
-        ),
-        context(
             "quote",
-            map(
-                token(positioned((quote, expression))),
-                |((sign, expression), position)| {
-                    Expression::Quote(&sign, expression.into(), position)
-                },
-            ),
+            token(alt((
+                map(
+                    positioned((
+                        tag("#"),
+                        positioned((
+                            raw_symbol,
+                            preceded(
+                                not(alt((
+                                    value((), multispace1),
+                                    value((), comment),
+                                    value((), eof),
+                                ))),
+                                expression,
+                            ),
+                        )),
+                    )),
+                    |((sign, ((symbol, expression), symbol_position)), position)| {
+                        Expression::Quote(
+                            &sign,
+                            Expression::Quote(&symbol, expression.into(), symbol_position).into(),
+                            position,
+                        )
+                    },
+                ),
+                map(
+                    positioned((quote, expression)),
+                    |((sign, expression), position)| {
+                        Expression::Quote(&sign, expression.into(), position)
+                    },
+                ),
+            ))),
         ),
         context("quoted symbol", quoted_symbol),
         context("symbol", symbol),
