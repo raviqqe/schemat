@@ -143,25 +143,24 @@ fn expression(input: Input) -> IResult<Expression> {
                 map(
                     positioned((
                         tag("#"),
-                        positioned((
-                            raw_symbol,
-                            preceded(
-                                not(alt((
-                                    value((), multispace1),
-                                    value((), comment),
-                                    value((), eof),
-                                ))),
-                                expression,
-                            ),
-                        )),
+                        map(
+                            positioned((
+                                raw_symbol,
+                                preceded(
+                                    not(alt((
+                                        value((), multispace1),
+                                        value((), comment),
+                                        value((), eof),
+                                    ))),
+                                    expression,
+                                ),
+                            )),
+                            |((symbol, expression), position)| {
+                                Expression::Quote(&symbol, expression.into(), position)
+                            },
+                        ),
                     )),
-                    |((sign, ((symbol, expression), symbol_position)), position)| {
-                        Expression::Quote(
-                            &sign,
-                            Expression::Quote(&symbol, expression.into(), symbol_position).into(),
-                            position,
-                        )
-                    },
+                    |((sign, quote), position)| Expression::Quote(&sign, quote.into(), position),
                 ),
                 map(
                     positioned((quote, expression)),
