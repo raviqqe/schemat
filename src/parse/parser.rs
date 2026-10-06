@@ -140,17 +140,7 @@ fn expression(input: Input) -> IResult<Expression> {
         context(
             "quote",
             map(
-                token(positioned(alt((
-                    (
-                        recognize((
-                            tag("#"),
-                            raw_symbol,
-                            peek(not(alt((value((), multispace1), value((), comment))))),
-                        )),
-                        expression,
-                    ),
-                    (quote, expression),
-                )))),
+                token(positioned((quote, expression))),
                 |((sign, expression), position)| {
                     Expression::Quote(&sign, expression.into(), position)
                 },
@@ -165,7 +155,19 @@ fn expression(input: Input) -> IResult<Expression> {
 }
 
 fn quote(input: Input) -> IResult<Input> {
-    alt((tag("'"), tag("`"), tag(",@"), tag(","), tag("#;"), tag("#"))).parse(input)
+    alt((
+        tag("'"),
+        tag("`"),
+        tag(",@"),
+        tag(","),
+        tag("#;"),
+        tag("#"),
+        terminated(
+            raw_symbol,
+            peek(not(alt((value((), multispace1), value((), comment))))),
+        ),
+    ))
+    .parse(input)
 }
 
 fn list_like(left: &'static str, right: &'static str) -> impl FnMut(Input) -> IResult<Expression> {
@@ -527,16 +529,21 @@ mod tests {
         assert_eq!(
             expression(Input::new("#u8(1 2 3)")).unwrap().1,
             Expression::Quote(
-                "#u8",
-                Expression::List(
-                    "(",
-                    ")",
-                    vec![
-                        Expression::Symbol("1", Position::new(4, 5)),
-                        Expression::Symbol("2", Position::new(6, 7)),
-                        Expression::Symbol("3", Position::new(8, 9))
-                    ],
-                    Position::new(3, 10)
+                "#",
+                Expression::Quote(
+                    "u8",
+                    Expression::List(
+                        "(",
+                        ")",
+                        vec![
+                            Expression::Symbol("1", Position::new(4, 5)),
+                            Expression::Symbol("2", Position::new(6, 7)),
+                            Expression::Symbol("3", Position::new(8, 9))
+                        ],
+                        Position::new(3, 10)
+                    )
+                    .into(),
+                    Position::new(1, 10)
                 )
                 .into(),
                 Position::new(0, 10)
@@ -815,20 +822,19 @@ mod tests {
         }
 
         #[test]
-        fn parse_symbol_and_adjacent_list() {
+        fn parse_symbol_quoting_adjacent_list() {
             assert_eq!(
-                (expression, expression)
-                    .parse(Input::new("foo(bar)"))
-                    .unwrap()
-                    .1,
-                (
-                    Expression::Symbol("foo", Position::new(0, 3)),
+                expression(Input::new("foo(bar)")).unwrap().1,
+                Expression::Quote(
+                    "foo",
                     Expression::List(
                         "(",
                         ")",
                         vec![Expression::Symbol("bar", Position::new(4, 7))],
                         Position::new(3, 8)
                     )
+                    .into(),
+                    Position::new(0, 8)
                 )
             );
         }
@@ -870,8 +876,13 @@ mod tests {
             assert_eq!(
                 expression(Input::new("#rx\"foo\"")).unwrap().1,
                 Expression::Quote(
-                    "#rx",
-                    Expression::String("foo", Position::new(3, 8)).into(),
+                    "#",
+                    Expression::Quote(
+                        "rx",
+                        Expression::String("foo", Position::new(3, 8)).into(),
+                        Position::new(1, 8)
+                    )
+                    .into(),
                     Position::new(0, 8)
                 )
             );
