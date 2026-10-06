@@ -140,17 +140,7 @@ fn expression(input: Input) -> IResult<Expression> {
         context(
             "quote",
             map(
-                token(positioned(alt((
-                    (
-                        recognize((
-                            tag("#"),
-                            raw_symbol,
-                            peek(not(alt((value((), multispace1), value((), comment))))),
-                        )),
-                        expression,
-                    ),
-                    (quote, expression),
-                )))),
+                token(positioned((quote, expression))),
                 |((sign, expression), position)| {
                     Expression::Quote(&sign, expression.into(), position)
                 },
@@ -165,7 +155,19 @@ fn expression(input: Input) -> IResult<Expression> {
 }
 
 fn quote(input: Input) -> IResult<Input> {
-    alt((tag("'"), tag("`"), tag(",@"), tag(","), tag("#;"), tag("#"))).parse(input)
+    alt((
+        tag("'"),
+        tag("`"),
+        tag(",@"),
+        tag(","),
+        tag("#;"),
+        tag("#"),
+        terminated(
+            raw_symbol,
+            peek(not(alt((value((), multispace1), value((), comment))))),
+        ),
+    ))
+    .parse(input)
 }
 
 fn list_like(left: &'static str, right: &'static str) -> impl FnMut(Input) -> IResult<Expression> {
