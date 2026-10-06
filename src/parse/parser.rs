@@ -10,7 +10,7 @@ use nom::{
     character::complete::{
         anychar, char, multispace0, multispace1, none_of, one_of, satisfy, space0,
     },
-    combinator::{all_consuming, cut, map, not, opt, peek, recognize, value},
+    combinator::{all_consuming, cut, map, not, peek, recognize, value},
     error::context,
     multi::{fold_many0, many0, many0_count, many1_count},
     sequence::{delimited, preceded, terminated},
@@ -57,19 +57,9 @@ pub fn hash_directives(input: Input) -> IResult<Vec<HashDirective>> {
 }
 
 fn symbol(input: Input) -> IResult<Expression> {
-    map(
-        token(positioned((
-            raw_symbol,
-            opt(preceded(not(blank), expression)),
-        ))),
-        |((symbol, expression), position)| {
-            if let Some(expression) = expression {
-                Expression::Quote(&symbol, expression.into(), position)
-            } else {
-                Expression::Symbol(&symbol, position)
-            }
-        },
-    )
+    map(token(positioned(raw_symbol)), |(input, position)| {
+        Expression::Symbol(&input, position)
+    })
     .parse(input)
 }
 
@@ -165,7 +155,19 @@ fn expression(input: Input) -> IResult<Expression> {
 }
 
 fn quote(input: Input) -> IResult<Input> {
-    alt((tag("'"), tag("`"), tag(",@"), tag(","), tag("#;"), tag("#"))).parse(input)
+    alt((
+        tag("'"),
+        tag("`"),
+        tag(",@"),
+        tag(","),
+        tag("#;"),
+        tag("#"),
+        terminated(
+            raw_symbol,
+            peek(not(alt((value((), multispace1), value((), comment))))),
+        ),
+    ))
+    .parse(input)
 }
 
 fn list_like(left: &'static str, right: &'static str) -> impl FnMut(Input) -> IResult<Expression> {
