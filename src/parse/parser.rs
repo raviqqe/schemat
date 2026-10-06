@@ -142,15 +142,16 @@ fn expression(input: Input) -> IResult<Expression> {
             token(map(
                 positioned(alt((
                     (
-                        recognize((tag("#"), raw_symbol)),
-                        preceded(
-                            not(alt((
+                        recognize((
+                            tag("#"),
+                            raw_symbol,
+                            peek(not(alt((
                                 value((), multispace1),
                                 value((), comment),
                                 value((), eof),
-                            ))),
-                            expression,
-                        ),
+                            )))),
+                        )),
+                        expression,
                     ),
                     (quote, expression),
                 ))),
