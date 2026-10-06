@@ -139,8 +139,8 @@ fn expression(input: Input) -> IResult<Expression> {
         context("string", string),
         context(
             "quote",
-            token(map(
-                positioned(alt((
+            map(
+                token(positioned(alt((
                     (
                         recognize((
                             tag("#"),
@@ -154,11 +154,11 @@ fn expression(input: Input) -> IResult<Expression> {
                         expression,
                     ),
                     (quote, expression),
-                ))),
+                )))),
                 |((sign, expression), position)| {
                     Expression::Quote(&sign, expression.into(), position)
                 },
-            )),
+            ),
         ),
         context("quoted symbol", quoted_symbol),
         context("symbol", symbol),
