@@ -529,16 +529,21 @@ mod tests {
         assert_eq!(
             expression(Input::new("#u8(1 2 3)")).unwrap().1,
             Expression::Quote(
-                "#u8",
-                Expression::List(
-                    "(",
-                    ")",
-                    vec![
-                        Expression::Symbol("1", Position::new(4, 5)),
-                        Expression::Symbol("2", Position::new(6, 7)),
-                        Expression::Symbol("3", Position::new(8, 9))
-                    ],
-                    Position::new(3, 10)
+                "#",
+                Expression::Quote(
+                    "u8",
+                    Expression::List(
+                        "(",
+                        ")",
+                        vec![
+                            Expression::Symbol("1", Position::new(4, 5)),
+                            Expression::Symbol("2", Position::new(6, 7)),
+                            Expression::Symbol("3", Position::new(8, 9))
+                        ],
+                        Position::new(3, 10)
+                    )
+                    .into(),
+                    Position::new(1, 10)
                 )
                 .into(),
                 Position::new(0, 10)
@@ -817,20 +822,19 @@ mod tests {
         }
 
         #[test]
-        fn parse_symbol_and_adjacent_list() {
+        fn parse_symbol_quoting_adjacent_list() {
             assert_eq!(
-                (expression, expression)
-                    .parse(Input::new("foo(bar)"))
-                    .unwrap()
-                    .1,
-                (
-                    Expression::Symbol("foo", Position::new(0, 3)),
+                expression(Input::new("foo(bar)")).unwrap().1,
+                Expression::Quote(
+                    "foo",
                     Expression::List(
                         "(",
                         ")",
                         vec![Expression::Symbol("bar", Position::new(4, 7))],
                         Position::new(3, 8)
                     )
+                    .into(),
+                    Position::new(0, 8)
                 )
             );
         }
@@ -872,8 +876,13 @@ mod tests {
             assert_eq!(
                 expression(Input::new("#rx\"foo\"")).unwrap().1,
                 Expression::Quote(
-                    "#rx",
-                    Expression::String("foo", Position::new(3, 8)).into(),
+                    "#",
+                    Expression::Quote(
+                        "rx",
+                        Expression::String("foo", Position::new(3, 8)).into(),
+                        Position::new(1, 8)
+                    )
+                    .into(),
                     Position::new(0, 8)
                 )
             );
