@@ -10,7 +10,7 @@ use nom::{
     character::complete::{
         anychar, char, multispace0, multispace1, none_of, one_of, satisfy, space0,
     },
-    combinator::{all_consuming, cut, eof, map, not, peek, recognize, value},
+    combinator::{all_consuming, cut, map, not, peek, recognize, value},
     error::context,
     multi::{fold_many0, many0, many0_count, many1_count},
     sequence::{delimited, preceded, terminated},
@@ -148,7 +148,6 @@ fn expression(input: Input) -> IResult<Expression> {
                             peek(not(alt((
                                 value((), multispace1),
                                 value((), comment),
-                                value((), eof),
                             )))),
                         )),
                         expression,
