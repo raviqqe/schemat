@@ -144,7 +144,14 @@ fn expression(input: Input) -> IResult<Expression> {
                     tag("#"),
                     positioned((
                         raw_symbol,
-                        preceded(not(alt((multispace1, eof))), expression),
+                        preceded(
+                            not(alt((
+                                value((), multispace1),
+                                value((), comment),
+                                value((), eof),
+                            ))),
+                            expression,
+                        ),
                     )),
                 ))),
                 |((sign, ((symbol, expression), symbol_position)), position)| {
@@ -843,6 +850,38 @@ mod tests {
                         vec![Expression::Symbol("bar", Position::new(4, 7))],
                         Position::new(3, 8)
                     )
+                )
+            );
+        }
+
+        #[test]
+        fn parse_symbol_and_comment() {
+            assert_eq!(
+                (expression, expression)
+                    .parse(Input::new("foo;bar\nbaz"))
+                    .unwrap()
+                    .1,
+                (
+                    Expression::Symbol("foo", Position::new(0, 3)),
+                    Expression::Symbol("baz", Position::new(8, 11))
+                )
+            );
+        }
+
+        #[test]
+        fn parse_hash_symbol_and_comment() {
+            assert_eq!(
+                (expression, expression)
+                    .parse(Input::new("#t;foo\nbar"))
+                    .unwrap()
+                    .1,
+                (
+                    Expression::Quote(
+                        "#",
+                        Expression::Symbol("t", Position::new(1, 2)).into(),
+                        Position::new(0, 2)
+                    ),
+                    Expression::Symbol("bar", Position::new(7, 10))
                 )
             );
         }
