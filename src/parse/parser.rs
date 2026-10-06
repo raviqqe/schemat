@@ -17,8 +17,8 @@ use nom::{
 };
 
 const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&~^.:";
-const SPECIAL_SIGNS: &str = ";\"";
 const SYMBOL_END_HINT: &str = ")]}";
+const SPECIAL_SIGNS: &str = ";\"";
 
 pub type IResult<'a, T> = nom::IResult<Input<'a>, T, NomError<'a>>;
 
