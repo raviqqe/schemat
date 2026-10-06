@@ -161,8 +161,11 @@ fn quote(input: Input) -> IResult<Input> {
         tag(",@"),
         tag(","),
         tag("#;"),
+        recognize((
+            tag("#"),
+            terminated(raw_symbol, peek(not(alt((multispace1, eof))))),
+        )),
         tag("#"),
-        terminated(raw_symbol, peek(not(alt((multispace1, eof))))),
     ))
     .parse(input)
 }
