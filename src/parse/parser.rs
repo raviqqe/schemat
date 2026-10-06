@@ -18,6 +18,7 @@ use nom::{
 
 const SYMBOL_SIGNS: &str = "+-*/<>=!?$@%_&~^.:";
 const SPECIAL_SIGNS: &str = ";\"";
+const SYMBOL_END_HINT: &str = ")]}";
 
 pub type IResult<'a, T> = nom::IResult<Input<'a>, T, NomError<'a>>;
 
@@ -164,7 +165,7 @@ fn quote(input: Input) -> IResult<Input> {
         tag("#"),
         terminated(
             raw_symbol,
-            peek(not(alt((value((), multispace1), value((), comment))))),
+            peek(not(alt((blank, value((), one_of(SYMBOL_END_HINT)))))),
         ),
     ))
     .parse(input)
