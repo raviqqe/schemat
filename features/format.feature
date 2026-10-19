@@ -110,8 +110,14 @@ Feature: Format
       """
       bar
       """
-    And the stderr should contain "FORMAT\tfoo.scm"
-    And the stderr should contain "FORMAT\tbar.scm"
+    And the stderr should contain:
+      """
+      FORMAT	foo.scm
+      """
+    And the stderr should contain:
+      """
+      FORMAT	bar.scm
+      """
 
   Scenario: Format valid and invalid files with a verbose option
     Given a file named "foo.scm" with:
@@ -131,7 +137,10 @@ Feature: Format
       """
       (
       """
-    And the stderr should contain "FORMAT\tfoo.scm"
+    And the stderr should contain:
+      """
+      FORMAT	foo.scm
+      """
     And the stderr should contain "ERROR"
     And the stderr should contain "bar.scm"
 
