@@ -163,6 +163,7 @@ Feature: Format
     And I successfully run `git init bar`
     And I cd to "bar"
     And I successfully run `git config user.name me`
+    And I successfully run `git config user.email foo@bar.com`
     And I successfully run `git commit --allow-empty -m commit`
     When I successfully run `schemat ../foo.scm`
     And I cd to ".."
@@ -179,6 +180,7 @@ Feature: Format
     And I successfully run `git init bar`
     And I cd to "bar"
     And I successfully run `git config user.name me`
+    And I successfully run `git config user.email foo@bar.com`
     And I successfully run `git commit --allow-empty -m commit`
     When I successfully run `schemat ../*.scm`
     And I cd to ".."
@@ -210,6 +212,7 @@ Feature: Format
       """
     And I successfully run `git init`
     And I successfully run `git config user.name me`
+    And I successfully run `git config user.email foo@bar.com`
     And I successfully run `git add .`
     And I successfully run `git commit -m commit`
     When I successfully run `schemat *.scm`
@@ -225,6 +228,7 @@ Feature: Format
       """
     And I successfully run `git init`
     And I successfully run `git config user.name me`
+    And I successfully run `git config user.email foo@bar.com`
     And I successfully run `git add .`
     And I successfully run `git commit -m commit`
     When I successfully run `schemat .`
