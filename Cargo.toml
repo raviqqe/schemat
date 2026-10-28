@@ -1,6 +1,6 @@
 [package]
 name = "schemat"
-version = "0.5.12"
+version = "0.5.13"
 edition = "2024"
 description = "A code formatter for Scheme, Lisp, and any S-expressions"
 readme = "./README.md"

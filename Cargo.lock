@@ -2195,7 +2195,7 @@ dependencies = [
 
 [[package]]
 name = "schemat"
-version = "0.5.12"
+version = "0.5.13"
 dependencies = [
  "allocator-api2",
  "bumpalo",
