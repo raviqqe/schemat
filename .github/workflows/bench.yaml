@@ -11,26 +11,26 @@ jobs:
   cargo:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: raviqqe/cargo-cache@4c7db86c0f73cc94a5608ad8b09e7a8e136fd259 # v1.0.4
+      - uses: actions/checkout@v7.0.1
+      - uses: raviqqe/cargo-cache@v1.0.4
       - run: cargo bench
   codspeed:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: raviqqe/cargo-cache@4c7db86c0f73cc94a5608ad8b09e7a8e136fd259 # v1.0.4
+      - uses: actions/checkout@v7.0.1
+      - uses: raviqqe/cargo-cache@v1.0.4
       - run: cargo install --features vendored-openssl cargo-codspeed
       - run: cargo codspeed build
         # spell-checker: ignore codspeedhq
-      - uses: codspeedhq/action@af75f77f17a054769abefaa42fe8dc2975469b5f # v5.6.3
+      - uses: codspeedhq/action@v5.6.3
         with:
           mode: simulation
           run: cargo codspeed run
   command:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: raviqqe/cargo-cache@4c7db86c0f73cc94a5608ad8b09e7a8e136fd259 # v1.0.4
+      - uses: actions/checkout@v7.0.1
+      - uses: raviqqe/cargo-cache@v1.0.4
       - run: tools/bench.sh
   bench:
     needs:
