@@ -5,26 +5,30 @@ mod parser;
 pub use self::error::ParseError;
 use self::{
     input::Input,
-    parser::{IResult, comments, hash_directives, module},
+    parser::{Error, comments, hash_directives, module},
 };
 use crate::ast::{Comment, Expression, HashDirective};
+use winnow::Parser;
 
 pub fn parse(source: &str) -> Result<Vec<Expression<'_>>, ParseError> {
-    convert_result(module(Input::new(source)), source)
+    parse_source(module, source)
 }
 
 pub fn parse_comments(source: &str) -> Result<Vec<Comment<'_>>, ParseError> {
-    convert_result(comments(Input::new(source)), source)
+    parse_source(comments, source)
 }
 
 pub fn parse_hash_directives(source: &str) -> Result<Vec<HashDirective<'_>>, ParseError> {
-    convert_result(hash_directives(Input::new(source)), source)
+    parse_source(hash_directives, source)
 }
 
-fn convert_result<T>(result: IResult<T>, source: &str) -> Result<T, ParseError> {
-    result
-        .map(|(_, value)| value)
-        .map_err(|error| ParseError::new(source, error))
+fn parse_source<'a, T>(
+    mut parser: impl Parser<Input<'a>, T, Error>,
+    source: &'a str,
+) -> Result<T, ParseError> {
+    parser
+        .parse(Input::new(source))
+        .map_err(|error| ParseError::new(source, error.offset()))
 }
 
 #[cfg(test)]

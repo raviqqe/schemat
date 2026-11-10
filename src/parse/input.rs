@@ -1,3 +1,3 @@
-use nom_locate::LocatedSpan;
+use winnow::LocatingSlice;
 
-pub type Input<'a> = LocatedSpan<&'a str>;
+pub type Input<'a> = LocatingSlice<&'a str>;
