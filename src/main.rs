@@ -48,6 +48,9 @@ async fn run(
         ..
     }: Arguments,
 ) -> Result<(), Box<dyn Error>> {
+    let path = path.iter().map(String::as_str).collect::<Vec<_>>();
+    let ignore = ignore.iter().map(String::as_str).collect::<Vec<_>>();
+
     if path.is_empty() && check {
         Err("cannot check stdin".into())
     } else if path.is_empty() {
@@ -60,8 +63,8 @@ async fn run(
 }
 
 async fn check_paths(
-    paths: &[String],
-    ignore_patterns: &[String],
+    paths: &[&str],
+    ignore_patterns: &[&str],
     verbose: bool,
 ) -> Result<(), Box<dyn Error>> {
     let directory = current_dir()?;
@@ -105,8 +108,8 @@ async fn check_paths(
 }
 
 async fn format_paths(
-    paths: &[String],
-    ignore_patterns: &[String],
+    paths: &[&str],
+    ignore_patterns: &[&str],
     verbose: bool,
 ) -> Result<(), Box<dyn Error>> {
     let directory = current_dir()?;

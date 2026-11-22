@@ -1,6 +1,6 @@
 use crate::error::Error;
 use alloc::rc::Rc;
-use core::str::Utf8Error;
+use core::{fmt::Display, str::Utf8Error};
 use glob::{Pattern, glob};
 use itertools::Itertools;
 use std::path::{Path, PathBuf};
@@ -8,8 +8,8 @@ use std::path::{Path, PathBuf};
 /// Reads file paths matching glob patterns.
 pub fn read_paths(
     base: &Path,
-    paths: &[String],
-    ignore_patterns: &[String],
+    paths: &[&str],
+    ignore_patterns: &[&str],
 ) -> Result<impl Iterator<Item = PathBuf>, Error> {
     let ignore_patterns = Rc::new(compile_patterns(ignore_patterns, base)?);
     let repository = gix::discover(base).ok();
@@ -67,7 +67,7 @@ pub fn read_paths(
         .unique())
 }
 
-fn compile_patterns(patterns: &[String], base: &Path) -> Result<Vec<Pattern>, glob::PatternError> {
+fn compile_patterns(patterns: &[&str], base: &Path) -> Result<Vec<Pattern>, glob::PatternError> {
     patterns
         .iter()
         .map(|pattern| Pattern::new(&resolve_path(pattern, base).display().to_string()))
@@ -85,10 +85,9 @@ fn resolve_path(path: impl AsRef<Path>, base: &Path) -> PathBuf {
 }
 
 /// Displays a path relative to a base directory.
-pub fn display_path(path: &Path, base: &Path) -> String {
+pub fn display_path(path: &Path, base: &Path) -> impl Display {
     path.strip_prefix(base)
         .map_or_else(|_| path.display(), |path| path.display())
-        .to_string()
 }
 
 #[cfg(test)]
@@ -104,7 +103,7 @@ mod tests {
 
         fs::write(directory.path().join("foo"), "").unwrap();
 
-        let paths = read_paths(directory.path(), &["foo".into()], &[])
+        let paths = read_paths(directory.path(), &["foo"], &[])
             .unwrap()
             .collect::<Vec<_>>();
 
@@ -120,7 +119,7 @@ mod tests {
         let bar_directory = directory.path().join("bar");
         fs::create_dir_all(&bar_directory).unwrap();
 
-        let paths = read_paths(&bar_directory, &["../foo".into()], &[])
+        let paths = read_paths(&bar_directory, &["../foo"], &[])
             .unwrap()
             .collect::<Vec<_>>();
 
@@ -138,7 +137,7 @@ mod tests {
 
         gix::init(&repository_directory).unwrap();
 
-        let paths = read_paths(&repository_directory, &["../foo".into()], &[])
+        let paths = read_paths(&repository_directory, &["../foo"], &[])
             .unwrap()
             .collect::<Vec<_>>();
 
@@ -157,7 +156,7 @@ mod tests {
 
         gix::init(&repository_directory).unwrap();
 
-        let paths = read_paths(&repository_directory, &["../*".into()], &[])
+        let paths = read_paths(&repository_directory, &["../*"], &[])
             .unwrap()
             .collect::<Vec<_>>();
 
@@ -172,7 +171,7 @@ mod tests {
         gix::init(&directory).unwrap();
         fs::write(directory.join("foo"), "").unwrap();
 
-        let paths = read_paths(&directory, &["foo".into()], &[])
+        let paths = read_paths(&directory, &["foo"], &[])
             .unwrap()
             .collect::<Vec<_>>();
 
@@ -186,7 +185,7 @@ mod tests {
         fs::create_dir_all(directory.path().join("foo")).unwrap();
         fs::write(directory.path().join("foo/foo"), "").unwrap();
 
-        let paths = read_paths(directory.path(), &["foo".into()], &[])
+        let paths = read_paths(directory.path(), &["foo"], &[])
             .unwrap()
             .collect::<Vec<_>>();
 
@@ -201,7 +200,7 @@ mod tests {
         fs::write(directory.path().join("foo/foo"), "").unwrap();
         fs::write(directory.path().join("bar"), "").unwrap();
 
-        let paths = read_paths(directory.path(), &[".".into()], &[])
+        let paths = read_paths(directory.path(), &["."], &[])
             .unwrap()
             .collect::<Vec<_>>();
 
@@ -214,7 +213,7 @@ mod tests {
 
         fs::write(directory.path().join("foo"), "").unwrap();
 
-        let paths = read_paths(directory.path(), &["foo".into(), "*".into()], &[])
+        let paths = read_paths(directory.path(), &["foo", "*"], &[])
             .unwrap()
             .collect::<Vec<_>>();
 
@@ -228,7 +227,7 @@ mod tests {
         fs::write(directory.path().join("foo"), "").unwrap();
         fs::write(directory.path().join("bar"), "").unwrap();
 
-        let paths = read_paths(directory.path(), &["*".into()], &["foo".into()])
+        let paths = read_paths(directory.path(), &["*"], &["foo"])
             .unwrap()
             .collect::<Vec<_>>();
 
@@ -242,7 +241,7 @@ mod tests {
         fs::create_dir_all(directory.path().join("foo")).unwrap();
         fs::write(directory.path().join("foo/foo"), "").unwrap();
 
-        let paths = read_paths(directory.path(), &["foo/foo".into()], &["foo".into()])
+        let paths = read_paths(directory.path(), &["foo/foo"], &["foo"])
             .unwrap()
             .collect::<Vec<_>>();
 
@@ -256,16 +255,16 @@ mod tests {
         #[test]
         fn handle_current_directory() {
             assert_eq!(
-                &display_path(Path::new("foo"), Path::new(".")),
-                Path::new("foo")
+                display_path(Path::new("foo"), Path::new(".")).to_string(),
+                "foo"
             );
         }
 
         #[test]
         fn remove_base_directory() {
             assert_eq!(
-                &display_path(Path::new("foo/bar"), Path::new("foo")),
-                Path::new("bar")
+                display_path(Path::new("foo/bar"), Path::new("foo")).to_string(),
+                "bar"
             );
         }
     }
