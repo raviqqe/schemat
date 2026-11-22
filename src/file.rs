@@ -86,8 +86,7 @@ fn resolve_path(path: impl AsRef<Path>, base: &Path) -> PathBuf {
 
 /// Displays a path relative to a base directory.
 pub fn display_path(path: &Path, base: &Path) -> impl Display {
-    path.strip_prefix(base)
-        .map_or_else(|_| path.display(), |path| path.display())
+    path.strip_prefix(base).unwrap_or(path).display()
 }
 
 #[cfg(test)]
