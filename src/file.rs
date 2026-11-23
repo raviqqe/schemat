@@ -17,35 +17,29 @@ pub fn read_paths(
         .as_ref()
         .and_then(gix::Repository::workdir)
         .map(ToOwned::to_owned);
-    let (files, patterns) = paths
+    let (paths, patterns) = paths
         .iter()
         .copied()
         .partition::<Vec<_>, _>(|path| resolve_path(path, base).is_file());
 
-    Ok(files
+    Ok(patterns
+        .iter()
+        .map(|pattern| resolve_path(pattern, base))
+        .filter(|pattern| {
+            repository_directory
+                .as_ref()
+                .map(|parent| !pattern.starts_with(parent))
+                .unwrap_or(true)
+        })
+        .map(|pattern| Ok(glob(&pattern.display().to_string())?.collect::<Result<Vec<_>, _>>()?))
+        .collect::<Result<Vec<_>, Error>>()?
         .into_iter()
-        .map(move |path| resolve_path(path, base))
-        .chain(
-            patterns
-                .iter()
-                .map(|pattern| resolve_path(pattern, base))
-                .filter(|pattern| {
-                    repository_directory
-                        .as_ref()
-                        .map(|parent| !pattern.starts_with(parent))
-                        .unwrap_or(true)
-                })
-                .map(|pattern| {
-                    Ok(glob(&pattern.display().to_string())?.collect::<Result<Vec<_>, _>>()?)
-                })
-                .collect::<Result<Vec<_>, Error>>()?
-                .into_iter()
-                .flatten(),
-        )
+        .flatten()
+        .chain(paths.into_iter().map(move |path| resolve_path(path, base)))
         .filter({
-            let patterns = ignore_patterns.clone();
+            let ignore_patterns = ignore_patterns.clone();
 
-            move |path| !path.is_dir() && !match_patterns(path, &patterns)
+            move |path| !path.is_dir() && !match_patterns(path, &ignore_patterns)
         })
         .chain(
             (if let Some((repository, directory)) = repository.zip(repository_directory) {

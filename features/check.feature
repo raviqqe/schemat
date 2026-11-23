@@ -70,7 +70,7 @@ Feature: Check
       """
     And a file named "foo0.scm" with:
       """
-        foo
+        bar
       """
     When I successfully run `schemat --check foo[0].scm`
     Then the exit status should be 0
