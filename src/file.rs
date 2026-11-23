@@ -5,7 +5,7 @@ use glob::{Pattern, glob};
 use itertools::Itertools;
 use std::path::{Path, PathBuf};
 
-/// Reads paths of existing files and files matching glob patterns.
+/// Reads paths of existing files, or else of files matching glob patterns.
 pub fn read_paths(
     base: &Path,
     paths: &[&str],
