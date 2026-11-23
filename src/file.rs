@@ -100,7 +100,7 @@ mod tests {
     fn track_files(repository: &gix::Repository, paths: &[&str]) {
         let mut index = gix::index::File::from_state(
             gix::index::State::new(repository.object_hash()),
-            repository.index_path(),
+            repository.git_dir().join("index"),
         );
 
         for path in paths {
@@ -218,12 +218,13 @@ mod tests {
         let directory = tempdir().unwrap();
         let directory = directory.path().canonicalize().unwrap();
 
-        fs::create_dir_all(directory.join("bar")).unwrap();
+        let bar_directory = directory.join("bar");
+        fs::create_dir_all(&bar_directory).unwrap();
         fs::write(directory.join("foo"), "").unwrap();
         fs::write(directory.join("bar/baz"), "").unwrap();
         track_files(&gix::init(&directory).unwrap(), &["foo", "bar/baz"]);
 
-        let paths = read_paths(&directory.join("bar"), &["*"], &[])
+        let paths = read_paths(&bar_directory, &["*"], &[])
             .unwrap()
             .collect::<Vec<_>>();
 
@@ -231,16 +232,17 @@ mod tests {
     }
 
     #[test]
-    fn list_tracked_file_in_parent_directory() {
+    fn list_tracked_file_outside_directory() {
         let directory = tempdir().unwrap();
         let directory = directory.path().canonicalize().unwrap();
 
-        fs::create_dir_all(directory.join("bar")).unwrap();
+        let bar_directory = directory.join("bar");
+        fs::create_dir_all(&bar_directory).unwrap();
         fs::write(directory.join("foo"), "").unwrap();
         fs::write(directory.join("bar/foo"), "").unwrap();
         track_files(&gix::init(&directory).unwrap(), &["foo", "bar/foo"]);
 
-        let paths = read_paths(&directory.join("bar"), &["../foo"], &[])
+        let paths = read_paths(&bar_directory, &["../foo"], &[])
             .unwrap()
             .collect::<Vec<_>>();
 

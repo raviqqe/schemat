@@ -122,6 +122,20 @@ Feature: Check
     When I successfully run `schemat -ci *.scm *.scm`
     Then the exit status should be 0
 
+  Scenario: Check a tracked file not formatted
+    Given a file named "foo.scm" with:
+      """
+        foo
+      """
+    And I successfully run `git init`
+    And I successfully run `git add .`
+    When I run `schemat --check foo.scm`
+    Then the exit status should not be 0
+    And the stderr should contain:
+      """
+      1 / 1 file(s) failed
+      """
+
   Scenario: Respect .gitignore file
     Given a file named "foo.scm" with:
       """
@@ -138,17 +152,3 @@ Feature: Check
     And I successfully run `git commit -m commit`
     When I successfully run `schemat -c *.scm`
     Then the exit status should be 0
-
-  Scenario: Check a tracked file not formatted
-    Given a file named "foo.scm" with:
-      """
-        foo
-      """
-    And I successfully run `git init`
-    And I successfully run `git add .`
-    When I run `schemat --check foo.scm`
-    Then the exit status should not be 0
-    And the stderr should contain:
-      """
-      1 / 1 file(s) failed
-      """
