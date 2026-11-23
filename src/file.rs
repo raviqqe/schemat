@@ -310,6 +310,19 @@ mod tests {
     }
 
     #[test]
+    fn list_file_with_unclosed_bracket() {
+        let directory = tempdir().unwrap();
+
+        fs::write(directory.path().join("foo["), "").unwrap();
+
+        let paths = read_paths(directory.path(), &["foo["], &[])
+            .unwrap()
+            .collect::<Vec<_>>();
+
+        assert_eq!(paths, [directory.path().join("foo[")]);
+    }
+
+    #[test]
     fn list_tracked_file_with_glob_characters() {
         let directory = tempdir().unwrap();
         let directory = directory.path().canonicalize().unwrap();
