@@ -201,6 +201,36 @@ Feature: Format
       foo
       """
 
+  Scenario: Format a tracked file in a subdirectory
+    Given a file named "bar/foo.scm" with:
+      """
+        foo
+      """
+    And I successfully run `git init`
+    And I successfully run `git add .`
+    And I cd to "bar"
+    When I successfully run `schemat foo.scm`
+    And I cd to ".."
+    Then a file named "bar/foo.scm" should contain exactly:
+      """
+      foo
+      """
+
+  Scenario: Format tracked files in a subdirectory with a glob
+    Given a file named "bar/foo.scm" with:
+      """
+        foo
+      """
+    And I successfully run `git init`
+    And I successfully run `git add .`
+    And I cd to "bar"
+    When I successfully run `schemat *.scm`
+    And I cd to ".."
+    Then a file named "bar/foo.scm" should contain exactly:
+      """
+      foo
+      """
+
   Scenario: Respect .gitignore file
     Given a file named "foo.scm" with:
       """
