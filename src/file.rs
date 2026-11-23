@@ -47,15 +47,16 @@ pub fn read_paths(
                         .entries()
                         .iter()
                         .map(|entry| {
-                            Ok(PathBuf::from(str::from_utf8(entry.path(&index).as_ref())?))
+                            Ok(resolve_path(
+                                str::from_utf8(entry.path(&index).as_ref())?,
+                                &directory,
+                            ))
                         })
                         .collect::<Result<Vec<_>, Utf8Error>>()?
                         .into_iter()
                         .filter(move |path| {
-                            let path = resolve_path(path, &directory);
-
-                            patterns.iter().any(|pattern| pattern.matches_path(&path))
-                                && !match_patterns(&path, &ignore_patterns)
+                            patterns.iter().any(|pattern| pattern.matches_path(path))
+                                && !match_patterns(path, &ignore_patterns)
                         }),
                 )
             } else {
@@ -95,6 +96,26 @@ mod tests {
     use pretty_assertions::assert_eq;
     use std::fs;
     use tempfile::tempdir;
+
+    fn track_files(repository: &gix::Repository, paths: &[&str]) {
+        let mut index = gix::index::File::from_state(
+            gix::index::State::new(repository.object_hash()),
+            repository.index_path(),
+        );
+
+        for path in paths {
+            index.dangerously_push_entry(
+                Default::default(),
+                repository.object_hash().null(),
+                gix::index::entry::Flags::empty(),
+                gix::index::entry::Mode::FILE,
+                (*path).into(),
+            );
+        }
+
+        index.sort_entries();
+        index.write(Default::default()).unwrap();
+    }
 
     #[test]
     fn list_file() {
@@ -178,6 +199,55 @@ mod tests {
     }
 
     #[test]
+    fn list_tracked_file() {
+        let directory = tempdir().unwrap();
+        let directory = directory.path().canonicalize().unwrap();
+
+        fs::write(directory.join("foo"), "").unwrap();
+        track_files(&gix::init(&directory).unwrap(), &["foo"]);
+
+        let paths = read_paths(&directory, &["foo"], &[])
+            .unwrap()
+            .collect::<Vec<_>>();
+
+        assert_eq!(paths, [directory.join("foo")]);
+    }
+
+    #[test]
+    fn list_tracked_files_in_subdirectory() {
+        let directory = tempdir().unwrap();
+        let directory = directory.path().canonicalize().unwrap();
+
+        fs::create_dir_all(directory.join("bar")).unwrap();
+        fs::write(directory.join("foo"), "").unwrap();
+        fs::write(directory.join("bar/baz"), "").unwrap();
+        track_files(&gix::init(&directory).unwrap(), &["foo", "bar/baz"]);
+
+        let paths = read_paths(&directory.join("bar"), &["*"], &[])
+            .unwrap()
+            .collect::<Vec<_>>();
+
+        assert_eq!(paths, [directory.join("bar/baz")]);
+    }
+
+    #[test]
+    fn list_tracked_file_in_parent_directory() {
+        let directory = tempdir().unwrap();
+        let directory = directory.path().canonicalize().unwrap();
+
+        fs::create_dir_all(directory.join("bar")).unwrap();
+        fs::write(directory.join("foo"), "").unwrap();
+        fs::write(directory.join("bar/foo"), "").unwrap();
+        track_files(&gix::init(&directory).unwrap(), &["foo", "bar/foo"]);
+
+        let paths = read_paths(&directory.join("bar"), &["../foo"], &[])
+            .unwrap()
+            .collect::<Vec<_>>();
+
+        assert_eq!(paths, [directory.join("foo")]);
+    }
+
+    #[test]
     fn list_file_in_directory() {
         let directory = tempdir().unwrap();
 
@@ -245,6 +315,22 @@ mod tests {
             .collect::<Vec<_>>();
 
         assert_eq!(paths, [] as [PathBuf; _]);
+    }
+
+    #[test]
+    fn ignore_tracked_file() {
+        let directory = tempdir().unwrap();
+        let directory = directory.path().canonicalize().unwrap();
+
+        fs::write(directory.join("foo"), "").unwrap();
+        fs::write(directory.join("bar"), "").unwrap();
+        track_files(&gix::init(&directory).unwrap(), &["foo", "bar"]);
+
+        let paths = read_paths(&directory, &["*"], &["foo"])
+            .unwrap()
+            .collect::<Vec<_>>();
+
+        assert_eq!(paths, [directory.join("bar")]);
     }
 
     mod display {
