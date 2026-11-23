@@ -81,6 +81,25 @@ Feature: Format
       bar
       """
 
+  Scenario: Format a file with glob characters in its name
+    Given a file named "foo[0].scm" with:
+      """
+        foo
+      """
+    And a file named "foo0.scm" with:
+      """
+        bar
+      """
+    When I successfully run `schemat foo[0].scm`
+    Then a file named "foo[0].scm" should contain exactly:
+      """
+      foo
+      """
+    And a file named "foo0.scm" should contain exactly:
+      """
+        bar
+      """
+
   Scenario: Do not format files in a current directory
     Given a file named "foo.scm" with:
       """
@@ -229,6 +248,27 @@ Feature: Format
     Then a file named "bar/foo.scm" should contain exactly:
       """
       foo
+      """
+
+  Scenario: Format a tracked file with glob characters in its name
+    Given a file named "foo[0].scm" with:
+      """
+        foo
+      """
+    And a file named "foo0.scm" with:
+      """
+        bar
+      """
+    And I successfully run `git init`
+    And I successfully run `git add .`
+    When I successfully run `schemat foo[0].scm`
+    Then a file named "foo[0].scm" should contain exactly:
+      """
+      foo
+      """
+    And a file named "foo0.scm" should contain exactly:
+      """
+        bar
       """
 
   Scenario: Respect .gitignore file

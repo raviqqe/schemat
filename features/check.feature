@@ -62,6 +62,19 @@ Feature: Check
     Then the stderr should not contain "foo.scm"
     And the stderr should not contain "bar.scm"
 
+  Scenario: Check a file with glob characters in its name
+    Given a file named "foo[0].scm" with:
+      """
+      foo
+
+      """
+    And a file named "foo0.scm" with:
+      """
+        foo
+      """
+    When I successfully run `schemat --check foo[0].scm`
+    Then the exit status should be 0
+
   Scenario: Check files not formatted
     Given a file named "foo.scm" with:
       """

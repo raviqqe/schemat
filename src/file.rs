@@ -5,7 +5,7 @@ use glob::{Pattern, glob};
 use itertools::Itertools;
 use std::path::{Path, PathBuf};
 
-/// Reads file paths matching glob patterns.
+/// Reads paths of existing files and files matching glob patterns.
 pub fn read_paths(
     base: &Path,
     paths: &[&str],
@@ -17,21 +17,31 @@ pub fn read_paths(
         .as_ref()
         .and_then(gix::Repository::workdir)
         .map(ToOwned::to_owned);
-
-    Ok(paths
+    let (files, patterns) = paths
         .iter()
-        .map(|path| resolve_path(path, base))
-        .filter(|path| {
-            path.is_file()
-                || repository_directory
-                    .as_ref()
-                    .map(|parent| !path.starts_with(parent))
-                    .unwrap_or(true)
-        })
-        .map(|path| Ok(glob(&path.display().to_string())?.collect::<Result<Vec<_>, _>>()?))
-        .collect::<Result<Vec<_>, Error>>()?
+        .copied()
+        .partition::<Vec<_>, _>(|path| resolve_path(path, base).is_file());
+
+    Ok(files
         .into_iter()
-        .flatten()
+        .map(move |path| resolve_path(path, base))
+        .chain(
+            patterns
+                .iter()
+                .map(|pattern| resolve_path(pattern, base))
+                .filter(|pattern| {
+                    repository_directory
+                        .as_ref()
+                        .map(|parent| !pattern.starts_with(parent))
+                        .unwrap_or(true)
+                })
+                .map(|pattern| {
+                    Ok(glob(&pattern.display().to_string())?.collect::<Result<Vec<_>, _>>()?)
+                })
+                .collect::<Result<Vec<_>, Error>>()?
+                .into_iter()
+                .flatten(),
+        )
         .filter({
             let patterns = ignore_patterns.clone();
 
@@ -40,7 +50,7 @@ pub fn read_paths(
         .chain(
             (if let Some((repository, directory)) = repository.zip(repository_directory) {
                 let index = repository.index_or_empty()?;
-                let patterns = compile_patterns(paths, base)?;
+                let patterns = compile_patterns(&patterns, base)?;
 
                 Some(
                     index
@@ -289,6 +299,49 @@ mod tests {
             .collect::<Vec<_>>();
 
         assert_eq!(paths, [directory.path().join("foo")]);
+    }
+
+    #[test]
+    fn list_file_with_glob_characters() {
+        let directory = tempdir().unwrap();
+
+        fs::write(directory.path().join("foo[0]"), "").unwrap();
+        fs::write(directory.path().join("foo0"), "").unwrap();
+
+        let paths = read_paths(directory.path(), &["foo[0]"], &[])
+            .unwrap()
+            .collect::<Vec<_>>();
+
+        assert_eq!(paths, [directory.path().join("foo[0]")]);
+    }
+
+    #[test]
+    fn list_tracked_file_with_glob_characters() {
+        let directory = tempdir().unwrap();
+        let directory = directory.path().canonicalize().unwrap();
+
+        fs::write(directory.join("foo[0]"), "").unwrap();
+        fs::write(directory.join("foo0"), "").unwrap();
+        track_files(&gix::init(&directory).unwrap(), &["foo[0]", "foo0"]);
+
+        let paths = read_paths(&directory, &["foo[0]"], &[])
+            .unwrap()
+            .collect::<Vec<_>>();
+
+        assert_eq!(paths, [directory.join("foo[0]")]);
+    }
+
+    #[test]
+    fn list_file_matched_by_character_class() {
+        let directory = tempdir().unwrap();
+
+        fs::write(directory.path().join("foo0"), "").unwrap();
+
+        let paths = read_paths(directory.path(), &["foo[0]"], &[])
+            .unwrap()
+            .collect::<Vec<_>>();
+
+        assert_eq!(paths, [directory.path().join("foo0")]);
     }
 
     #[test]

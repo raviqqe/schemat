@@ -15,7 +15,7 @@ use tokio::{
 #[derive(clap::Parser)]
 #[command(about, version)]
 struct Arguments {
-    /// A glob pattern of files.
+    /// A file or a glob pattern of files.
     #[arg()]
     path: Vec<String>,
     /// Check if files are formatted correctly.
