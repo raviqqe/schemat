@@ -114,7 +114,7 @@ mod tests {
         }
 
         index.sort_entries();
-        index.write(Default::default()).unwrap();
+        index.write(Default::default(), Default::default()).unwrap();
     }
 
     #[test]
